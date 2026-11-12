@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-xiaohei"
-version = "1.0.0"
+version = "1.0.1"
 description = "小黑工具箱：ComfyUI 自定义节点合集，126 个节点 / 24 个模块，覆盖视频、图像、音频、提示词与低显存优化。"
 dependencies = [
     "opencv-python",
@@ -18,6 +18,11 @@ Repository = "https://github.com/XiaoHei-8G/Comfyui-XiaoHei"
 PublisherId = "xh666"
 DisplayName = "Comfyui-XiaoHei"
 Icon = ""
+# comfy-cli 用 `git ls-files` 收集文件，git 默认把中文文件名转成八进制转义，
+# zip_files 拿到转义串判 os.path.exists 为假，会打印 "File not found" 静默跳过。
+# includes 走 os.walk 直接读文件系统，绕开转义问题，把音效库强制带进发布包。
+# 1.0.0 的 Registry 包因此少了 35 个中文名 flac；1.0.1 起修好。
+includes = ["web/sounds"]
 
 #  刻意【不】在这里写 web = "web"：
 # 本包已用 __init__.py 的 WEB_DIRECTORY = "web" 注册前端扩展。
