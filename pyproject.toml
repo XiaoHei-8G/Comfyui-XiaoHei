@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 [project.urls]
-Repository = "https://github.com/617694721-tech/Comfyui-XiaoHei"
+Repository = "https://github.com/XiaoHei-ComfyUI/Comfyui-XiaoHei"
 
 [tool.comfy]
 PublisherId = "xh666"
