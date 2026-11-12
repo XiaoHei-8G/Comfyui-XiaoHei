@@ -19,13 +19,16 @@ venv/
 *.exe
 *.msi
 
-# 备份与旧版前端（v1.0.0 发布包里混过一轮，永久挡住）
+# 备份与旧版前端（开发留底，不进仓库/不分发）
 *_bak_*/
 web_汉化前_*/
+web/汉化前_*/
+web/_bak_*/
 备份_*/
-*.bak
+*.bak*
 *.log
 *.tmp
+learn_pixaroma/
 
 # 工作流示例不进分发包（沿用打包脚本铁律 B）
 workflows/
