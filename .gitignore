@@ -27,6 +27,9 @@ web_汉化前_*/
 *.log
 *.tmp
 
+# 工作流示例不进分发包（沿用打包脚本铁律 B）
+workflows/
+
 # 系统文件
 Thumbs.db
 .DS_Store
