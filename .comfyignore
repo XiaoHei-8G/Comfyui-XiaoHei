@@ -1,0 +1,10 @@
+.git/
+.github/
+.gitignore
+.comfyignore
+XH家族风格总账.md
+XH节点包_官方前端兼容性说明.md
+__pycache__/
+*.pyc
+*.zip
+*.bak

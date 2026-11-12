@@ -1,0 +1,27 @@
+XiaoHei 设置面板「关于」徽章 —— 资源来源与声明
+================================================
+
+一、四枚品牌图形（qq.svg / bilibili.svg / wechat.svg / github.svg）
+  来源：Simple Icons（https://simpleicons.org），CC0 1.0 公有领域贡献。
+  取自官方 CDN https://cdn.simpleicons.org/<slug>，图形路径未改动。
+  QQ 小企鹅、B站小电视、微信双气泡、GitHub 猫均为各自品牌的官方识别图形。
+   商标权归腾讯 / 哔哩哔哩 / 腾讯 / GitHub 各自所有，本包仅作「指向该平台」的
+     识别性使用，不表示 endorsement 或 affiliation，不用于商业商标用途。
+
+二、微信二维码（wechat-qr.png）
+  由 XiaoHei 作者本人提供（Z9 个人微信「扫二维码，添加我为朋友」），
+  仅用于本包设置面板「关于」里悬浮展示，方便用户反馈问题。
+   该图随分发包发布，作者已明确要求放进设置面板；如日后要撤下，
+     删掉本文件即可（xh_about.js 会自动退回「二维码未随包」提示）。
+
+三、为什么不用 shields.io 的在线图片徽章
+  小助手那排是 https://img.shields.io/badge/... 生成的 <img>；
+  国内访问经常超时 ⇒ 整排变成碎图。XiaoHei 用本地 CSS 1:1 复刻 flat 样式
+  （左半 label 带 logo + 右半彩色 message，20px 高 / 3px 圆角），
+  图形与配色全部本地，离线可用，版本号仍由后端 /xh/about 动态给。
+
+四、配色来源（禁止自造色值）
+  #5E5E5E / #F7F7F7 / #6EAC19 / #17A4D3 = 参考截图纯色区逐像素实测
+    （依次对应 shields 默认 label #555、labelColor=%23FFFFFF、-green、color=%2307A3D7）
+  #1EBAFC / #00A1D6 / #07C160 / #181717 = 四枚 Simple Icons SVG 自带的品牌官方色
+  面板底 / 边框 / 文字 = ComfyUI 官方 CSS 变量 --background / --border / --foreground

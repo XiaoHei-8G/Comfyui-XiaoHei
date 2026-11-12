@@ -1,0 +1,218 @@
+"""Sigma Curve: draw a sampler sigma schedule with draggable control points.
+
+The curve math mirrors ``js/sigma_curve.mjs`` so the graph preview and the
+executed SIGMAS match. Points are ``[x, y]`` with ``x`` the 0..1 position along
+the schedule and ``y`` the sigma as a fraction of ``sigma_max``.
+"""
+
+import json
+import math
+
+MIN_GAP = 1e-4
+MAX_POINTS = 64
+LOG_FLOOR = 1e-5
+MODES = ["log smooth", "smooth", "linear"]
+DEFAULT_SIGMA_MAX = 14.614642
+DEFAULT_SIGMA_MIN = 0.0291675
+# Karras fitted by js/sigma_curve.mjs (fitCurve); tests check the two stay identical.
+DEFAULT_CURVE = (
+    '{"v":1,"points":[[0,1],[0.065,0.761052],[0.2,0.416169],[0.365,0.183976],'
+    '[0.575,0.05547],[0.76,0.015753],[0.855,0.007467],[0.955,0.003089],'
+    '[1,0.001996]],"log":false,"snap":true}'
+)
+
+
+def _clamp(value, lo, hi):
+    return max(lo, min(hi, value))
+
+
+def _finite(value, fallback):
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return value if math.isfinite(value) else fallback
+
+
+def normalize_points(points):
+    items = []
+    for p in points if isinstance(points, (list, tuple)) else []:
+        if isinstance(p, (list, tuple)) and len(p) >= 2:
+            items.append([_clamp(_finite(p[0], 0.0), 0.0, 1.0),
+                          _clamp(_finite(p[1], 0.0), 0.0, 1.0)])
+    items.sort(key=lambda p: p[0])  # stable, like Array.prototype.sort
+    out = []
+    for p in items:
+        if out and p[0] - out[-1][0] < MIN_GAP:
+            continue
+        out.append(p)
+    if not out:
+        return [[0.0, 1.0], [1.0, 0.0]]
+    if len(out) == 1:
+        return [[0.0, out[0][1]], [1.0, out[0][1]]]
+    out[0][0] = 0.0
+    out[-1][0] = 1.0
+    if len(out) > MAX_POINTS:
+        out = out[:MAX_POINTS - 1] + [out[-1]]
+    return out
+
+
+def monotone_tangents(points):
+    n = len(points)
+    d = [(points[i + 1][1] - points[i][1]) / (points[i + 1][0] - points[i][0])
+         for i in range(n - 1)]
+    m = [0.0] * n
+    m[0] = d[0]
+    m[-1] = d[-1]
+    for i in range(1, n - 1):
+        m[i] = 0.0 if d[i - 1] * d[i] <= 0 else (d[i - 1] + d[i]) / 2
+    for i in range(n - 1):
+        if d[i] == 0:
+            m[i] = 0.0
+            m[i + 1] = 0.0
+            continue
+        a = m[i] / d[i]
+        b = m[i + 1] / d[i]
+        s = a * a + b * b
+        if s > 9:
+            t = 3 / math.sqrt(s)
+            m[i] = t * a * d[i]
+            m[i + 1] = t * b * d[i]
+    return m
+
+
+def _segment(points, x):
+    i = 0
+    while i < len(points) - 2 and x > points[i + 1][0]:
+        i += 1
+    return i
+
+
+def _hermite(points, x, m):
+    if x <= points[0][0]:
+        return points[0][1]
+    if x >= points[-1][0]:
+        return points[-1][1]
+    i = _segment(points, x)
+    x0, y0 = points[i]
+    x1, y1 = points[i + 1]
+    h = x1 - x0
+    t = (x - x0) / h
+    t2 = t * t
+    t3 = t2 * t
+    return ((2 * t3 - 3 * t2 + 1) * y0 + (t3 - 2 * t2 + t) * h * m[i]
+            + (-2 * t3 + 3 * t2) * y1 + (t3 - t2) * h * m[i + 1])
+
+
+def make_evaluator(points, mode="log smooth"):
+    pts = normalize_points(points)
+    if mode == "linear":
+        def linear(x):
+            if x <= pts[0][0]:
+                return pts[0][1]
+            if x >= pts[-1][0]:
+                return pts[-1][1]
+            i = _segment(pts, x)
+            x0, y0 = pts[i]
+            x1, y1 = pts[i + 1]
+            return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+        return linear
+    if mode == "smooth":
+        m = monotone_tangents(pts)
+        return lambda x: _clamp(_hermite(pts, x, m), 0.0, 1.0)
+    log_pts = [[x, math.log(max(y, LOG_FLOOR))] for x, y in pts]
+    m = monotone_tangents(log_pts)
+
+    def log_smooth(x):
+        y = math.exp(_hermite(log_pts, x, m))
+        return 0.0 if y <= LOG_FLOOR * 1.000001 else _clamp(y, 0.0, 1.0)
+    return log_smooth
+
+
+def sample_positions(steps, end_at_zero=True):
+    steps = max(1, int(round(_finite(steps, 1))))
+    count = steps if end_at_zero else steps + 1
+    return [0.0 if count == 1 else i / (count - 1) for i in range(count)]
+
+
+def sample_sigmas(points, steps, sigma_max, mode="log smooth", end_at_zero=True):
+    f = make_evaluator(points, mode if mode in MODES else "log smooth")
+    out = [f(x) * sigma_max for x in sample_positions(steps, end_at_zero)]
+    if end_at_zero:
+        out.append(0.0)
+    return out
+
+
+def parse_curve(text):
+    try:
+        data = json.loads(text) if isinstance(text, str) and text.strip() else {}
+    except (TypeError, ValueError):
+        data = {}
+    if isinstance(data, list):
+        data = {"points": data}
+    if not isinstance(data, dict):
+        data = {}
+    return normalize_points(data.get("points"))
+
+
+def model_sigma_range(model):
+    """Return (sigma_max, sigma_min) from a ComfyUI MODEL, or None if unavailable."""
+    if model is None:
+        return None
+    try:
+        sampling = model.get_model_object("model_sampling")
+        hi, lo = float(sampling.sigma_max), float(sampling.sigma_min)
+    except Exception:  # unexpected model wrapper: fall back to the widgets
+        return None
+    if not (math.isfinite(hi) and math.isfinite(lo)) or hi <= 0:
+        return None
+    return hi, max(lo, 0.0)
+
+
+def resolve_range(sigma_max, sigma_min):
+    """Widget sigma_max/sigma_min, made finite and non-negative."""
+    return (max(_finite(sigma_max, DEFAULT_SIGMA_MAX), 0.0),
+            max(_finite(sigma_min, DEFAULT_SIGMA_MIN), 0.0))
+
+
+class WN_SigmaCurve:
+    """Visual sigma schedule editor that outputs SIGMAS for SamplerCustom."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "steps": ("INT", {"default": 20, "min": 1, "max": 1000,"tooltip": "采样步数（曲线采样点数）"}),
+                "sigma_max": ("FLOAT", {"default": DEFAULT_SIGMA_MAX, "min": 0.0001,
+                                        "max": 1000.0, "step": 0.001, "round": False,"tooltip": "曲线起始（最大）sigma"}),
+                "sigma_min": ("FLOAT", {"default": DEFAULT_SIGMA_MIN, "min": 0.00001,
+                                        "max": 1000.0, "step": 0.0001, "round": False,
+                                        "tooltip": "曲线结束（最小）sigma，预设/下限用"}),
+                "interpolation": (MODES, {"default": "log smooth","tooltip": "相邻 sigma 之间的插值方式"}),
+                "end_at_zero": ("BOOLEAN", {"default": True,
+                                            "tooltip": "在曲线末尾追加一个 sigma=0"}),
+                "curve": ("STRING", {"default": DEFAULT_CURVE, "multiline": False,"tooltip": "曲线形状预设"}),
+            },
+            "optional": {
+                "model": ("MODEL", {"tooltip": "可选：用该模型的 sigma 时间表"
+                                    "instead of the widgets (e.g. 1.0 for flow models). The widgets "
+                                    "update to match after the first run."}),
+            },
+        }
+
+    RETURN_TYPES = ("SIGMAS",)
+    RETURN_NAMES = ("sigmas",)
+    FUNCTION = "build"
+    CATEGORY = "XiaoHei/工具"
+
+    def build(self, steps, sigma_max, sigma_min, interpolation, end_at_zero, curve, model=None):
+        import torch
+
+        from_model = model_sigma_range(model)
+        hi, lo = from_model or resolve_range(sigma_max, sigma_min)
+        values = sample_sigmas(parse_curve(curve), steps, hi, interpolation, bool(end_at_zero))
+        result = (torch.FloatTensor(values),)
+        if from_model:
+            # lets the graph adopt the model's range so the preview matches the output
+            return {"ui": {"wn_model_sigmas": [hi, lo]}, "result": result}
+        return result
