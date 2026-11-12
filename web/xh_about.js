@@ -64,7 +64,7 @@ const ABOUT_SETTING = {
     name: "关于",
     category: ["XiaoHei", "关于", "关于"],
     //  官方面板只认 tooltip ⇒ 补上才有 ⓘ 说明。
-    tooltip: "纯信息行：版本、GitHub（暂空）、B 站、交流群入口、微信交流反馈。不保存任何值，关掉或改动它不会有任何影响。",
+    tooltip: "纯信息行：版本、GitHub 仓库、B 站主页、交流群入口、微信交流反馈。不保存任何值，关掉或改动它不会有任何影响。",
     //  组间排序靠它（降序）⇒ 100 让「关于」稳在最顶。
     sortOrder: groupOrder("about"),
     type: _renderAboutRow,

@@ -537,7 +537,7 @@
 #    分发 / 压缩命名规范：Comfyui-XiaoHei_v{主}.{次}.{修}_{YYYYMMDD}.zip
 #    改完节点包后升级对应位，再重新压缩，文件名版本号才对得上。
 # ---------------------------------------------------------------------------
-VERSION = "1.0.0"  # 小黑 XiaoHei 品牌首版（前身 Comfyui-XH_Toolbox v1.59.1，2026-11-12 品牌更名重置）
+VERSION = "1.0.2"  # 小黑 XiaoHei 品牌；填 GitHub 仓库链接 + 修正版本号标注（前身 Comfyui-XH_Toolbox v1.59.1）
 
 # ---------------------------------------------------------------------------
 #  子模块加载：逐个 try，缺谁只少谁（2026-10-05 改造，为「分发给别人」而做）
@@ -1008,7 +1008,7 @@ def _register_about_route():
                 "version": _V,
                 "bilibili": "https://space.bilibili.com/96854764",
                 "opus": "https://www.bilibili.com/opus/1267916337700667400",
-                "github": "",   # 空壳：用户 2026-11-11 定「GitHub 暂时先空，先做一个空壳放着」
+                "github": "https://github.com/XiaoHei-8G/Comfyui-XiaoHei",   # 2026-11-13 填上真实仓库（用户名 XiaoHei-8G，仓库名小写 ui）
                 "tagline": "8g显存小黑的折腾日记",
             })
 
