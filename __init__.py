@@ -570,35 +570,23 @@ _CORE = {"torch", "numpy", "safetensors", "Pillow", "einops", "aiohttp"}
 
 
 # ---------------------------------------------------------------------------
-#  自动补依赖（2026-10-05，为「别人拿到就能用」而做）
+#  依赖自检（只检查、只提示，绝不运行时装包）
 # ---------------------------------------------------------------------------
-# 白名单：只认下面这 3 个「本包独有、无害」的小包。**绝不碰** torch 系
-# （torch / torchaudio / torchvision）与 numpy / Pillow 等 ComfyUI 核心包 ——
-# 那些一旦被 pip 重装可能毁掉别人的 CUDA 环境，必须留给用户按官方指引装。
-#
-# 流程：启动时先看缺哪些 → 缺就 pip 装（默认走清华镜像，国内没魔法也能下）→
-#      装完 invalidate_caches() 让**本次启动**立刻就能 import，不用手动重启。
-# 关闭：设环境变量 XH_TOOLBOX_NO_AUTOINSTALL=1 即完全跳过，退回「只提示不装」。
-#
-# 为什么敢自动装（与 README「不偷偷装」并不矛盾）：
-#   · 只装写死的这 3 个包，不读任何外部文件、不执行 requirements 里的任意内容
-#   · 命令不带 --upgrade / -r，pip 只「补齐缺失」；已满足的包原封不动
-#   · 全程 try/except + 超时，失败只打印提示，绝不让整包加载失败
+# Comfy Registry 安全标准（docs.comfy.org/registry/standards）明确禁止
+# 自定义节点在运行时通过 subprocess 安装依赖。依赖必须统一声明在
+# requirements.txt / pyproject.toml，由 ComfyUI-Manager 集中安装。
+# 这里只做「缺哪些 + 给一条能照抄的 pip 命令」，不执行任何安装。
+# 缺包时对应子模块会被 _fail 跳过，其余节点照常可用，整包不会阵亡。
 _AUTO_DEPS = (
     ("cv2", "opencv-python", "接缝校正 / 锁脸"),
     ("scenedetect", "scenedetect", "接缝校正·场景切分"),
     ("rotary_embedding_torch", "rotary-embedding-torch", "人声分离"),
+    ("imageio_ffmpeg", "imageio-ffmpeg", "H3视频预处理"),
 )
-_MIRROR = "https://pypi.tuna.tsinghua.edu.cn/simple"
 
 
-def _auto_install_deps():
-    """启动自检：缺那 3 个白名单包就自动补装（失败不影响加载）。"""
-    if _os.environ.get("XH_TOOLBOX_NO_AUTOINSTALL", "").strip().lower() in (
-            "1", "true", "yes", "on"):
-        print("[XiaoHei] 已按 XH_TOOLBOX_NO_AUTOINSTALL 跳过依赖自动安装。")
-        return
-
+def _check_deps():
+    """启动自检：缺包只打日志，不自动安装（Comfy Registry 合规要求）。"""
     import importlib.util
     missing = []
     for imp, pip_name, usage in _AUTO_DEPS:
@@ -609,53 +597,19 @@ def _auto_install_deps():
             missing.append((pip_name, usage))
     if not missing:
         return
-
     pkgs = [p for p, _ in missing]
     print(f"[XiaoHei]  依赖自检：缺 {len(pkgs)} 个 → {', '.join(pkgs)}")
     for _p, _u in missing:
         print(f"[XiaoHei]      · {_p}（{_u}）")
-    print("[XiaoHei]     正在自动安装（首次较慢，别关窗口）…")
-
-    import subprocess
-    _base = [_PY, "-m", "pip", "install", "--no-input",
-             "--disable-pip-version-check", "--no-warn-script-location",
-             "--prefer-binary"]
-    # 依次尝试三个源，任一成功即止；全部失败/超时才放弃（单个源最多等 300s）：
-    #   ① 清华镜像（国内秒下，无魔法也能用）② PyPI 官方源 ③ 完全按对方自己的 pip 配置
-    _attempts = (
-        ["-i", _MIRROR],
-        ["-i", "https://pypi.org/simple"],
-        [],
-    )
-    ok = False
-    for _idx, _opt in enumerate(_attempts, 1):
-        try:
-            _r = subprocess.run([*_base, *_opt, *pkgs],
-                                capture_output=True, text=True, timeout=300)
-            if _r.returncode == 0:
-                ok = True
-                break
-            _tail = ((_r.stderr or "") + (_r.stdout or "")).strip().splitlines()[-2:]
-            print(f"[XiaoHei]     第 {_idx} 个源失败（code={_r.returncode}）：{' | '.join(_tail)}")
-        except subprocess.TimeoutExpired:
-            print(f"[XiaoHei]     第 {_idx} 个源超时（300s），换下一个源…")
-        except Exception as _e2:
-            print(f"[XiaoHei]     第 {_idx} 个源出错：{type(_e2).__name__}: {_e2}")
-
-    if ok:
-        try:
-            import importlib
-            importlib.invalidate_caches()      # 让本次启动就能 import 到新装的包
-        except Exception:
-            pass
-        print("[XiaoHei]      依赖已补齐，本次启动直接生效（不必重启）。")
-    else:
-        print("[XiaoHei]      三个源都没装上（可能真没网 / 被限制）。不影响使用："
-              "相关节点会缺，其余照常。")
-        print(f"[XiaoHei]       联网后手动补：\"{_PY}\" -m pip install {' '.join(pkgs)}")
+    print("[XiaoHei]     缺这些包只影响对应节点，其余节点照常可用。")
+    print(f"[XiaoHei]     请手动补一次：\"{_PY}\" -m pip install {' '.join(pkgs)}")
+    print(f"[XiaoHei]     或整包装：\"{_PY}\" -m pip install -r "
+          f"\"{_os.path.join(_HERE, 'requirements.txt')}\"")
+    print("[XiaoHei]     装完重启 ComfyUI 即生效；装了 ComfyUI-Manager 的话它会自动装好。")
 
 
-_auto_install_deps()
+_check_deps()
+
 
 
 def _fail(mod, usage, deps, err):

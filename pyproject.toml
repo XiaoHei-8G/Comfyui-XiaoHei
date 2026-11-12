@@ -1,7 +1,13 @@
 [project]
 name = "comfyui-xiaohei"
 version = "1.0.0"
-description = " Comfyui-XiaoHei —— XiaoHei 节点合集（126 个节点 / 24 个模块）：H3低显存、图像工具（含去背景/图像对比拼图）、H3→LTX2.5 适配、LTX锁脸、衔接淡化/接缝修正、链提示词选择器/动态提示词联结、MSR精修编码（分段稿段尾写时长，LTX二采防串味）、分组控制/循环/分段表/标签/计时器/布尔开关/种子/整数运算/浮点运算、人声分离、LoRA堆栈、滑块、Set/Get（单路+多路，走官方虚拟节点内核，与KJNodes互通）、工具扩展（表达式求值/形状遮罩覆盖/区域限定框/万能遮罩）、声音播放、宫格故事板（宫格底板/图像对比度/宫格切图）、加载视频（复刻 VHS，零新增依赖，带内嵌播放器+预览开关）、加载音频（复刻官方 Load Audio，输出逐字一致可互换，前端粗时间线播放器：10px 轨道+16px 拖把手拖拽 seek + 实时频谱律动条（Web Audio AnalyserNode 32 根竖条随音乐跳动 + 峰值帽） +  文件夹模式与循环轮次索引（接 XiaoHei-循环零接线逐段换音频，start_index 有接线以它为准）、H3 latent接续（接缝 latent 锚定 + Drift-Control，XiaoHei 自研净室实现零三方依赖）、H3 动作校正（TST 推理时注意力校正，arXiv:2609.08505·MIT，XiaoHei 自研 H3 移植，MODEL→MODEL 零第三方依赖）、H3 音频同步（把真音轨锁进 H3 latent 的声音那半，noise_mask 画面1/声音0 走官方 NestedTensor；算法照搬 ComfyUI-Pixaroma·MIT，三个偏好改成节点下拉）、H3 2K 精修（Open-H3 Regenerate 2K，8 节点：视频预处理/提示词编码/精修总控/低内存解码/分块扩散/模型补丁/官方步长/锁定音频；复刻 ComfyUI-OpenH3-VideoTools·GPL-3.0 并自持 ComfyUI-OpenH3-Regenerate2K·MIT 的 3 节点，外部那两个包不装也能跑，KJNodes 可选）、Qwen21 改图四件套（约束裁切 / 局部色彩校准 / 双图滑块对比 / 带遮罩加载图，1:1 复刻 ComfyUI-BlueBox·MIT，零新增依赖）"
+description = "小黑工具箱：ComfyUI 自定义节点合集，126 个节点 / 24 个模块，覆盖视频、图像、音频、提示词与低显存优化。"
+dependencies = [
+    "opencv-python",
+    "scenedetect",
+    "rotary-embedding-torch",
+    "imageio-ffmpeg",
+]
 readme = "README.md"
 requires-python = ">=3.10"
 

@@ -82,25 +82,25 @@ XiaoHei 自研 / 复刻节点的合集包。**126 个节点，24 个模块**，�
 1. 把整个 `Comfyui-XiaoHei` 文件夹放进 `<ComfyUI>\custom_nodes\`
 2. **重启 ComfyUI** —— 完事，节点搜索框里打 `XH` 就能看到本包节点（口径见开头，完整清单见 §1）。
 
-**依赖不用你手动装**：本包启动时会自检，缺 `opencv-python` / `scenedetect` /
-`rotary-embedding-torch` 就**自己 pip 装**（依次试：清华镜像 → PyPI 官方源 →
-你自己的 pip 配置，**没有魔法也能装上**），装完当次启动就生效、不用再重启一遍。
-首次启动会多等十几秒到半分钟（在下东西），日志里能看到：
+**依赖怎么装**：
+- 装了 **ComfyUI-Manager**（或从 Comfy Registry 一键装）的：Manager 会逐包读 `requirements.txt` 自动装齐，**你什么都不用做**。
+- 直接解压 zip 的：用跑 ComfyUI 的那个 python 手动补一次（命令见 §5.0），装完重启。
+
+本包启动时**只做自检、不会自己装包**：缺哪个包会在日志里点名，并给出能照抄的命令
+（Comfy Registry 安全标准禁止自定义节点在运行时安装依赖）。日志长这样：
 
 ```
-[XiaoHei-Toolbox]  依赖自检：缺 3 个 → opencv-python, scenedetect, rotary-embedding-torch
-[XiaoHei-Toolbox]      依赖已补齐，本次启动直接生效（不必重启）。
+[XiaoHei]  依赖自检：缺 3 个 → opencv-python, scenedetect, rotary-embedding-torch
+[XiaoHei]     请手动补一次："...python.exe" -m pip install opencv-python scenedetect rotary-embedding-torch
 ```
 
-装好了，最后会有这一行：
+装齐后启动日志末尾会有这一行：
 
 ```
-[XiaoHei-Toolbox]  已加载 126 个节点，来自 24 个模块
+[XiaoHei]  已加载 126 个节点，来自 24 个模块
 ```
 
-- **不想让它自动装**：设环境变量 `XH_TOOLBOX_NO_AUTOINSTALL=1` 即跳过（退回「只提示不装」）。
-- **没网 / 装不上也不会崩**：缺哪个包只少对应那一块节点，其余照常可用；日志会点名缺什么，并给出可照抄的补装命令（详见 §5.0）。
-- 装了 **ComfyUI-Manager** 的话，Manager 会在本包之外再兜一层（自动读 `requirements.txt`）。
+- **缺依赖不会让整包阵亡**：缺哪个包只少对应那一块节点，其余照常可用（详见 §5.0）。
 
 >  本包**不含模型权重** —— 工作流里用到的模型要自己下，清单见 §5.4。
 

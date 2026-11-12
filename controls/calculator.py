@@ -8,7 +8,9 @@
 #   · 后端也做一次「白名单安全求值」，所以即使前端 DOM 没加载（命令行/API 跑工作流）也能算出结果；
 #   · class_type（XHCalculator）必须与 web/xh_calculator.js 里的 NODE_TYPE 逐字一致，否则渲染成空白壳。
 
+import ast
 import json
+import operator
 import re
 
 CATEGORY_TYPE = "XiaoHei/数学"
@@ -23,6 +25,27 @@ DEFAULT_STATE = '{"expr":"","result":0}'
 #  2026-10-21 修：放行 e/E —— 前端 fmt 对极大/极小结果会输出科学计数法（如 1e+21），
 #    老白名单把 e 毙掉 ⇒ 前端显示屏有结果、后端 result 口却给 0，两口不一致。
 _SAFE_CHARS = re.compile(r"^[0-9.()+\-*/% eE]+$")
+
+_BIN_OPS = {
+    ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+    ast.Div: operator.truediv, ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod, ast.Pow: operator.pow,
+}
+_UNARY_OPS = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+
+
+def _arith(node):
+    """AST 白名单求值：只认数字与算术运算符，绝不执行任意代码。"""
+    if isinstance(node, ast.Expression):
+        return _arith(node.body)
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) \
+            and not isinstance(node.value, bool):
+        return node.value
+    if isinstance(node, ast.BinOp) and type(node.op) in _BIN_OPS:
+        return _BIN_OPS[type(node.op)](_arith(node.left), _arith(node.right))
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _UNARY_OPS:
+        return _UNARY_OPS[type(node.op)](_arith(node.operand))
+    raise ValueError("unsupported arithmetic")
 
 
 def safe_eval(expr: str):
@@ -43,8 +66,8 @@ def safe_eval(expr: str):
     if not _SAFE_CHARS.match(s):
         return None
     try:
-        # 用 Function 构造，不暴露任何内建，纯算术求值
-        val = eval(compile(f"({s})", "<calc>", "eval"), {"__builtins__": {}}, {})
+        # AST 白名单求值：不调用 eval / exec，符合 Comfy Registry 安全标准
+        val = _arith(ast.parse(f"({s})", mode="eval"))
     except Exception:
         return None
     if not isinstance(val, (int, float)) or isinstance(val, bool):

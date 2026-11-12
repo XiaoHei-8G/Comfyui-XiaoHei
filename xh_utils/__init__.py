@@ -15,13 +15,78 @@
 #
 # 家族规范：class_type 与前端 js 的 NODE_TYPE 必须逐字一致（本模块纯后端，无 js）。
 
+import ast
 import math
+import operator
 import torch
 
 from .smart_face_mask import XHSmartFaceMask
 from .xh_track_colorize import XHTrackColorize
 
-_SAFE_GLOBALS = {"__builtins__": {}}
+_BIN_OPS = {
+    ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+    ast.Div: operator.truediv, ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod, ast.Pow: operator.pow,
+}
+_UNARY_OPS = {ast.UAdd: operator.pos, ast.USub: operator.neg, ast.Not: operator.not_}
+_CMP_OPS = {
+    ast.Eq: operator.eq, ast.NotEq: operator.ne, ast.Lt: operator.lt,
+    ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge,
+}
+
+
+def _safe_eval_node(node, env):
+    """AST 白名单求值：变量/字面量/算术/比较/白名单函数，禁止属性访问与任意调用。"""
+    if isinstance(node, ast.Expression):
+        return _safe_eval_node(node.body, env)
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, (int, float, bool, str)):
+            return node.value
+        raise ValueError("unsupported constant")
+    if isinstance(node, ast.Name):
+        if node.id not in env:
+            raise ValueError("unknown name: " + node.id)
+        return env[node.id]
+    if isinstance(node, ast.BinOp) and type(node.op) in _BIN_OPS:
+        return _BIN_OPS[type(node.op)](_safe_eval_node(node.left, env),
+                                      _safe_eval_node(node.right, env))
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _UNARY_OPS:
+        return _UNARY_OPS[type(node.op)](_safe_eval_node(node.operand, env))
+    if isinstance(node, ast.BoolOp):
+        out = True
+        for v in node.values:
+            out = _safe_eval_node(v, env)
+            if isinstance(node.op, ast.And) and not out:
+                return out
+            if isinstance(node.op, ast.Or) and out:
+                return out
+        return out
+    if isinstance(node, ast.Compare):
+        left = _safe_eval_node(node.left, env)
+        for op, comp in zip(node.ops, node.comparators):
+            if type(op) not in _CMP_OPS:
+                raise ValueError("unsupported comparison")
+            right = _safe_eval_node(comp, env)
+            if not _CMP_OPS[type(op)](left, right):
+                return False
+            left = right
+        return True
+    if isinstance(node, ast.IfExp):
+        return _safe_eval_node(node.body, env) if _safe_eval_node(node.test, env) \
+            else _safe_eval_node(node.orelse, env)
+    if isinstance(node, ast.Call):
+        if not isinstance(node.func, ast.Name) or node.keywords:
+            raise ValueError("unsupported call")
+        fn = env.get(node.func.id)
+        if not callable(fn):
+            raise ValueError("unknown function: " + node.func.id)
+        return fn(*[_safe_eval_node(arg, env) for arg in node.args])
+    raise ValueError("unsupported expression")
+
+
+def _safe_eval(expression, env):
+    """安全替代 eval()：先解析成 AST，再逐节点按白名单计算。"""
+    return _safe_eval_node(ast.parse(expression, mode="eval"), env)
 
 
 class XHMathExpression:
@@ -64,16 +129,15 @@ class XHMathExpression:
         a = float(kwargs.get("values.a", 0) or 0)
         b = float(kwargs.get("values.b", 0) or 0)
         c = float(kwargs.get("values.c", 0) or 0)
-        env = dict(_SAFE_GLOBALS)
-        env.update({
+        env = {
             "a": a, "b": b, "c": c,
             "abs": abs, "min": min, "max": max, "round": round, "pow": pow,
             "floor": math.floor, "ceil": math.ceil, "sqrt": math.sqrt,
             "exp": math.exp, "log": math.log, "sin": math.sin, "cos": math.cos,
             "tan": math.tan, "pi": math.pi, "e": math.e,
-        })
+        }
         try:
-            result = eval(expression, env)
+            result = _safe_eval(expression, env)
         except Exception as ex:
             print(f"[XiaoHei-表达式] 解析失败：{expression!r} -> {ex}（已返回 0，不中断流程）")
             result = 0.0
