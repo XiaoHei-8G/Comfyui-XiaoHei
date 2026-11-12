@@ -492,7 +492,7 @@
   · 各子模块内部**保持原样**：它们原有的相对导入（如 `from .py.xxx import`、
     `from .nodes import`、`from .h3ltx import`）因为原来是「包根 → 子目录」、
     现在是「子包根 → 子目录」，层级完全没变，所以**一行都不用改**
-  · 前端 js 全部汇到顶层 `web/`（全包唯一 `WEB_DIRECTORY`）。
+  · 前端 js 全部汇到顶层 `js/`（全包唯一 `WEB_DIRECTORY`；原为 `web/`，1.0.2 起改名）。
     它们内部的 `import { app } from "../../scripts/app.js"` 依赖「js 位于
     /extensions/<包名>/ 下一层」这个基准 —— 包名换了但层数没变，同样不用改
   · 旧包整份留底在 桌面\\AI创作产出\\备份_20260922\\合并前_6原包\\，可随时回滚

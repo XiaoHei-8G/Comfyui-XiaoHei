@@ -22,8 +22,10 @@ Icon = ""
 # zip_files 拿到转义串判 os.path.exists 为假，会打印 "File not found" 静默跳过。
 # includes 走 os.walk 直接读文件系统，绕开转义问题，把音效库强制带进发布包。
 # 1.0.0 的 Registry 包因此少了 35 个中文名 flac；1.0.1 起修好。
-includes = ["web/sounds"]
+# 1.0.2 目录重构后前端目录由 web/ 改名为 js/，此路径必须跟着改，
+# 否则下次发版（1.0.3）会重新静默丢掉全部 36 个中文名 flac。
+includes = ["js/sounds"]
 
-#  刻意【不】在这里写 web = "web"：
-# 本包已用 __init__.py 的 WEB_DIRECTORY = "web" 注册前端扩展。
+#  刻意【不】在这里写 web = "js"：
+# 本包已用 __init__.py 的 WEB_DIRECTORY = "js" 注册前端扩展。
 # 两处同时声明会让 ComfyUI 用两个不同的键注册同一个目录，js 有被加载两次的风险。
