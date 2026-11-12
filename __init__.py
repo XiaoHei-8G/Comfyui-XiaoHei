@@ -638,7 +638,7 @@ def _fail(mod, usage, deps, err):
 
 
 try:
-    from .memsaver import (
+    from .nodes.memsaver import (
         NODE_CLASS_MAPPINGS as _M_MEM,
         NODE_DISPLAY_NAME_MAPPINGS as _D_MEM,
     )
@@ -648,7 +648,7 @@ except Exception as _e:
     _M_MEM = _D_MEM = {}
 
 try:
-    from .image_tools import (
+    from .nodes.image_tools import (
         NODE_CLASS_MAPPINGS as _M_IMG,
         NODE_DISPLAY_NAME_MAPPINGS as _D_IMG,
     )
@@ -658,7 +658,7 @@ except Exception as _e:
     _M_IMG = _D_IMG = {}
 
 try:
-    from .h3ltx_adapter import (
+    from .nodes.h3ltx_adapter import (
         NODE_CLASS_MAPPINGS as _M_ADP,
         NODE_DISPLAY_NAME_MAPPINGS as _D_ADP,
     )
@@ -668,7 +668,7 @@ except Exception as _e:
     _M_ADP = _D_ADP = {}
 
 try:
-    from .ltx_identity import (
+    from .nodes.ltx_identity import (
         NODE_CLASS_MAPPINGS as _M_ID,
         NODE_DISPLAY_NAME_MAPPINGS as _D_ID,
     )
@@ -678,7 +678,7 @@ except Exception as _e:
     _M_ID = _D_ID = {}
 
 try:
-    from .seam_feather import (
+    from .nodes.seam_feather import (
         NODE_CLASS_MAPPINGS as _M_SEAM,
         NODE_DISPLAY_NAME_MAPPINGS as _D_SEAM,
     )
@@ -687,7 +687,7 @@ except Exception as _e:
     _M_SEAM = _D_SEAM = {}
 
 try:
-    from .chain_prompt import (
+    from .nodes.chain_prompt import (
         NODE_CLASS_MAPPINGS as _M_CHAIN,
         NODE_DISPLAY_NAME_MAPPINGS as _D_CHAIN,
     )
@@ -696,7 +696,7 @@ except Exception as _e:
     _M_CHAIN = _D_CHAIN = {}
 
 try:
-    from .controls import (
+    from .nodes.controls import (
         NODE_CLASS_MAPPINGS as _M_CTRL,
         NODE_DISPLAY_NAME_MAPPINGS as _D_CTRL,
     )
@@ -706,7 +706,7 @@ except Exception as _e:
     _M_CTRL = _D_CTRL = {}
 
 try:
-    from .audiosep import (
+    from .nodes.audiosep import (
         NODE_CLASS_MAPPINGS as _M_AUD,
         NODE_DISPLAY_NAME_MAPPINGS as _D_AUD,
     )
@@ -717,7 +717,7 @@ except Exception as _e:
     _M_AUD = _D_AUD = {}
 
 try:
-    from .lorastack import (
+    from .nodes.lorastack import (
         NODE_CLASS_MAPPINGS as _M_LRS,
         NODE_DISPLAY_NAME_MAPPINGS as _D_LRS,
     )
@@ -726,7 +726,7 @@ except Exception as _e:
     _M_LRS = _D_LRS = {}
 
 try:
-    from .slider import (
+    from .nodes.slider import (
         NODE_CLASS_MAPPINGS as _M_SLD,
         NODE_DISPLAY_NAME_MAPPINGS as _D_SLD,
     )
@@ -735,7 +735,7 @@ except Exception as _e:
     _M_SLD = _D_SLD = {}
 
 try:
-    from .setget import (
+    from .nodes.setget import (
         NODE_CLASS_MAPPINGS as _M_SG,
         NODE_DISPLAY_NAME_MAPPINGS as _D_SG,
     )
@@ -744,7 +744,7 @@ except Exception as _e:
     _M_SG = _D_SG = {}
 
 try:
-    from .xh_utils import (
+    from .nodes.xh_utils import (
         NODE_CLASS_MAPPINGS as _M_UTIL,
         NODE_DISPLAY_NAME_MAPPINGS as _D_UTIL,
     )
@@ -754,7 +754,7 @@ except Exception as _e:
     _M_UTIL = _D_UTIL = {}
 
 try:
-    from .seam_correct import (
+    from .nodes.seam_correct import (
         NODE_CLASS_MAPPINGS as _M_SCOR,
         NODE_DISPLAY_NAME_MAPPINGS as _D_SCOR,
     )
@@ -764,7 +764,7 @@ except Exception as _e:
     _M_SCOR = _D_SCOR = {}
 
 try:
-    from .soundboard import (
+    from .nodes.soundboard import (
         NODE_CLASS_MAPPINGS as _M_SND,
         NODE_DISPLAY_NAME_MAPPINGS as _D_SND,
     )
@@ -773,7 +773,7 @@ except Exception as _e:
     _M_SND = _D_SND = {}
 
 try:
-    from .storyboard import (
+    from .nodes.storyboard import (
         NODE_CLASS_MAPPINGS as _M_SB,
         NODE_DISPLAY_NAME_MAPPINGS as _D_SB,
     )
@@ -782,7 +782,7 @@ except Exception as _e:
     _M_SB = _D_SB = {}
 
 try:
-    from .camangle import (
+    from .nodes.camangle import (
         NODE_CLASS_MAPPINGS as _M_CAM,
         NODE_DISPLAY_NAME_MAPPINGS as _D_CAM,
     )
@@ -791,7 +791,7 @@ except Exception as _e:
     _M_CAM = _D_CAM = {}
 
 try:
-    from .caminfo import (
+    from .nodes.caminfo import (
         NODE_CLASS_MAPPINGS as _M_CAMINFO,
         NODE_DISPLAY_NAME_MAPPINGS as _D_CAMINFO,
     )
@@ -800,7 +800,7 @@ except Exception as _e:
     _M_CAMINFO = _D_CAMINFO = {}
 
 try:
-    from .msr_relay import (
+    from .nodes.msr_relay import (
         NODE_CLASS_MAPPINGS as _M_MSR,
         NODE_DISPLAY_NAME_MAPPINGS as _D_MSR,
     )
@@ -809,7 +809,7 @@ except Exception as _e:
     _M_MSR = _D_MSR = {}
 
 try:
-    from .paint import (
+    from .nodes.paint import (
         NODE_CLASS_MAPPINGS as _M_PAINT,
         NODE_DISPLAY_NAME_MAPPINGS as _D_PAINT,
     )
@@ -823,7 +823,7 @@ except Exception as _e:
 #   原包两个 Qwen 对齐模块顶层 import scipy（本机 .venv 已装 1.18.0）；
 #   wepenerd/__init__.py 内已逐个 try 隔离，缺 scipy 只少那几个节点，H3 Ripple 主链路照常。
 try:
-    from .wepenerd import (
+    from .nodes.wepenerd import (
         NODE_CLASS_MAPPINGS as _M_WN,
         NODE_DISPLAY_NAME_MAPPINGS as _D_WN,
     )
@@ -837,7 +837,7 @@ except Exception as _e:
 #   只换接线（XHLabelPix / xh-lbl- / XH.LabelPix）+ 界面文案全量中文。
 #   与自家 XiaoHei-标签（XHLabel）并存，老工作流存档零影响。
 try:
-    from .label_pix import (
+    from .nodes.label_pix import (
         NODE_CLASS_MAPPINGS as _M_LP,
         NODE_DISPLAY_NAME_MAPPINGS as _D_LP,
     )
@@ -850,7 +850,7 @@ except Exception as _e:
 #   节点脸上的齿轮 → 右侧浮动设置窗口，骨架复用本包 web/shared/node_panel.mjs。
 #   界面全中文、配色只取官方 CSS 变量、图案走自有图标库；class_type = XH_TagPrompt。
 try:
-    from .tag_prompt import (
+    from .nodes.tag_prompt import (
         NODE_CLASS_MAPPINGS as _M_TAG,
         NODE_DISPLAY_NAME_MAPPINGS as _D_TAG,
     )
@@ -864,7 +864,7 @@ except Exception as _e:
 #   后端只按顺序拼接。界面全中文、配色只取官方 CSS 变量、图案走自有图标库；
 #   class_type = XH_PromptStack，显示名 XiaoHei-提示词堆叠。
 try:
-    from .prompt_stack import (
+    from .nodes.prompt_stack import (
         NODE_CLASS_MAPPINGS as _M_PS,
         NODE_DISPLAY_NAME_MAPPINGS as _D_PS,
     )
@@ -880,7 +880,7 @@ except Exception as _e:
 #   KJNodes 是**可选**的 —— 有就多两层低显存补丁（8GB 强烈建议），没有就跳过这两层，
 #   仍可运行，只是峰值显存更高（启动日志会点名说明跳过了什么）。
 try:
-    from .openh3 import (
+    from .nodes.openh3 import (
         NODE_CLASS_MAPPINGS as _M_OH3,
         NODE_DISPLAY_NAME_MAPPINGS as _D_OH3,
     )
@@ -897,7 +897,7 @@ except Exception as _e:
 #     scipy.ndimage 的 EDT 已换成 cv2.distanceTransform（cv2 是家族存量依赖），
 #     15 组用例逐像素实测 0 差异。原包照旧可装，class_type 全改 XiaoHei 前缀，互不干扰。
 try:
-    from .qwen21_edit import (
+    from .nodes.qwen21_edit import (
         NODE_CLASS_MAPPINGS as _M_QE,
         NODE_DISPLAY_NAME_MAPPINGS as _D_QE,
     )
@@ -907,7 +907,7 @@ except Exception as _e:
 
 # 小黑·全能角色设定表（复刻 + 优化 H3-Character-Sheet-Designer v1.3，MIT 署名保留）
 try:
-    from .charsheet import (
+    from .nodes.charsheet import (
         NODE_CLASS_MAPPINGS as _M_CS,
         NODE_DISPLAY_NAME_MAPPINGS as _D_CS,
     )
@@ -956,7 +956,7 @@ _PARTS = tuple(
 # 关掉：环境变量 XH_SAM3_KEEP_OCCLUDED=0
 # ---------------------------------------------------------------------------
 try:
-    from .xh_utils.sam3_patch import apply_patch as _xh_sam3_patch
+    from .nodes.xh_utils.sam3_patch import apply_patch as _xh_sam3_patch
     _xh_sam3_patch()
 except Exception as _e:      # noqa: BLE001
     print(f"[XiaoHei]  SAM3 稳像补丁未挂载（其余功能正常）：{_e}")
@@ -980,9 +980,9 @@ for _mod, _cm, _dm in _PARTS:
 
 #  全包唯一的 WEB_DIRECTORY —— 28 个前端 js（中/EN 切换 + 参数标签本地化 +
 #    controls 三件套的界面 + 声音播放的前端）全部放在这里。
-#    子模块里也各有一句 WEB_DIRECTORY = "web"，但那是死变量：
+#    子模块里也各有一句 WEB_DIRECTORY = "js"，但那是死变量：
 #    ComfyUI 只认顶层自定义节点目录的声明，子目录里的不会被读取。
-WEB_DIRECTORY = "web"
+WEB_DIRECTORY = "js"
 
 # ---------------------------------------------------------------------------
 #  设置面板「关于」徽章的数据源（2026-10-20 新增）
