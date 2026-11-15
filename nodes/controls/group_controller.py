@@ -8,33 +8,23 @@ class XHGroupController:
     """分组控制：在画布上给一组节点做整体开关/分组管理（界面在 web/xh_group.js）。"""
 
     DESCRIPTION = (
-        "【干什么】一个「组开关」：把若干条通路接到它上面，由界面上的按钮统一控制这一组的通断 / 顺序，"
-        "用来快速对比同一套工作流里不同分支的效果。\n"
-        "【怎么配】· opt：任意类型（*）的可选输入，接什么都不会改写数据\n"
-        "【怎么用】节点上的界面列出接进来的每一路，点一下就能把那一路单独拎出来跑。"
+        "【干什么】一个「组开关」：在画布上给一组节点做整体开/关，由界面上的按钮统一控制这一组的通断。\n"
+        "【怎么用】节点自己就是一块面板，列出画布（含子图）里的每一组，点一下就能单独开/关那一组。"
         "适合「几个采样器 / 几套提示词换着试」的场景。\n"
-        "【输出】OPT_CONNECTION（*）：原样透传，**不做任何处理**。\n"
-        " 它是纯控制用的便利节点，删掉不影响主干逻辑。"
+        " 它是纯控制用的便利节点，没有数据端口，删掉不影响主干逻辑。"
     )
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {}, "optional": {"opt": ("*", {
-            "raw": True,
-            "tooltip": (
-                "任意类型的透传口：接进来什么值，输出就是什么值，**本节点不做任何计算**。\n"
-                "它的作用是让你能在界面上按组切换这一路要不要往下参与。"
-            ),
-        })}}
+        return {"required": {}, "optional": {}}
 
-    RETURN_TYPES = ("*",)
-    RETURN_NAMES = ("OPT_CONNECTION",)
+    RETURN_TYPES = ()
+    RETURN_NAMES = ()
     FUNCTION = "noop"
     CATEGORY = "XiaoHei/工具"
-    OUTPUT_NODE = True
 
-    def noop(self, opt=None):
-        return (None,)
+    def noop(self):
+        return ()
 
 
 NODE_CLASS_MAPPINGS = {"XHGroupController": XHGroupController}

@@ -30,6 +30,49 @@ const HELP_DEFS = [
 <p style="font-size:12px;opacity:.75">提示：输入端是编辑器动态生成的占位槽，具体说明在编辑器界面内。</p>
 </div>`,
   },
+  {
+    //  2026-11-14：1:1 复刻进小黑家族的「小黑·全能角色设定表」（XiaoHeiCharacterSheet）。
+    //    它的 CATEGORY 是「小黑家族」而不是 XiaoHei/*，原先 buildIndex 会把整个节点过滤掉；
+    //    且后端 DESCRIPTION 是原版英文，故在这里补一条中文说明。
+    cls: "XiaoHeiCharacterSheet",
+    title: "小黑·全能角色设定表",
+    icon: xhIconHTML("user", { size: 22, color: "brand" }),
+    tagline: "小黑角色设定表：13 视图点选、Auto/Manual 排版，提示词可按 MiniMax H3 Image 或千问 2.1 的格式输出",
+    help: `<div style="line-height:1.85">
+<p><b>这是什么</b></p>
+<p>给 <b>MiniMax H3 Image</b> 或 <b>千问 2.1（Qwen-Image 2.1）</b> 生成角色设定表（character sheet）的专用节点：点缩略图选 13 种视图，自动排版并算出画布尺寸，把角色主图与附加参考图一起编译成提示词和 5 张图片输出。节点上的<b>「下游模型格式」</b>下拉决定提示词写成哪种模型的口径。只适配图像模型，不适配 H3 视频。</p>
+<p><b>怎么用</b></p>
+<ul>
+<li><b>点上面的缩略图选视图</b>：13 个视图（头部特写 / 全身 / 服装正反 / 手 / 脚等），选中后下方立刻显示排版预览。也可以用「预设」下拉一次套一组常用视图。</li>
+<li><b>Auto / Manual</b>：Auto 由所选视图自动算出画布尺寸；Manual 自己填宽高，预览按真实宽高比变化。</li>
+<li><b>参考图靠面板选作用部位</b>：在面板里给每张参考图指定角色（同一角色 / 脸 / 服装 / 手 / 鞋等），不是靠文字描述。空着的参考图接口会自动跳过、图片编号重新排。</li>
+<li><b>标签页</b>：「布局」调排版、「部位指定」改各部位指令、「风格 / 设置」调渲染细节与生成尺寸，「提示词」页可逐视图改基础提示词；下方还有编译出来的完整提示词。</li>
+</ul>
+<p><b>接线</b></p>
+<p>输入：<b>character_image</b>（角色主图，<b>可选</b>）、<b>reference_image_1~3</b>（可选）、<b>use_layout_image</b>（是否输出排版图）、<b>style</b>（风格）、<b>model_format</b>（下游模型格式）。<br>
+输出：<b>prompt</b>（STRING）、<b>width / height</b>（INT）、<b>negative_prompt</b>（STRING，负向提示词），以及 <b>layout_image、character_image、reference_image_1~3</b> 五张 IMAGE。关掉排版图时那一路是空（None）。</p>
+<p><b>两种模型格式</b></p>
+<ul>
+<li><b>H3 Image</b>：提示词写成 H3 Image 的角色指令口径。接到 <b>MiniMax H3 Image Conditioning</b> 的 prompt；五张图按这个顺序接它的 images 槽位（槽位名从 0 起）：<b>角色主图 → image_0，排版参考图 → image_1，附加参考 1/2/3 → image_2 / image_3 / image_4</b>。<b>negative_prompt</b> 是空的。</li>
+<li><b>千问 2.1</b>：提示词改成自然语言，开头附一份「Reference image 1 / 2 / 3…」的参考图清单。接到千问文本编码节点的 prompt，图片<b>按清单里的顺序</b>接它的图片槽位，<b>negative_prompt</b> 接它的负向提示词框。<br>
+  注意两版千问编码器槽位名不一样：<b>TextEncodeQwenImage21</b> 是 <b>image_1 ~ image_16</b>（从 1 起），<b>TextEncodeQwenImage21GH</b> 是 <b>image_01 ~ image_10</b>（带前导零）。<b>哪版都行，照你手上那个节点的槽位名接。</b></li>
+<li><b>两种格式的图片编号规则相同</b>：主图 → 排版图 → 参考图 1/2/3，没接的跳过、往下排。千问模式里同一个位置叫「Reference image N」。</li>
+<li><b>认准「图片编号」不是「输出口下标」</b>：本节点输出端口里<b>排版参考图排在角色主图前面</b>（第 4、第 5 个 IMAGE 输出口），但下游只看<b>你把图接到了第几号槽位</b>，接错号就会图和提示词对不上。</li>
+</ul>
+<p><b>不接图也能用</b></p>
+<ul>
+<li><b>纯文字模式</b>：<b>character_image</b> 不接线也能跑，面板顶部会显示「纯文字模式」。此时角色长相完全由「部位指定」页的文字决定，提示词里不会出现任何图片引用。</li>
+<li><b>编号会自动重排</b>：没接主图时，剩下的排版图 / 参考图依次占用第 1、2、3 号。所以<b>下游要按「谁排第几」重新接</b> —— 没接主图时排版图接 <b>image_0</b>，参考图依次接 <b>image_1 / image_2 / image_3</b>；接了主图就回到主图接 image_0、排版图接 image_1 的老接法。</li>
+<li><b>接了主图 = 老样子</b>：主图始终占第 1 号，H3 模式提示词与以前逐字相同，行为一点没改。</li>
+</ul>
+<p><b>注意</b></p>
+<ul>
+<li><b>state_json 不要手改</b>：由面板自动管理，存的是 schema_version 3 的合法格式。旧工作流里若残留早期版本的数据，会自动归一成默认值。</li>
+<li>节点搜索框输「<b>小黑</b>」「<b>MiniMax</b>」或「<b>千问</b>」能找到它；也可在菜单「小黑家族」里直接拖。</li>
+<li>改后端代码要<b>完全重启 ComfyUI</b>，只改前端时 <b>Ctrl+F5</b> 强刷即可。</li>
+</ul>
+</div>`,
+  },
 ];
 
 // ═══════════════════════════════════════════════════════
@@ -60,6 +103,8 @@ const CATEGORY_ICONS = {
   "Character": "user",
   // 专题分组（XiaoHei 指南）
   "XiaoHei 指南": "book-open",
+  //  2026-11-14：角色表节点归入「小黑家族」分类
+  "小黑家族": "user",
 };
 function catIcon(name) { return CATEGORY_ICONS[name] || ""; }
 //  节点图标：关键词优先（更贴切），其次按分类，最后兜底 box
@@ -546,7 +591,8 @@ const XH_NODE_COLORS = {
   "XiaoHei/音频工具":     { title: "#2f8f6f", body: "#0f2b22" },
   "XiaoHei/导演台":      { title: "#b0772c", body: "#2a1c0e" },
   "XiaoHei/Character":  { title: "#9a4fb0", body: "#231433" },
-  "XiaoHei/指南":        { title: "#01386A", body: "#11283f" }
+  "XiaoHei/指南":        { title: "#01386A", body: "#11283f" },
+  "小黑家族":            { title: "#9a4fb0", body: "#231433" }
 };
 
 async function buildIndex() {
@@ -559,7 +605,10 @@ async function buildIndex() {
       const def = d[type] || {};
       const cat = def.category || "";
       const replica = isWNReplica(type);
-      if (!cat.startsWith("XiaoHei") && !replica) continue;
+      //  2026-11-14：1:1 复刻的角色表节点 CATEGORY 是「小黑家族」而不是 XiaoHei/*，
+      //    原先这里会把它整个过滤掉 ⇒ 帮助里搜「小黑」只剩一条「交流反馈」。
+      //    按分类精确放行（不放宽到任意中文分类，避免把别人的节点收进来）。
+      if (!cat.startsWith("XiaoHei") && cat !== "小黑家族" && !replica) continue;
       if (cat === "_internal") continue;             // 内部快照节点不进帮助侧栏
       const helpDef = HELP_DEFS.find((h) => h.cls === type) || {};
       // 复刻节点 CATEGORY 已是 XiaoHei/Video·XiaoHei/Image·XiaoHei/工具 ⇒ 直接按真实分类归组（不再堆「复刻」分组）
@@ -724,7 +773,7 @@ function renderSidebar(activeEntry) {
     const grpWrap = el("div", "xhhelp-grp");
     const headClass = "xhhelp-grp-head" + (g.open ? " xhhelp-grp-open" : "");
     const head = el("div", headClass);
-    head.innerHTML = `<span class="xhhelp-grp-arrow">▶</span>
+    head.innerHTML = `<span class="xhhelp-grp-arrow">${xhIconHTML("chevron-right", { size: 12, color: "current" })}</span>
       <span class="xhhelp-grp-ic">${catIconHTML(g.name, null, { size: 14 })}</span>
       <span class="xhhelp-grp-label">${esc(catZh(g.name))}</span>
       <span class="xhhelp-grp-count">${g.items.length}</span>`;
@@ -847,7 +896,14 @@ function renderContactExtras(wrap) {
 }
 function renderSearch(q) {
   const main = S.win.querySelector(".xhhelp-main"); main.innerHTML = "";
-  const hits = S.index.filter((it) => it.title.toLowerCase().includes(q) || it.cls.toLowerCase().includes(q) || (it.tagline || "").toLowerCase().includes(q));
+  //  2026-11-14：分类名也参与搜索（「小黑家族」「图像」「视频」等），
+  //    否则按家族中文名搜时，节点明明在侧栏里却一个都搜不到。
+  const hits = S.index.filter((it) =>
+    it.title.toLowerCase().includes(q) ||
+    it.cls.toLowerCase().includes(q) ||
+    (it.tagline || "").toLowerCase().includes(q) ||
+    (it.cat || "").toLowerCase().includes(q) ||
+    (it.groupLabel || "").toLowerCase().includes(q));
   if (!hits.length) { main.innerHTML = `<div style="padding:20px;opacity:.6;text-align:center;">没有找到匹配 "${esc(q)}" 的组件。</div>`; return; }
   const h = el("p"); h.style.cssText = "font-weight:700;color:var(--xh-text);margin:0 0 10px;font-size:14px";
   h.textContent = `找到 ${hits.length} 个结果`; main.appendChild(h);
@@ -1062,7 +1118,9 @@ function toggle() { ensureWindow(); if (S.win.style.display === "flex") close();
 //  缓存只在「XiaoHei 节点集合变了」时失效：存的是节点类型清单，比对不一致就重建。
 //  2026-11-10：v1 缓存里没有「设置项说明」专题（专题 help 也换成了实时正文）⇒ 换 key 让旧缓存自然失效。
 //  2026-11-12：追加节点「端口预览」数据（preview 字段）⇒ 升 v3 让旧缓存自然失效重建。
-const IDX_CACHE_KEY = "XH.Help.index.v4";
+//  2026-11-14：索引收录范围新增「小黑家族」分类 + 角色表节点中文说明
+//    ⇒ 升 v5 让浏览器里 v4 旧缓存自然失效重建（否则改了代码也还是搜不到）。
+const IDX_CACHE_KEY = "XH.Help.index.v5";
 
 function readIdxCache() {
   try {

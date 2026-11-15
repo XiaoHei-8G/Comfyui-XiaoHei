@@ -12,7 +12,7 @@
 //
 // 零 Python 改动、零第三方依赖。
 
-import { installTitleAutoColor, refreshVueTitles, helpIconHTML } from "./xh_ui_kit.js";
+import { installTitleAutoColor, refreshVueTitles, helpIconHTML, xhIconHTML } from "./xh_ui_kit.js";
 import { creatXHColorPicker } from "./xh_color_picker.js";
 import { iXHNode, isVueNodes } from "./xh_undo_remount.js";
 import { refreshNode } from "./xh_brand.js";
@@ -357,7 +357,8 @@ function makePalShell(titleText) {
   const closeX = document.createElement("button");
   closeX.type = "button";
   closeX.className = "xh-nc-pal-close";
-  closeX.textContent = "✕";
+  //  2026-11-13 家族图标统一：Unicode ✕ → 图标库「关闭」→ x。
+  closeX.innerHTML = xhIconHTML("关闭", { size: 12, color: "current" });
   closeX.title = "Close";
   header.appendChild(titleEl);
   header.appendChild(closeX);
@@ -715,11 +716,108 @@ function openNodeColorsPalette(targets, node) {
 const OPEN_CMD = "XH.OpenColors";
 const CLIP_KEY = "XH.NodeColorClipboard";
 
-//  2026-11-06 家族菜单统一：右键菜单四项一律挂家族图案，**唯一真源只此一处**。
-//    依据：xh_brand.js 的 CATEGORY_PREFIX = "XiaoHei"（123 个家族节点的分类前缀）、
-//    xh_animated_links.js 明文「加  家族图标（与节点标题 XiaoHei-xxx 统一）」、
-//    设置分类「 XiaoHei」。要换图案只改这一行，别再各写各的功能 emoji。
-const FAMILY_ICON = "";
+// ══════════════════════════════════════════════════════════════════════
+//  2026-11-13 右键菜单图标：家族统一改用**官方 MDI 字体图标**
+// ──────────────────────────────────────────────────────────────────────
+//  为什么不塞进 content：官方 treeUtil-DQP-z4_o.js 的 ContextMenu.addItem 会把含标签的
+//  content 先过 DOMPurify：ALLOWED_TAGS 只有 span/b/i/em/strong、ALLOWED_ATTR 只有 style，
+//  style 内 CSS 属性又只准 display/color/background-color/padding-left/border-left
+//  ⇒ <svg> / <img> / class / mask 全被剥光。Vue「更多选项」菜单更直接把 content 当纯文本 label。
+//  所以 content 保持纯文字，图标在**菜单 DOM 出现后由我们自己 createElement 插进去**
+//  （自己建的 DOM 不过 sanitizer）。图标源 = 官方全局已加载的 Material Design Icons 7.4.47。
+//  自家 2350 枚 Lucide SVG（js/xh_icons/）版权没问题，但这一格塞不进；节点内 UI / 浮层照常用。
+// ══════════════════════════════════════════════════════════════════════
+const MENU_ICONS = {
+    "节点配色": "mdi-palette",
+    "复制节点颜色": "mdi-content-copy",
+    "粘贴节点颜色": "mdi-content-paste",
+    "恢复默认配色": "mdi-backup-restore",
+};
+const MENU_ICON_CSS_ID = "xh-menu-icon-css";
+
+/** 按菜单文字找图标；兼容多选后缀「（N 个节点）」。 */
+function xhMenuIconFor(text) {
+    const s = String(text || "").trim();
+    for (const label of Object.keys(MENU_ICONS)) {
+        if (s === label || s.startsWith(label + "（")) return MENU_ICONS[label];
+    }
+    return null;
+}
+
+function xhInjectMenuIconCSS() {
+    if (document.getElementById(MENU_ICON_CSS_ID)) return;
+    const st = document.createElement("style");
+    st.id = MENU_ICON_CSS_ID;
+    st.textContent = `
+.xh-menu-icon.mdi {
+  display: inline-block;
+  width: 16px; height: 16px;
+  margin-right: 8px;
+  font-size: 16px; line-height: 16px;
+  vertical-align: -3px;
+  pointer-events: none;
+  flex-shrink: 0;
+  color: var(--xh-primary, #E8A33C);
+  color: color-mix(in srgb, var(--xh-primary, #E8A33C) 78%, currentColor);
+}
+`;
+    document.head.appendChild(st);
+}
+
+/** 给单个菜单项前面插一枚官方图标，幂等。 */
+function xhDecorateMenuEntry(el, hintedIcon) {
+    if (!el || el.dataset.xhMenuIcon || el.querySelector(".xh-menu-icon")) return;
+    // 传统 LiteGraph 菜单把整个菜单项对象挂在 el.value 上，最稳；Vue 菜单只能按文字认。
+    // 任何一路给脏值都继续往下找，别把整项图标吞掉。
+    const valid = (v) => typeof v === "string" && /^mdi-[a-z0-9-]+$/.test(v);
+    const icon = valid(hintedIcon) ? hintedIcon
+               : valid(el.value?.xhIcon) ? el.value.xhIcon
+               : xhMenuIconFor(el.textContent);
+    if (!valid(icon)) return;
+    const i = document.createElement("i");
+    i.className = "mdi " + icon + " xh-menu-icon";
+    i.setAttribute("aria-hidden", "true");
+    el.insertBefore(i, el.firstChild);
+    el.dataset.xhMenuIcon = icon;
+}
+
+/** 菜单是「用完即毁」的动态 DOM ⇒ 观察 body 下新增节点，两套渲染器一并覆盖。 */
+function xhInstallMenuIcons() {
+    xhInjectMenuIconCSS();
+    if (window.__xhMenuIconsInstalled) return;
+    window.__xhMenuIconsInstalled = true;
+
+    const scan = (root) => {
+        if (!root || root.nodeType !== 1) return;
+        const SEL = ".litemenu-entry, [role='menuitem']";
+        try {
+            if (root.matches?.(SEL)) xhDecorateMenuEntry(root);
+            for (const el of root.querySelectorAll?.(SEL) || []) xhDecorateMenuEntry(el);
+        } catch (e) { /* 单项失败不影响其它菜单 */ }
+    };
+
+    const start = () => {
+        scan(document.body);
+        // 一帧内多次 DOM 变动合并成一次扫描：画布/日志频繁增删节点也不拖慢界面。
+        const pending = new Set();
+        let scheduled = false;
+        const flush = () => {
+            scheduled = false;
+            for (const n of pending) scan(n);
+            pending.clear();
+        };
+        const mo = new MutationObserver((records) => {
+            for (const r of records) for (const n of r.addedNodes) pending.add(n);
+            if (!scheduled && pending.size) {
+                scheduled = true;
+                (window.requestAnimationFrame || ((f) => setTimeout(f, 16)))(flush);
+            }
+        });
+        mo.observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.body) start();
+    else document.addEventListener("DOMContentLoaded", start, { once: true });
+}
 
 /** 节点当前生效的颜色（显式覆盖 → 类默认 → LiteGraph 主题默认）。 */
 function captureColors(node) {
@@ -819,6 +917,7 @@ app.registerExtension({
 
   setup() {
     injectCSS();
+    xhInstallMenuIcons();   // 右键菜单四项的官方 MDI 图标（DOM 后注入，绕开菜单 HTML 白名单）
   },
 
   commands: [
@@ -841,7 +940,7 @@ app.registerExtension({
   //  2026-11-06：不再实现 getSelectionToolboxCommands ⇒ 工具条上不再多出一颗调色板。
   //    节点配色统一从右键菜单「 节点配色」/ 更多选项 / Shift+\ 进（功能不丢）。
 
-  // 右键菜单四项一律用 FAMILY_ICON（模块顶层常量），别再各写各的功能 emoji。
+  // 右键菜单四项的图标统一由 MENU_ICONS + xhDecorateMenuEntry 注入（官方 MDI 字体图标）。
 
   // 节点右键菜单 —— 对**任何节点**开放（官方节点也能配）。
   getNodeMenuItems(node) {
@@ -851,17 +950,20 @@ app.registerExtension({
     const items = [
       null,
       {
-        content: `${FAMILY_ICON} 节点配色${suffix}`,
+        content: `节点配色${suffix}`,
+        xhIcon: MENU_ICONS["节点配色"],
         callback: () => openNodeColorsPalette(targets, node),
       },
       {
-        content: `${FAMILY_ICON} 复制节点颜色`,
+        content: "复制节点颜色",
+        xhIcon: MENU_ICONS["复制节点颜色"],
         callback: () => { writeClip(captureColors(node)); notifyGraphChangedSafe(); },
       },
     ];
     if (readClip()) {
       items.push({
-        content: `${FAMILY_ICON} 粘贴节点颜色${suffix}`,
+        content: `粘贴节点颜色${suffix}`,
+        xhIcon: MENU_ICONS["粘贴节点颜色"],
         callback: () => {
           const c = readClip();
           if (!c) return;
@@ -871,7 +973,8 @@ app.registerExtension({
       });
     }
     items.push({
-      content: `${FAMILY_ICON} 恢复默认配色${suffix}`,
+      content: `恢复默认配色${suffix}`,
+      xhIcon: MENU_ICONS["恢复默认配色"],
       callback: () => { resetColors(targets); notifyGraphChangedSafe(); },
     });
     return items;

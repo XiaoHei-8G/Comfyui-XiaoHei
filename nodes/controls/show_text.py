@@ -1,84 +1,82 @@
-# XiaoHei-显示文本（XiaoHei 家族）
+# XiaoHei-预览任意（XHShowText）· 官方 PreviewAny 的 1:1 复刻
 #
-# 仿 comfyui-custom-scripts（pysssss）的 `ShowText|pysssss` 做的 XiaoHei 版（2026-10-09 读本地源码核对）。
-# **机制与官方逐字一致**（这是它唯一正确的做法，别"优化"掉任何一条）：
-#   ① `text` 用 forceInput —— 只当输出口用，不给手动填写的框；
-#   ② INPUT_IS_LIST + OUTPUT_IS_LIST —— 官方同款，接什么都能过（字符串 / 列表都行）；
-#   ③ OUTPUT_NODE = True —— 它是"终点"节点，跑流程时必须执行它，画面才会把文本刷出来；
-#   ④ 执行时把收到的 text **回写进工作流存档**（`node["widgets_values"] = [text]`）——
-#      这样保存工作流后重开，上次显示的内容还在（前端 onConfigure 从存档恢复）；
-#   ⑤ 返回 `{"ui": {"text": text}, "result": (text,)}` —— ui 部分给前端 onExecuted 刷显示，
-#      result 照原样传出去 ⇒ 可以串在链路中间当"窥视口"，不影响下游。
+# 2026-11-14 用户要求「完全复刻官方预览任意节点」。本轮真源（全部本机实读）：
+#   · comfy_extras/nodes_preview_any.py     → class PreviewAny
+#   · static/assets/core-*.js               → Comfy.PreviewAny 扩展，并把
+#       addTextPreviewWidgets / updateTextPreviewWidgets 公开到
+#       window.comfyAPI.textPreviewWidgets
+#   · static/assets/WidgetTextPreview-*.js  → 官方显示组件（Textarea / Markdown
+#       渲染 / hover 复制·下载）
+#   · static/assets/nodeDefs-*(zh).js       → 中文名「预览任意」、端口「源」
+#   · /object_info/PreviewAny               → 服务端真实 schema
 #
-# 比官方多做的事（都不改机制）：
-#   · 中文显示名 + 端口中英切换（家族 i18n，见 web/xh_show_text.js）；
-#   · 节点上自带  复制按钮 —— 一键把当前显示的文本拷进剪贴板（官方是靠前端自带的角标，不明显）；
-#   · 显示文本框样式统一成家族风（只读、淡显、等宽换行）。
+# 复刻清单（与官方逐项对齐，⛔ 别再自作主张改）：
+#   ① 输入名 source，类型 "*"（= IO.ANY），spec 空 {}（**没有 forceInput**）；
+#      前端对 "*" 天然只画端口不画输入框（app-*.js 的 addInputSocket 实锤）。
+#   ② RETURN_TYPES = ("STRING",)，输出的是**转好的可读字符串**，不是原始对象。
+#   ③ FUNCTION = "main"、OUTPUT_NODE = True、DESCRIPTION 与官方中文一致。
+#   ④ 序列化算法照搬：set_printoptions(edgeitems=6) → str / json.dumps(indent=4,
+#      ensure_ascii=False) / str 兜底 → 恢复 printoptions。
+#   ⑤ 返回 {"ui": {"text": (value,)}, "result": (value,)}（单元素 tuple；官方前端
+#      toPreviewText 会把数组用 \n\n 拼起来）。
+#   ⑥ 前端 js/xh_show_text.js 直接调官方公开 API 挂 preview_text 组件 +
+#      preview_mode(Plain text / Markdown) 切换 ⇒ 与官方同一套 Vue 组件。
 #
-#  家族规范：class_type 与 web/xh_show_text.js 里的 NODE_TYPE 必须逐字一致。
-#  照抄提醒：hidden 里的 unique_id / extra_pnginfo 必须原样保留，
-#   少了任何一个，"重开工作流还能看到上次文本"就失效（其余功能不受影响）。
+# 🔴 唯一与官方不同（刻意保留，别改回去）：
+#   source 放 **optional** 而不是 required。官方自己空输入提交会被判
+#   required_input_missing（本机 validate_prompt 实测 valid=False）⇒ 节点套红框，
+#   正是 2026-11-14 用户报过的那个 bug。复刻不复制 bug；代价仅是端口点是空心圆。
+#
+# 家族归属（不影响外观）：class_type 仍是 XHShowText（老工作流认得出）、
+#   CATEGORY "XiaoHei/工具"、中文显示名「预览任意」、SEARCH_ALIASES 保留旧叫法
+#   「显示任何 / 显示文本」⇒ 老用户照旧搜得到。
+
+import json
+
+import torch
 
 
 class XHShowText:
-    """把链路上任意字符串显示在节点上（只读），并可原样传给下游 —— Show Text 的 XiaoHei 版。"""
+    """预览任意 —— 官方 PreviewAny 的 XiaoHei 复刻（详见文件头复刻清单）。"""
 
     @classmethod
     def INPUT_TYPES(cls):
         return {
-            "required": {
-                "text": ("STRING", {
-                    "forceInput": True,
-                    "tooltip": (
-                        "【 要显示的文本】接上游任意 STRING 输出，原样显示在节点面板上，也原样往下传。\n"
-                        "典型用法：把提示词 / 报告 / 日志接到这里，边跑边看内容对不对。\n"
-                        " 只做「显示 + 透传」，不改一个字；节点上有「」按钮可一键复制。"
-                    ),
-                }),
-            },
-            "hidden": {
-                "unique_id": "UNIQUE_ID",
-                "extra_pnginfo": "EXTRA_PNGINFO",
+            "required": {},
+            "optional": {
+                "source": ("*", {}),
             },
         }
 
-    INPUT_IS_LIST = True
     RETURN_TYPES = ("STRING",)
-    FUNCTION = "notify"
+    FUNCTION = "main"
     OUTPUT_NODE = True
-    OUTPUT_IS_LIST = (True,)
 
     CATEGORY = "XiaoHei/工具"
-    DESCRIPTION = (
-        "【干什么】把链路上任意字符串**显示在节点上**（只读），并原样传给下游。\n"
-        "【怎么用】· 接 XiaoHei-色调补偿 的 info 口看补偿参数；接表达式求值 / 分段表 / 提示词表看运行结果；\n"
-        "· 它是 OUTPUT_NODE：链路末端光有它也能跑 —— 想只看内容不用出图时，拿它当终点。\n"
-        "【输出】STRING：收到的文本原样传出（列表进列表出），串在中间不影响下游。\n"
-        "【存档】显示的内容会写进工作流存档 ⇒ 保存后重开，上次显示还在。\n"
-        " 文本只在**跑的时候**刷新 —— 改了上游没重跑，这里还是旧内容，不是坏了。"
-    )
+    SEARCH_ALIASES = [
+        "preview", "preview text", "show output", "inspect", "debug",
+        "print value", "show text", "预览任意", "显示任何", "显示文本",
+    ]
+    DESCRIPTION = "将任意输入值以文本形式预览。"
 
-    def notify(self, text, unique_id=None, extra_pnginfo=None):
-        # 与官方 ShowText|pysssss 逐字一致的存档回写逻辑
-        if unique_id is not None and extra_pnginfo is not None:
-            if not isinstance(extra_pnginfo, list):
-                print("Error: extra_pnginfo is not a list")
-            elif (
-                not isinstance(extra_pnginfo[0], dict)
-                or "workflow" not in extra_pnginfo[0]
-            ):
-                print("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
-            else:
-                workflow = extra_pnginfo[0]["workflow"]
-                node = next(
-                    (x for x in workflow["nodes"] if str(x["id"]) == str(unique_id[0])),
-                    None,
-                )
-                if node:
-                    node["widgets_values"] = [text]
-
-        return {"ui": {"text": text}, "result": (text,)}
+    def main(self, source=None):
+        torch.set_printoptions(edgeitems=6)
+        value = "None"
+        if isinstance(source, str):
+            value = source
+        elif isinstance(source, (int, float, bool)):
+            value = str(source)
+        elif source is not None:
+            try:
+                value = json.dumps(source, indent=4, ensure_ascii=False)
+            except Exception:
+                try:
+                    value = str(source)
+                except Exception:
+                    value = "source exists, but could not be serialized."
+        torch.set_printoptions()
+        return {"ui": {"text": (value,)}, "result": (value,)}
 
 
 NODE_CLASS_MAPPINGS = {"XHShowText": XHShowText}
-NODE_DISPLAY_NAME_MAPPINGS = {"XHShowText": "显示文本"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XHShowText": "预览任意"}

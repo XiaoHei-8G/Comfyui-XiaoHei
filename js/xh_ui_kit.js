@@ -417,20 +417,23 @@ export function refreshVueTitles() {
             //    CATEGORY_PREFIX），以及 class_type 的「XH_」前缀（底层类型名未改）。节点标题已不再
             //    带品牌前缀，故这里仅作最后的宽松兜底；真正可靠的是上面的 _xhCatHexOfDom + 第三重
             //    data-xh-family 属性（子图 / Vue 重渲染时仍认得出来）。
-            if (!isXH) {
+            if (!isXiaoHei) {
                 try { isXiaoHei = /\s*XH|XiaoHei-|XiaoHei/.test(el.textContent || ""); } catch (e) {}
             }
             //  第三重兜底（2026-11-08 改）：有些家族节点把 this.title 设成空串
             //    （XiaoHei-标签 就是 this.title = ""），文本判据必漏；但只要之前成功认过一次，
             //    节点根上就留着 data-xh-family="1"（Vue 只 patch 自己的 class，不擦 data-*）
             //    ⇒ 照样认得出来。 分类小方块 .xh-cat-dot 已取消，不能再拿它当判据。
-            if (!isXH) {
+            //  2026-11-13 修：原来三处都写成未定义的 `isXH` ⇒ 每次刷新标题栏必抛
+            //    ReferenceError，整轮 run() 被拦腰截断，标题栏加粗 / 金线全都不生效。
+            //    这里也改成「只在还没认出来时补认」，不能用 data-* 结果覆盖掉上面已判定的 true。
+            if (!isXiaoHei) {
                 try {
                     const r = el.closest?.(".lg-node") || el.closest?.("[data-node-id]");
                     isXiaoHei = r?.dataset?.xhFamily === "1";
                 } catch (e) {}
             }
-            if (isXH) {
+            if (isXiaoHei) {
                 // 身份写到**节点根**：Vue 只 patch 自己绑定的 class，不会擦掉自定义 data-*。
                 // 这样即便 header 被重建、class 丢了，加粗 CSS 依然命中。
                 try {
@@ -750,7 +753,13 @@ export function xhPlaceBeside(panel, rect, opt = {}) {
         return;
     }
     let left, top;
-    if (opt.preferBottom) {
+    if (opt.preferLeft) {
+        // 从锚点左侧弹出：left = 锚点左缘 - gap - 面板宽
+        left = rect.left - gap - mw;
+        top = rect.top;
+        if (left < pad) left = rect.right + gap;                       // 左边放不下 → 翻到右边
+        if (left + mw > vw - pad) left = Math.max(pad, vw - mw - pad); // 还放不下 → 贴右
+    } else if (opt.preferBottom) {
         left = rect.left;
         top = rect.bottom + gap;
         if (top + mh > vh - pad) top = Math.max(pad, rect.top - gap - mh);
@@ -780,6 +789,9 @@ export function xhFollowAnchor(panel, anchorEl, opt = {}) {
         raf = requestAnimationFrame(tick);
         if (userMoved) return;
         const r = anchorEl.getBoundingClientRect();
+        //  ⛔ 异常帧保护：锚点尺寸为 0 或坐标 NaN（Vue 重排/元素替换的过渡态）时跳过本帧，
+        //    绝不用异常值去重定位面板 —— 否则面板会被甩到屏幕顶部/抽搐。
+        if (!r || !isFinite(r.left) || !isFinite(r.top) || r.width <= 0 || r.height <= 0) return;
         const key = Math.round(r.left) + "," + Math.round(r.top) + "," + Math.round(r.width) + "," + Math.round(r.height);
         if (key === lastKey) return;      // 绝大多数帧在这里就 return 了
         lastKey = key;
@@ -1081,6 +1093,51 @@ export const BAR_BTN_W_MIN = 26;
 export const BAR_BTN_PAD = "0 9px";
 
 /**
+ * 🔴 家族「版式令牌」唯一真源（2026-11-15 立）。
+ *   以前 Skill 只统一了**零件**（按钮配色 / 图标 / 命名 / 齿轮 / 锁高），规矩写在 md 里；
+ *   整块面板的尺寸没人管 ⇒ xh_group.js 写 `2px #444` / `4px` / `#2d7d2d` 而**不违反任何一条铁律**。
+ *   ⇒ 把间距 / 圆角 / 描边 / 字号三档 / 状态色 / 动效全收成常量，节点只准引用，
+ *     ⛔ 不许再在节点里写死 hex 或 `2px solid`。
+ *   颜色一律 getter，跟 BAR_COLORS 一样实时跟随官方深浅主题（浅底必须配深字）。
+ */
+export const XH_TOKENS = {
+    // 已有家族标准（22 / 4 / 12）—— 原样收编，不推倒重来
+    BTN_H: BAR_BTN_H,
+    BTN_RADIUS: 4,
+    BTN_FONT: 12,
+    // 面板版式（此前完全没有统一过的一层）
+    CARD_RADIUS: 12,
+    BORDER_W: 1,
+    ROW_GAP: 8,
+    PAD_X: 12,
+    PAD_Y: 8,
+    FONT_LG: 13,
+    FONT_MD: 12,
+    FONT_SM: 11,
+    DUR: 180,
+    get BORDER()       { return officialPalette().border; },
+    get CARD_BG()      { return officialPalette().surface; },
+    get TEXT()         { return officialPalette().text; },
+    get SUB()          { return officialPalette().secondTx; },
+    get ACCENT()       { return brandButtonBg(); },      // ⏱ 瞬时信号色：只给「当前动作 / 刚点过」
+    get STATE_ON_BG()  { return isLightTheme() ? "rgba(45,125,45,.16)" : "rgba(90,170,105,.20)"; },
+    get STATE_ON_TX()  { return officialPalette().text; },
+    get STATE_OFF_BG() { return isLightTheme() ? "rgba(0,0,0,.05)" : "rgba(255,255,255,.05)"; },
+    get STATE_OFF_TX() { return officialPalette().secondTx; },
+};
+if (typeof window !== "undefined") window.XH_TOKENS = XH_TOKENS;
+
+/** 家族卡片：一行一卡。节点只准用这个拼样式，别自己写 border / radius / padding。 */
+export function xhCardCss(extra = "") {
+    const T = XH_TOKENS;
+    return `display:flex;align-items:center;gap:10px;`
+        + `padding:${T.PAD_Y}px ${T.PAD_X}px;margin:0 0 ${T.ROW_GAP}px;`
+        + `border:${T.BORDER_W}px solid ${T.BORDER};border-radius:${T.CARD_RADIUS}px;`
+        + `background:${T.CARD_BG};transition:border-color ${T.DUR}ms ease,background ${T.DUR}ms ease;`
+        + `cursor:pointer;box-sizing:border-box;` + extra;
+}
+
+/**
  * 统一外观。四档（ 2026-10-29 全部改为官方中性黑白灰，层级靠**明度**不靠色相）：
  *   "neutral" （默认，配角）面板灰底 #252525 + #333 描边 + 近白字 + 字重 600
  *   "primary"（主角）    官方白键 #e8e8e8 + **深墨字 #1c1c1c** + 字重 700
@@ -1147,10 +1204,120 @@ export function barBtnHoverFilter(role) {
  * @param opts.role  "neutral"(默认) | "primary" | "active"
  * @param opts.width 指定宽度（px），不传按内容自适应
  */
+// ══════════════════════════════════════════════════════════════════════
+//  2026-11-13 家族图标统一：清理 emoji 后留下的「前导空格」按钮文案
+// ══════════════════════════════════════════════════════════════════════
+//  早前把 Windows 彩色 emoji 从按钮上删掉时只删了字符，文案里留下一个前导空格
+//  （" 刷新" / " Upload"），也没补上自家图标库的图案 ⇒ 节点上到处是没图案的按钮。
+//  这里按语义把空格换成 2350 枚图标库里的对应图案；匹配不到就只把空格去掉。
+//  ⛔ 不改文案表、不改存档值、不改参数 label（只动按钮显示层）。
+export const XH_BTN_ICON_WORDS = [
+    [/^全关|^All Off/i, "开关"],
+    [/^全开|^All On/i, "开关"],
+    [/^刷新|^Refresh/i, "刷新"],
+    [/^重置|^Reset/i, "重置"],
+    [/^撤销|^撤|^Undo/i, "撤销"],
+    [/^扫描|^Scan/i, "扫描"],
+    [/^悬浮|^Float/i, "扩展"],
+    [/^文件夹|^Folder/i, "文件夹"],
+    [/^选文件|^选文件夹|^ File|^ Folder/i, "文件"],
+    [/^传视频|^上传|^Upload/i, "上传"],
+    [/^加音频|^Add audio/i, "音乐"],
+    [/^每次随机|^Random/i, "刷新"],
+    [/^生成固定值|^Roll fixed/i, "锁定"],
+    [/^用上次|^Reuse last/i, "历史"],
+    [/^起跑|^Start/i, "播放"],
+    [/^分割|^Split/i, "拆分"],
+    [/^清空|^Clear/i, "删除"],
+    [/^编辑|^Edit/i, "编辑"],
+    [/^更新|^Update/i, "刷新"],
+    [/^添加|^加|^Add/i, "加"],
+    [/^应用|^Apply/i, "勾选"],
+];
+
+/**
+ * 🔴 2026-11-14 越界防线：上表里**只含中文分支**的条目。
+ *
+ * 为什么单独切一份：
+ *   ComfyUI 官方 / 第三方插件的按钮文案是**英文**（Save / Refresh / Clear / Edit / Apply / Add …），
+ *   家族自己的按钮文案是**中文**（刷新 / 上传 / 清空 / 编辑 / 应用 …）。
+ *   ⇒ 「命中中文词」就是「这按钮必是家族自己的」的铁证，可以安全地在任何位置补图案；
+ *   而「命中英文词」（Refresh / Clear / Edit / Update / Start / Split / Upload / Random …）
+ *   官方自己也有同样的词，**绝不能单凭文案就动手**，必须另加 DOM 范围判据。
+ *
+ * ⚠️ 切的时候**只保留中文那一段**，不能直接用整条正则：
+ *   `/^全关|^All Off/i` 整条拿来判，"All Off" 也会命中 ⇒ 官方英文按钮又被误伤。
+ *   所以按 `|` 拆开，只留含中文的分支，再用 `^(?:…)` 拼回去。
+ *
+ *   配套：xh_icon_fill.js 的全页面兜底扫描（sweep）就靠这条区分，
+ *   避免把官方按钮（`<i class="icon"> Save` 这种带前导空格的）也重写成家族样式。
+ */
+export const XH_BTN_ICON_WORDS_ZH = (() => {
+    const out = [];
+    for (const [re, icon] of XH_BTN_ICON_WORDS) {
+        const zhParts = re.source.split("|").filter((p) => /[\u4e00-\u9fff]/.test(p));
+        if (!zhParts.length) continue;
+        try {
+            out.push([new RegExp("^(?:" + zhParts.join("|") + ")", re.flags.replace("g", "")), icon]);
+        } catch (e) { /* 单条正则构造失败就跳过，不影响其余 */ }
+    }
+    return out;
+})();
+
+/** 文案是否命中「纯中文家族词」；命中即判定为家族自己的按钮。 */
+export function isFamilyChineseWord(text) {
+    if (typeof text !== "string" || !text) return false;
+    const clean = text.trim();
+    if (!clean) return false;
+    return XH_BTN_ICON_WORDS_ZH.some(([re]) => re.test(clean));
+}
+
+//  2026-11-13 家族图标统一（用户「一个一个检查，能换的都给它换了」）：
+//    有些老节点还把 Unicode 图案直接写进按钮文案（"＋ 加一个排除区" / "✕" / "▲" / "▶"）。
+//    这些不是 emoji，但同样不属于自家 2350 枚图标库。这里做统一显示层替换：
+//    ⛔ 只认「开头 / 结尾 / 纯符号」的图案，中间夹的 "+"（如 "Ctrl + Z"）不动；
+//    ⛔ 只动显示层，文案表、存档值、参数 label 一律不改。
+// 2026-11-13 补：画板（Pixaroma 1:1 复刻）里还用到 ▴▾ ↻↺ ⇄ 这几个文字符号。
+const XH_SYM_CLASS = "＋+−－✚✕✖✗✓✔▲▼▴▾◀▶⏵⏸↶↷⟲↻↺⟳⇄⇆↔⚙☲";
+const XH_SYM_AT_EDGE = new RegExp("^[\\s" + XH_SYM_CLASS + "]|[" + XH_SYM_CLASS + "]\\s*$");
+const XH_SYM_STRIP = new RegExp("^[\\s" + XH_SYM_CLASS + "]+|[" + XH_SYM_CLASS + "\\s]+$", "g");
+const XH_SYMBOL_ICON = [
+    [/✕|✖|✗/, "关闭"], [/✓|✔/, "勾选"],
+    [/▲|▴/, "chevron-up"], [/▼|▾/, "chevron-down"],
+    [/◀/, "chevron-left"], [/⏸/, "暂停"], [/⏵|▶/, "播放"],
+    [/↶|⟲/, "撤销"], [/↷/, "重做"], [/＋|✚|\+/, "加"], [/−|－/, "minus"],
+    [/↻|↺|⟳/, "重置"], [/⇄|⇆|↔/, "arrow-left-right"],
+    [/⚙/, "设置"], [/☲/, "列表"],
+];
+
+/** 把「前导空格 / 非家族 Unicode 图案」补成家族图标；没命中的返回 false，调用方照旧 textContent。 */
+export function xhDecorateButton(btn, text) {
+    if (!btn || typeof text !== "string") return false;
+    const hasLeadingBlank = /^\s+\S/.test(text);
+    const hasEdgeSymbol = XH_SYM_AT_EDGE.test(text);
+    if (!hasLeadingBlank && !hasEdgeSymbol) return false;
+    const clean = text.replace(XH_SYM_STRIP, "").trim();
+    const sym = XH_SYMBOL_ICON.find(([re]) => re.test(text));
+    const word = XH_BTN_ICON_WORDS.find(([re]) => re.test(clean));
+    const icon = sym ? sym[1] : (word ? word[1] : null);
+    btn.textContent = "";
+    if (icon) {
+        btn.insertAdjacentHTML("afterbegin", xhIconHTML(icon, { size: 12, color: "current" }));
+        if (clean) btn.appendChild(document.createTextNode(" " + clean));
+        btn.style.display = "inline-flex";
+        btn.style.alignItems = "center";
+        btn.style.justifyContent = "center";
+    } else {
+        btn.appendChild(document.createTextNode(clean));
+    }
+    btn.dataset.xhIconDone = "1";
+    return true;
+}
+
 export function makeBarBtn(text, tip, opts = {}) {
     const btn = document.createElement("button");
     btn.type = "button";
-    if (text != null) btn.textContent = text;
+    if (text != null && !xhDecorateButton(btn, text)) btn.textContent = text;
     if (tip) btn.title = tip;
     paintBarBtn(btn, opts.role || "neutral");
     if (opts.width) btn.style.width = opts.width + "px";
@@ -1334,7 +1501,9 @@ export function helpIconHTML(cls) {
 //     常态   **官方按钮底色** var(--secondary) + **官方前景色** var(--foreground) 的图案
 //     悬停   实心家族黄底 + 深墨字 #1c1c1c（瞬时信号）
 //     打开   实心家族黄底 + 深墨字（常驻，移开鼠标不掉、刷新保留）
-//     门面   琥珀金底 + 深墨爪印（白图案放黄底上会看不见，全家族独一份）
+//     门面   图案仍是小黑爪印，但 2026-11-15 起**取消常亮黄**（用户「点它的时候才显示」）：
+//            常态官方灰 + 浅色爪印 ⇒ 点开设置面板才亮黄 + 深墨爪印，关面板退回灰。
+//            门面身份靠图案本身，⛔ 不靠常亮底色抢「运行」按钮的视觉焦点。
 //      不自造颜色：一度硬编码一枚中灰、还称之为「浅灰」，用户当场指出官方那个
 //        底色是黑的不是灰。从官方截图与官方 CSS 实测：顶栏背景 #171718(--background)、
 //        按钮底 #262729(--secondary)、图案 #C0C0C1~#fff(--foreground)、边框 #494a50(--border)。
@@ -1389,11 +1558,16 @@ body .comfyui-button.xh-tb .xh-icon-mask{vertical-align:middle;}
   color:var(--xh-on-primary,#1c1c1c) !important;
   border-color:var(--xh-primary,#E8A33C) !important;
 }
-/*  家族门面（顶栏那颗「XH」）：常态就是品牌色 —— 与 Pixaroma 的橘红小方块同一思路 */
-.comfyui-button.xh-tb.xh-tb-brand{
-  background-color:var(--xh-brand,#E8A33C) !important;
-  color:var(--xh-brand-tx,#1c1c1c) !important;
-  border-color:var(--xh-brand,#E8A33C) !important;
+/*  2026-11-15：删除「门面常亮品牌色」规则 .xh-tb-brand（无条件琥珀金底）。
+    用户原话「不要让它一直显现出我们的黄色，点它的时候它才显示」。
+    现在四颗按钮共用同一套：常态官方灰 → hover / 按下亮一下 →
+    面板打开 .xh-tb-open 常驻黄 → 关面板退回灰。
+    老 DOM 万一还带 xh-tb-brand，删规则后自然落回 .xh-tb 常态灰，不会出错。 */
+/* 按下瞬间：家族黄（点它就有反馈；松开后面板开着由 .xh-tb-open 接着亮） */
+.comfyui-button.xh-tb:active:not(:disabled){
+  background-color:var(--xh-primary,#E8A33C) !important;
+  color:var(--xh-on-primary,#1c1c1c) !important;
+  border-color:var(--xh-primary,#E8A33C) !important;
 }
 /* 悬停：品牌色实心 + 深墨字（浅底必须配深字） */
 .comfyui-button.xh-tb:hover:not(:disabled){
@@ -1649,22 +1823,23 @@ export function makeXHToolbar(node, opts = {}) {
     const bar = document.createElement("div");
     bar.style.cssText = "display:flex;align-items:center;gap:6px;padding:3px 4px;width:100%;box-sizing:border-box;flex-wrap:wrap;background:transparent;";
     for (const el of (opts.prependNodes || [])) if (el) bar.appendChild(el);
-    //  2026-10-29 中/EN 键的新家 = **官方「选中工具条」**（节点上方那条浮出的图标条）。
-    //    实现见 web/xh_node_toolbar.js：用 ComfyUI 官方扩展钩子 getSelectionToolboxCommands
-    //    注册命令，官方在**两套画布渲染器**下都会调它 ⇒ 旧版 LiteGraph 与 Nodes 2.0 通吃。
-    //    （不再用"塞进节点标题栏"那套 —— 标题栏 DOM 只有 Nodes 2.0 有，会把旧版用户挡在门外。）
-    //     内容区这一份只是**老前端兜底**：钩子一旦被调用过（= 官方支持），
-    //      xh_node_toolbar.js 会把 .xh-lang-content 全部撤掉，只留工具条上那一份，不重复。
-    //  noLang：节点明确「本体不挂中/EN」时（如声音播放节点），直接不创建、不挂载，
-    //    从根上掐掉 —— 比事后 removeChild 可靠（某些渲染时序下事后移除会漏）。
-    const langBtn = opts.noLang ? null : makeLangBtn(node);
+    //  🔴🔴 2026-11-13：内容区「中/EN」键**从根上不再创建**（用户被"鬼影"烦了三轮）。
+    //    根因（时序竞态，⛔ 别再恢复下面这段兜底）：
+    //      旧逻辑拿 window.__xhTbHookHits 判断"官方选中工具条是否可用"，为 0 就把
+    //      makeLangBtn() 塞进节点内容区（.xh-lang-content）。但官方钩子
+    //      getSelectionToolboxCommands **只有用户点选节点时**才被调用 ⇒ 节点创建
+    //      (onNodeCreated) 永远早于第一次点选 ⇒ 计数恒为 0 ⇒ 每个节点一出生就被塞一颗「中」；
+    //      等用户点一下，钩子命中 + dropContentLangButtons() 才把它删掉 ⇒ 看起来就是
+    //      "点一下鬼影才消失"。分辨率选择器还被两个扩展各挂一次工具条 ⇒ 一次冒两颗。
+    //    修法：**不再创建**。中/EN 唯一入口 = 官方选中工具条（xh_node_toolbar.js 的
+    //      LANG_CMD，选中节点才浮出），节点本体一律不挂 —— 事后 removeChild 永远有时序漏网。
+    //    ⛔ 不许改回默认开启，⛔ 不许再用 __xhTbHookHits 做运行时判定。
+    //    contentLang:true 只留给"确实跑在不支持官方钩子的老前端"的显式兜底，默认关闭；
+    //    noLang 仍兼容旧调用方（历史上声音播放节点传过），现在等价于默认值。
+    const langBtn = (opts.contentLang === true && !opts.noLang) ? makeLangBtn(node) : null;
     if (langBtn) {
-        if ((window.__xhTbHookHits || 0) > 0) {
-            // 官方工具条已确认可用 ⇒ 内容区不放，免得出现两个中/EN
-        } else {
-            langBtn.classList.add("xh-lang-content");
-            bar.appendChild(langBtn);
-        }
+        langBtn.classList.add("xh-lang-content");   // 老前端专用；钩子命中时仍会被清掉
+        bar.appendChild(langBtn);
     }
     //  2026-10-28： 配色键已删（配色走右键菜单的完整画板，对任何节点都开放）。
     //    返回值里仍保留 colorBtn 字段（恒为 null），避免老调用方解构后崩。

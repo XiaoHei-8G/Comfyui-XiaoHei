@@ -1,7 +1,7 @@
 // XiaoHei 标签 - Nodes 2.0 兼容版（顶部按钮条 + 文字区）
 const { app } = window.comfyAPI.app;
 
-import { onLangEvent, ensureLangBridge, makeXHToolbar, releaseButtons, showXHPicker, darkenHex , paintBarBtn} from "./xh_ui_kit.js";
+import { onLangEvent, ensureLangBridge, makeXHToolbar, releaseButtons, showXHPicker, darkenHex , paintBarBtn, xhIconHTML} from "./xh_ui_kit.js";
 
 ensureLangBridge();
 // ② 家族同步：别的 XiaoHei 节点切语言时，所有标签节点跟着切（本节点是自绘 DOM）
@@ -311,7 +311,9 @@ app.registerExtension({
             fsStep.style.cssText = "display:flex;flex-direction:column;gap:1px;height:28px;";
             const mkStepBtn = (dir) => {
                 const b = document.createElement("button");
-                b.innerHTML = dir > 0 ? "▲" : "▼";
+                //  2026-11-13 家族图标统一：Unicode 三角 ▲▼ → 图标库 chevron-up/down。
+                b.innerHTML = xhIconHTML(dir > 0 ? "chevron-up" : "chevron-down",
+                    { size: 9, color: "current" });
                 b.title = this._lang === "zh"
                     ? "微调字号：点一下 ±1（Shift+点 = ±10），按住不放连调"
                     : "Fine-tune: click ±1 (Shift+click = ±10), hold to repeat";

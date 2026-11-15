@@ -6,7 +6,11 @@
 // 设计铁律：UI 全走 addDOMWidget；行的增删只在自己 DOM 内部；数据唯一载体是后端 STRING widget（loras_json）。
 const { app } = window.comfyAPI.app;
 
-import { onLangEvent, ensureLangBridge, releaseButtons, xhGetNodeRect, xhPlaceBeside, xhFollowAnchor, xhMakeDraggable } from "./xh_ui_kit.js";
+import { onLangEvent, ensureLangBridge, releaseButtons, xhGetNodeRect, xhPlaceBeside, xhFollowAnchor, xhMakeDraggable, xhIconHTML, xhDecorateButton } from "./xh_ui_kit.js";
+// 🔴 2026-11-14 修复：xhIconUrl 的家在 xh_icons/index.mjs，不在 xh_ui_kit.js（那边只是 import 来用、没再导出）。
+//   ESM 具名导入一个「不存在」的导出 = 链接期直接报错 = 本文件一行都不执行 ⇒
+//   LoRA 堆栈的前端扩展整个没注册 ⇒ 卡片 UI 从没创建，只剩后端 loras_json 裸输入框显示 JSON。
+import { xhIconUrl } from "./xh_icons/index.mjs";
 
 ensureLangBridge();
 const { api } = window.comfyAPI.api;
@@ -59,6 +63,8 @@ const I18N = {
         info: "信息 + 选触发词",
         missing: "文件没找到（改名或删了？这条会被跳过）",
         settings: "设置",
+        remove: "移除这个 LoRA",
+        removeWord: "删掉这个触发词",
     },
     en: {
         add: "＋ Add LoRA",
@@ -76,6 +82,8 @@ const I18N = {
         info: "Info + pick trigger words",
         missing: "File not found (renamed or removed?). This row is skipped.",
         settings: "Settings",
+        remove: "Remove this LoRA",
+        removeWord: "Remove this trigger word",
     },
 };
 
@@ -214,7 +222,7 @@ function injectStyle() {
     .xh-pll-row.off{opacity:.42;}
     .xh-pll-name{flex:1;min-width:0;height:24px;display:flex;align-items:center;gap:5px;
         background:#161616;border:1px solid #3a3a3a;border-radius:5px;padding:0 8px;
-        font:11px monospace;color:#ddd;cursor:pointer;overflow:hidden;}
+        font:400 11.5px var(--font-sans, ui-sans-serif, system-ui, sans-serif);color:#ddd;cursor:pointer;overflow:hidden;}
     .xh-pll-name:hover{border-color:var(--xh-acc,${XH_ACCENT});}
     .xh-pll-name .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .xh-pll-name.empty .nm{color:#777;}
@@ -226,7 +234,8 @@ function injectStyle() {
         background:#161616;border:1px solid #3a3a3a;border-radius:5px;overflow:hidden;}
     .xh-pll-w:focus-within{border-color:var(--xh-acc,${XH_ACCENT});}
     .xh-pll-wval{flex:1;min-width:0;width:100%;background:transparent;border:0;outline:none;color:#fff;
-        text-align:center;font:11px monospace;padding:0;cursor:text;}
+        text-align:center;font:400 11.5px var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+        font-variant-numeric:tabular-nums;padding:0;cursor:text;}
     /* 屏蔽原生 spinner：只留我们自己的 ▲▼（照 Pixaroma） */
     .xh-pll-wval::-webkit-outer-spin-button,.xh-pll-wval::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
     .xh-pll-wspin{flex:0 0 auto;display:flex;flex-direction:column;width:16px;height:100%;
@@ -239,11 +248,16 @@ function injectStyle() {
         display:flex;align-items:center;justify-content:center;padding:0;margin:0;
         -webkit-appearance:none;appearance:none;}
     .xh-pll-wbtn:hover{color:var(--xh-acc,${XH_ACCENT});background:rgba(255,255,255,0.08);}
-    /* i 信息钮 */
+    /* i 信息钮（2026-11-14：Georgia 斜体字母 i → 家族图标库 info） */
     .xh-pll-info{flex:0 0 auto;width:22px;height:22px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);
         background:rgba(255,255,255,0.05);color:#a8a8a8;cursor:pointer;display:flex;align-items:center;
-        justify-content:center;font:italic 12px Georgia,serif;}
+        justify-content:center;}
     .xh-pll-info:hover{border-color:var(--xh-acc,${XH_ACCENT});color:#fff;}
+    /* 删除键（2026-11-14 新增：行尾移除这一行 LoRA） */
+    .xh-pll-del{flex:0 0 auto;width:22px;height:22px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);
+        background:rgba(255,255,255,0.05);color:#a06a6a;cursor:pointer;display:flex;align-items:center;
+        justify-content:center;}
+    .xh-pll-del:hover{border-color:#d06a6a;color:#e08585;background:rgba(208,106,106,0.14);}
     .xh-pll-empty{height:46px;display:flex;align-items:center;justify-content:center;text-align:center;color:#777;
         font-size:11px;background:rgba(0,0,0,0.2);border:1px dashed #3a3a3a;border-radius:6px;padding:0 10px;}
 
@@ -256,28 +270,38 @@ function injectStyle() {
         background:#161616;position:relative;overflow:hidden;}
     .xh-pll-info-h{min-width:0;flex:1;}
     .xh-pll-info-h h3{margin:0 0 4px;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .xh-pll-info-meta{font:10px monospace;color:#7a7a7a;line-height:1.7;}
-    .xh-pll-info-x{margin-left:auto;color:#8a8a8a;cursor:pointer;align-self:flex-start;}
-    .xh-pll-info-x:hover{color:#fff;}
+    .xh-pll-info-meta{font:400 10.5px var(--font-sans, ui-sans-serif, system-ui, sans-serif);color:#7a7a7a;line-height:1.7;}
+    .xh-pll-info-x{margin-left:auto;color:#8a8a8a;cursor:pointer;align-self:flex-start;
+        width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:4px;}
+    .xh-pll-info-x:hover{color:#fff;background:rgba(255,255,255,0.10);}
     .xh-pll-info-sec{padding:11px 12px;}
-    .xh-pll-info-sec h4{margin:0 0 6px;font:600 9.5px 'Segoe UI';text-transform:uppercase;letter-spacing:.7px;color:#9a9a9a;
+    .xh-pll-info-sec h4{margin:0 0 6px;font:500 10px var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+        text-transform:uppercase;letter-spacing:.7px;color:#9a9a9a;
         display:flex;align-items:center;gap:6px;}
-    .xh-pll-info-note{font-size:10px;color:#7a7a7a;margin:0 0 8px;}
+    .xh-pll-info-note{font-size:10.5px;color:#7a7a7a;margin:0 0 8px;
+        font-family:var(--font-sans, ui-sans-serif, system-ui, sans-serif);line-height:1.5;}
     .xh-pll-chips{display:flex;flex-wrap:wrap;gap:5px;max-height:30vh;overflow-y:auto;padding-right:2px;}
     .xh-pll-chips::-webkit-scrollbar{width:7px;}
     .xh-pll-chips::-webkit-scrollbar-thumb{background:#555;border-radius:3px;}
-    .xh-pll-chip{font:10.5px 'Segoe UI';background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);
+    .xh-pll-chip{font:400 11px var(--font-sans, ui-sans-serif, system-ui, sans-serif);background:rgba(255,255,255,0.05);
+        border:1px solid rgba(255,255,255,0.14);
         border-radius:99px;padding:3px 9px;color:#cfcfcf;cursor:pointer;display:flex;align-items:center;gap:4px;}
     .xh-pll-chip:hover{border-color:var(--xh-acc,${XH_ACCENT});}
     .xh-pll-chip.sel{background:color-mix(in srgb, var(--xh-acc,${XH_ACCENT}) 18%, transparent);
         border-color:var(--xh-acc,${XH_ACCENT});color:#fff;}
-    .xh-pll-chip.sel::before{content:"✓";font-size:9px;flex:none;}
-    .xh-pll-chip .cx{margin-left:1px;color:#e0a08c;cursor:pointer;opacity:.6;font-size:10px;flex:none;}
+    .xh-pll-chip.sel::before{content:"";width:9px;height:9px;flex:none;background:currentColor;
+        -webkit-mask-image:url('${xhIconUrl("勾选")}');mask-image:url('${xhIconUrl("勾选")}');
+        -webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+        -webkit-mask-position:center;mask-position:center;}
+    /* chip 上的叉号：删掉这一条触发词（2026-11-14 新增） */
+    .xh-pll-chip .cx{margin-left:1px;color:#a06a6a;cursor:pointer;opacity:.65;font-size:10px;flex:none;
+        width:13px;height:13px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;}
+    .xh-pll-chip .cx:hover{opacity:1;color:#e08585;background:rgba(208,106,106,0.18);}
     .xh-pll-chip .cx:hover{opacity:1;}
     .xh-pll-chip-none{color:#777;font-size:11px;}
     .xh-pll-addtrig{display:flex;gap:5px;margin-top:8px;}
     .xh-pll-addtrig input{flex:1;min-width:0;background:#161616;border:1px solid #3a3a3a;border-radius:5px;
-        color:#fff;font:11px sans-serif;padding:4px 8px;}
+        color:#fff;font:400 11.5px var(--font-sans, ui-sans-serif, system-ui, sans-serif);padding:4px 8px;}
     .xh-pll-addtrig input:focus{outline:none;border-color:var(--xh-acc,${XH_ACCENT});}
     .xh-pll-addtrig button{flex:0 0 auto;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.05);
         color:#ddd;border-radius:5px;padding:0 10px;cursor:pointer;font-size:11px;}
@@ -381,7 +405,8 @@ function makeWeightBox(row, ctx, which) {
         //    ⇒ 浏览器用了默认 button 样式（13.3px Arial + 默认内边距），在 18px 宽的窄条里
         //    被挤成一个巨大的三角，底下的 ▼ 直接被裁掉 —— 用户看到的「看不见/图标太大」。
         b.className = "xh-pll-wbtn";
-        b.textContent = dir > 0 ? "▲" : "▼";
+        //  2026-11-13 家族图标统一：Unicode ▲▼ → 图标库 chevron-up / chevron-down。
+        b.innerHTML = xhIconHTML(dir > 0 ? "chevron-up" : "chevron-down", { size: 10, color: "current" });
         b.title = ctx.lang === "zh" ? `微调：点 ±${step().toFixed(2)}（Shift ±1.0）` : `Fine-tune: click ±${step().toFixed(2)} (Shift ±1.0)`;
         const apply = (ev) => commit((parseFloat(val.value) || 1) + dir * (ev && ev.shiftKey ? 1.0 : step()));
         let delay = null, rep = null, pressed = false;
@@ -456,15 +481,32 @@ function makeRowEl(row, ctx) {
     }
 
     // —— i 信息钮（触发词面板）——
+    //  🔴 2026-11-14 用户：「这个小感叹号，请替换为我们家族的自己的小图案。」
+    //    原来是 textContent="i" + CSS font:italic 12px Georgia（真字母，不是图案）⇒ 换家族图标库 info。
     const info = document.createElement("div");
     info.className = "xh-pll-info";
-    info.textContent = "i";
+    info.innerHTML = xhIconHTML("信息", { size: 13, color: "current" });
     info.title = ctx.t.info;
     info.addEventListener("pointerdown", (e) => e.stopPropagation(), true);
     info.addEventListener("click", (e) => {
         e.stopPropagation();
         if (!row.lora) { ctx.toast(ctx.t.pickFirst); return; }
         openInfoPanel(row, ctx);
+    });
+
+    // —— 删除键（2026-11-14 新增：用户原话「只能添加，不能取消某一个」）——
+    //    点一下把这一行整个移除（LoRA + 权重 + 触发词一起没），并立刻同步回后端 JSON。
+    const del = document.createElement("div");
+    del.className = "xh-pll-del";
+    del.innerHTML = xhIconHTML("删除", { size: 13, color: "current" });
+    del.title = ctx.t.remove;
+    del.addEventListener("pointerdown", (e) => e.stopPropagation(), true);
+    del.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const i = ctx.rows.indexOf(row);
+        if (i >= 0) ctx.rows.splice(i, 1);
+        ctx.renderAll();
+        ctx.sync();
     });
 
     // —— 开关 ——
@@ -476,7 +518,7 @@ function makeRowEl(row, ctx) {
 
     rowEl.append(name, wbox);
     if (cbox) rowEl.appendChild(cbox);
-    rowEl.append(info, sw);
+    rowEl.append(info, sw, del);
     return rowEl;
 }
 
@@ -678,7 +720,8 @@ function openSettingsPanel(ctx, node) {
     top.innerHTML = xhIco("settings", 16) || GEAR_SVG;
     const h = document.createElement("h3");
     h.textContent = ctx.lang === "zh" ? "LoRA 设置" : "LoRA Settings";
-    const x = document.createElement("div"); x.className = "x"; x.textContent = "✕"; x.title = "关闭";
+    const x = document.createElement("div"); x.className = "x"; x.title = "关闭";
+    x.innerHTML = xhIconHTML("关闭", { size: 12, color: "current" });
     x.addEventListener("click", (e) => { e.stopPropagation(); closeSettingsPanel(); });
     top.append(h, x);
     panel.appendChild(top);
@@ -823,7 +866,16 @@ function openInfoPanel(row, ctx) {
     const meta = document.createElement("div");
     meta.className = "xh-pll-info-meta";
     const x = document.createElement("div");
-    x.className = "xh-pll-info-x"; x.textContent = "✕"; x.title = "关闭";
+    x.className = "xh-pll-info-x"; x.title = "关闭";
+    x.innerHTML = xhIconHTML("关闭", { size: 12, color: "current" });
+    //  🔴 2026-11-14 用户报「右上角叉号点了关不掉面板」——根因修复：
+    //    叉号里套着图标（xhIconHTML 生成一个 <span>），用户鼠标点到的是**图标那个 span**，
+    //    而下面的拖动判据写的是 `e.target === x`（只认「正好点在 x 这个 div 本身」）
+    //    ⇒ 判据不成立 ⇒ 走进拖动分支 ⇒ top.setPointerCapture() 把指针扣在标题栏上
+    //    ⇒ click 被重定向到 top，x 自己的 click 监听器永远不触发 ⇒ 面板关不掉。
+    //  对照：设置面板走 xhMakeDraggable，里面用的是 e.target.closest(".x")（能穿透子元素）所以是好的。
+    //  正解：**用 contains 判据**（点在叉号内部任意位置都算点在叉号上），并 stopPropagation 拦掉冒泡。
+    x.addEventListener("pointerdown", (e) => e.stopPropagation(), true);
     x.addEventListener("click", (e) => { e.stopPropagation(); closeInfoPanel(); });
     h.append(title, meta);
     top.append(th, h, x);
@@ -832,7 +884,7 @@ function openInfoPanel(row, ctx) {
     // 拖动面板头部
     let dragging = false, ox = 0, oy = 0;
     top.addEventListener("pointerdown", (e) => {
-        if (e.target === x) return;
+        if (x.contains(e.target)) return;   // ← 修：contains 能穿透图标子元素
         dragging = true;
         if (_infoFollow) _infoFollow.markUserMoved();   // 用户拖走了就别再抢位置
         const pr = panel.getBoundingClientRect();
@@ -866,6 +918,10 @@ function openInfoPanel(row, ctx) {
         const push = (w) => { const k = w.toLowerCase(); if (w && !seen.has(k)) { seen.add(k); all.push(w); } };
         src.forEach(push);
         (row.triggers || []).forEach(push);
+        //  🔴 2026-11-14：区分「文件头自带词」和「自己加的词」。
+        //    自带词点一下 = 取消勾选（只是不加入提示词，词本身还在文件里，取消不了）。
+        //    自己加的词必须能**彻底删掉**，否则面板里加错一个词就永远去不掉。
+        const srcSet = new Set(src.map((w) => String(w).toLowerCase()));
         chips.innerHTML = "";
         if (!all.length) {
             const none = document.createElement("div");
@@ -879,6 +935,21 @@ function openInfoPanel(row, ctx) {
             const selected = sel.has(w.toLowerCase());
             chip.className = "xh-pll-chip" + (selected ? " sel" : "");
             chip.append(document.createTextNode(w));
+            const isCustom = !srcSet.has(w.toLowerCase());
+            if (isCustom) {
+                const cx = document.createElement("span");
+                cx.className = "cx";
+                cx.title = ctx.t.removeWord;
+                cx.innerHTML = xhIconHTML("关闭", { size: 9, color: "current" });
+                cx.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const cur = (row.triggers || []).filter((x) => x.toLowerCase() !== w.toLowerCase());
+                    row.triggers = cur;
+                    ctx.sync();
+                    renderChips(_lastInfo || { triggers: [] });
+                });
+                chip.appendChild(cx);
+            }
             chip.addEventListener("click", () => {
                 const cur = row.triggers || [];
                 const k = w.toLowerCase();
@@ -900,7 +971,8 @@ function openInfoPanel(row, ctx) {
     inp.placeholder = ctx.t.addWord;
     const addBtn = document.createElement("button");
     addBtn.type = "button";
-    addBtn.textContent = "＋";
+    //  2026-11-13 家族图标统一：Unicode ＋ → 图标库「加」→ plus。
+    addBtn.innerHTML = xhIconHTML("加", { size: 12, color: "current" });
     addBtn.title = ctx.t.addWord;
     const doAdd = () => {
         const w = inp.value.trim();

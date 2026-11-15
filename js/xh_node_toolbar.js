@@ -355,9 +355,12 @@ export function nodeHasButtons(node) {
 }
 
 /**
- * 官方钩子一旦被调用，就证明这个前端**支持**选中工具条命令
- * ⇒ 内容区那个「中/EN」键就是多余的了，撤掉，只留工具条上的那份。
- * 反之（钩子永远不被调用 = 老前端），内容区的键保留 —— 那是老用户唯一的入口。
+ * 清掉历史上遗留的内容区「中/EN」键（.xh-lang-content）。
+ *  2026-11-13：makeXHToolbar 已改为**默认不创建**它 —— 根因是「节点创建早于官方钩子首次命中」
+ *  的时序竞态，旧兜底判断误把新前端当成老前端，节点一出生就塞一颗「中」，点一下才被删。
+ *  本函数现在只负责：① 清掉旧版本 / 已打开工作流残留在 DOM 的按钮；
+ *  ② 万一某节点显式传 contentLang:true（真老前端兜底），仍由官方钩子收口。
+ *  清理很轻（一次 querySelectorAll），setup / 载入工作流 / 选中节点时各跑一次。
  */
 function dropContentLangButtons() {
     try {
@@ -416,7 +419,8 @@ app.registerExtension({
     // 官方来问：选中项要显示哪些命令。返回 id 数组，官方负责渲染。
     getSelectionToolboxCommands(item) {
         try {
-            // 任何一次被调用 = 这个前端支持本钩子 ⇒ 内容区的中/EN 键可以撤了
+            //  仅清历史残留。kit 已默认不创建内容区语言键，这里不再承担"判定"职责。
+            //  __xhTbHookHits 保留自增供调试，⛔ 不要再拿它决定要不要往节点里塞按钮。
             window.__xhTbHookHits = (window.__xhTbHookHits || 0) + 1;
             dropContentLangButtons();
             //  2026-11-11：多字段兜底（comfyClass || type || comfyType），
@@ -442,8 +446,11 @@ app.registerExtension({
     afterConfigureGraph() {
         try {
             repaintAllBtnColors();
+            dropContentLangButtons();     // 打开 / 切换工作流后清一次历史残留
             if (typeof requestAnimationFrame === "function") {
-                requestAnimationFrame(() => { try { repaintAllBtnColors(); } catch (e) {} });
+                requestAnimationFrame(() => {
+                    try { repaintAllBtnColors(); dropContentLangButtons(); } catch (e) {}
+                });
             }
         } catch (e) {}
     },
@@ -452,6 +459,9 @@ app.registerExtension({
         injectIconCSS();
         syncLangAttr();
         onLangChanged(() => syncLangAttr());
+        //  不刷新页面也能立刻清掉上一版本留在节点里的「中」（DOM 挂载有早有晚，兜几次）
+        dropContentLangButtons();
+        for (const d of [0, 200, 800, 2000]) setTimeout(dropContentLangButtons, d);
     },
 });
 

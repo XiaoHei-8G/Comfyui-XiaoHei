@@ -49,6 +49,11 @@ export function injectFrameworkStyles() {
    Pixaroma Editor Framework — Shared Stylesheet
    ═══════════════════════════════════════════════════════ */
 
+/* 2026-11-13 家族图案统一：Lucide SVG 里 stroke="currentColor"，
+   用 <img> 直接加载时 currentColor 会落成黑色，深色画板里等于看不见。
+   统一白化；已经自带内联 filter 的按钮由内联样式优先，不受这条影响。 */
+img[src*="/xh_icons/svg/"] { filter: brightness(0) invert(1); }
+
 /* ── CSS Custom Properties ──────────────────────────── */
 .pxf-overlay {
   --pxf-accent: #E8A33C;

@@ -15,7 +15,7 @@ import {
     onLangChanged,
     releaseButtons,
     currentLang,
- paintBarBtn} from "./xh_ui_kit.js";
+ paintBarBtn, xhIconHTML} from "./xh_ui_kit.js";
 
 ensureLangBridge();   // ① 早于任何 window.XH_LANG 使用
 
@@ -569,7 +569,9 @@ function buildGallery(node) {
         // 背景层：虚线方框内的中心十字（✚），作为照片框的「空位」提示；
         //   图片缩放为 contain 时，四周留出的空位正好露出这个十字，读起来就是一个相框。
         const cross = document.createElement("div");
-        cross.textContent = "✚";
+        //  2026-11-13 家族图标统一：相框中心那个「空位」十字原来是 Unicode "✚"，
+        //    换成自家图标库「加」→ plus（同样是十字，描边/圆角与全家族一致）。
+        cross.innerHTML = xhIconHTML("加", { size: 30, color: "rgba(255,255,255,.14)" });
         cross.style.cssText =
             "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);" +
             "font-size:34px;line-height:1;color:rgba(255,255,255,.14);pointer-events:none;user-select:none;";
@@ -599,10 +601,12 @@ function buildGallery(node) {
 
         const del = document.createElement("div");
         del.title = T("del");
-        del.textContent = "✕";
+        //  2026-11-13 家族图标统一：Unicode "✕" → 图标库「关闭」→ x。
+        del.innerHTML = xhIconHTML("关闭", { size: 12, color: "current" });
         del.style.cssText =
             "position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:9px;" +
-            "background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;";
+            "background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;" +
+            "display:flex;align-items:center;justify-content:center;";
         del.onclick = (e) => {
             e.stopPropagation();
             list.splice(index, 1);
@@ -647,8 +651,11 @@ function buildGallery(node) {
         chip.dataset.idx = String(index);
 
         const ico = document.createElement("span");
-        ico.textContent = "";
-        ico.style.cssText = "flex:0 0 auto;font-size:14px;line-height:1;";
+        //  2026-11-13：清理 emoji 时被清空 ⇒ 文件夹条目前面一片空白。
+        //    补上家族图标库「文件夹」→ folder。
+        ico.innerHTML = xhIconHTML("文件夹", { size: 14, color: "current" });
+        ico.style.cssText = "flex:0 0 auto;font-size:14px;line-height:1;"
+            + "display:inline-flex;align-items:center;justify-content:center;";
         chip.appendChild(ico);
 
         const box = document.createElement("div");
@@ -689,10 +696,13 @@ function buildGallery(node) {
 
         const del = document.createElement("div");
         del.title = T("del");
-        del.textContent = "✕";
+        //  2026-11-13 家族图标统一：chip 右上角删除键原来是 Unicode "✕"（div，DOM 兜底扫不到
+        //    button 时漏网），改成图标库「关闭」→ x，并用 flex 居中替代 line-height 居中。
+        del.innerHTML = xhIconHTML("关闭", { size: 12, color: "current" });
         del.style.cssText =
             "position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:9px;" +
-            "background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;";
+            "display:flex;align-items:center;justify-content:center;" +
+            "background:rgba(0,0,0,.6);color:#fff;cursor:pointer;";
         del.onclick = (e) => {
             e.stopPropagation();
             list.splice(index, 1);

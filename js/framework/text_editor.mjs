@@ -21,6 +21,8 @@ import { passComfyShortcut } from "../shared/text_shortcuts.mjs";
 // The font popup + its CSS live in js/shared/font_picker.mjs so Run Timer's
 // clock-font picker is the SAME control, not a copy that drifts (2026-08-16).
 import { openFontPopup, injectFontPickerCSS } from "../shared/font_picker.mjs";
+import { xhIconHTML } from "../xh_ui_kit.js";
+import { xhIconUrl } from "../xh_icons/index.mjs";
 
 const BRAND = "#E8A33C";
 
@@ -453,8 +455,9 @@ function chipBtn(text, className, onClick) {
 }
 
 function chevronDown() {
-  // Single-character chevron, same as Load Image's .arrow
-  return "▾";
+  // 2026-11-13 家族图案统一：返回值直接塞进 innerHTML，
+  // 所以返回家族图标库的 mask span HTML，不再是别人的 Unicode 文字符号。
+  return xhIconHTML("chevron-down", { size: 10, color: "current" });
 }
 
 function labelForFont(catalog, id) {
@@ -489,8 +492,8 @@ function inputCell(parent, label, min, max, value, step, onChange) {
   const upBtn = el("button", "pix-to-spin-up");   upBtn.type = "button";   upBtn.tabIndex = -1;
   const downBtn = el("button", "pix-to-spin-down"); downBtn.type = "button"; downBtn.tabIndex = -1;
   // The arrows are drawn by CSS, so give a screen reader a name to announce.
-  upBtn.setAttribute("aria-label", `Increase ${label}`);
-  downBtn.setAttribute("aria-label", `Decrease ${label}`);
+  upBtn.setAttribute("aria-label", `增大 ${label}`);
+  downBtn.setAttribute("aria-label", `减小 ${label}`);
   spin.append(upBtn, downBtn);
   cell.append(lbl, input, spin);
 
@@ -585,7 +588,7 @@ function fmtStep(v, step) {
 // the checker pattern + "(none)" text.
 function colorCell(parent, label, initialHex, getInitial, onPick, withClear) {
   const cell = el("div", "pix-to-color-cell");
-  cell.title = `${label} color`;
+  cell.title = `${label}颜色`;
   const swatch = el("div", "pix-to-color-cell-swatch");
   const lbl = el("span", "pix-to-input-label"); lbl.textContent = label;
   const val = el("span", "pix-to-color-cell-val");
@@ -612,7 +615,7 @@ function colorCell(parent, label, initialHex, getInitial, onPick, withClear) {
     // page so the popup can't be moved out from under you by clicking on
     // the node body or canvas (the issue with the compact popup).
     openPixaromaColorPickerModal({
-      title: label === "Behind" ? "背景色" : `${label} color`,
+      title: `${label}颜色`,
       initialColor: getInitial(),
       showClear: withClear,
       onPick: (c) => onPick(c),
@@ -852,15 +855,29 @@ function injectCSS() {
     .pix-to-spin > button:hover { color: var(--pix-acc,#E8A33C); }
     .pix-to-spin-up::before,
     .pix-to-spin-down::before {
+      content: "";
       position: absolute;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      font-size: 8px;
-      line-height: 1;
+      width: 9px;
+      height: 9px;
+      background-color: currentColor;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-position: center;
+      mask-position: center;
     }
-    .pix-to-spin-up::before   { content: "▲"; }
-    .pix-to-spin-down::before { content: "▼"; }
+    .pix-to-spin-up::before {
+      -webkit-mask-image: url("${xhIconUrl("chevron-up")}");
+      mask-image: url("${xhIconUrl("chevron-up")}");
+    }
+    .pix-to-spin-down::before {
+      -webkit-mask-image: url("${xhIconUrl("chevron-down")}");
+      mask-image: url("${xhIconUrl("chevron-down")}");
+    }
 
     /* Color cell: [swatch LABEL hex]. Tightened so a 7-char hex (#000000)
        fits the half-width 2-column layout without overflowing under the

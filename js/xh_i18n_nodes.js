@@ -52,7 +52,7 @@ const XH_I18N = {
             XH_WN_Speedpaint: "快速绘画",
             XH_WN_VAEDeGrid: "VAE去网格",
             XH_WN_ZoomCrop: "缩放裁剪",
-            XiaoHeiCharacterSheet: "小黑角色表",
+            // 2026-11-14 原作 1:1 复刻节点：显示名由后端 NODE_DISPLAY_NAME_MAPPINGS 决定，家族 i18n 不插手
         },
     },
     en: {
@@ -94,7 +94,7 @@ const XH_I18N = {
             XH_WN_Speedpaint: "Speedpaint",
             XH_WN_VAEDeGrid: "VAE De-Grid",
             XH_WN_ZoomCrop: "Zoom Crop",
-            XiaoHeiCharacterSheet: "XiaoHei Character Sheet",
+            // 2026-11-14 原作 1:1 复刻节点：见 zh 表注释，家族 i18n 不插手
         },
     },
 };

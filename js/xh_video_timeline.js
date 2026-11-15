@@ -33,7 +33,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 import {
     onLangChanged, currentLang, fixWidgetValuesFromSaved, lockDomWidgetHeight,
-    makeXHTimelineOverview, paintBarBtn, xhTLText,
+    makeXHTimelineOverview, paintBarBtn, xhTLText, xhIconHTML,
 } from "./xh_ui_kit.js";
 
 export const TL_WIDGET = "xh_timeline";
@@ -43,6 +43,27 @@ const FONT = 'system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-seri
 
 function tr(zh, en) { return currentLang() === "zh" ? zh : en; }
 function T(key) { return xhTLText(key); }
+
+//  2026-11-13 家族图标统一：播放器/工具按钮原来用 Unicode 符号（⏵ ⏸ ◀ ▶ ＋ ↶ ⟲），
+//  换成自家 2350 枚图标库；文案表里那些符号和清理 emoji 留下的前导空格，在显示层剥掉，
+//  ⛔ 不改文案表本身（它还被 title / tooltip / 状态文案共用）。
+const TL_BTN_ICON = {
+    play: "播放", pause: "暂停", prevFrame: "chevron-left", nextFrame: "chevron-right",
+    split: "拆分", undo: "撤销", reset: "重置", upload: "上传", pickFile: "文件",
+};
+function setIconBtn(btn, key, label) {
+    if (!btn) return;
+    const raw = label != null ? label : T(key);
+    const clean = String(raw).replace(/^[⏵⏸◀▶＋+↶⟲\s]+/, "").replace(/[◀▶]$/, "");
+    btn.textContent = "";
+    const ic = TL_BTN_ICON[key];
+    if (ic) btn.insertAdjacentHTML("afterbegin", xhIconHTML(ic, { size: 12, color: "current" }));
+    if (clean) btn.appendChild(document.createTextNode((ic ? " " : "") + clean));
+    btn.style.display = "inline-flex";
+    btn.style.alignItems = "center";
+    btn.style.justifyContent = "center";
+    btn.dataset.xhIconDone = "1";
+}
 
 function widget(node, name) { return (node.widgets || []).find((w) => w && w.name === name); }
 function str(node, name, dflt) {
@@ -355,14 +376,14 @@ export function setupXHVideoTimeline(node) {
             ? T("frameInfo").replace("%d", String(f)).replace("%d", String(st.total - 1)).replace("%.2f", (st.fps ? (f / st.fps) : 0).toFixed(2))
             + " · " + T("segCount").replace("%d", String(st.segs.length))
             : (st.probeFail || T("pickVideo"));
-        btnPlay.textContent = video.paused ? T("play") : T("pause");
-        btnPrev.textContent = T("prevFrame");
-        btnNext.textContent = T("nextFrame");
-        btnSplit.textContent = T("split");
-        btnUndo.textContent = T("undo");
-        btnReset.textContent = T("reset");
-        btnUpload.textContent = T("upload");
-        btnFile.textContent = T("pickFile");
+        setIconBtn(btnPlay, video.paused ? "play" : "pause", video.paused ? T("play") : T("pause"));
+        setIconBtn(btnPrev, "prevFrame", T("prevFrame"));
+        setIconBtn(btnNext, "nextFrame", T("nextFrame"));
+        setIconBtn(btnSplit, "split", T("split"));
+        setIconBtn(btnUndo, "undo", T("undo"));
+        setIconBtn(btnReset, "reset", T("reset"));
+        setIconBtn(btnUpload, "upload", T("upload"));
+        setIconBtn(btnFile, "pickFile", T("pickFile"));
         const has = !!st.total;
         btnSplit.disabled = !has;
         btnUndo.disabled = st.segs.length <= 1;
@@ -453,7 +474,7 @@ export function setupXHVideoTimeline(node) {
         fileInput.value = "";
         if (!f) return;
         const looksVideo = /video\//.test(f.type || "") || /\.(mp4|mkv|webm|mov|gif)$/i.test(f.name || "");
-        if (!looksVideo) { btnUpload.textContent = T("uploadFail"); setTimeout(() => { btnUpload.textContent = T("upload"); }, 1500); return; }
+        if (!looksVideo) { btnUpload.textContent = T("uploadFail"); setTimeout(() => { setIconBtn(btnUpload, "upload", T("upload")); }, 1500); return; }
         btnUpload.textContent = T("uploading");
         btnUpload.disabled = true;
         try {
@@ -461,11 +482,11 @@ export function setupXHVideoTimeline(node) {
             const name = info && info.name ? info.name : f.name;
             selectVideo(name);
             btnUpload.textContent = T("uploadOk");
-            setTimeout(() => { btnUpload.textContent = T("upload"); }, 1600);
+            setTimeout(() => { setIconBtn(btnUpload, "upload", T("upload")); }, 1600);
         } catch (e) {
             console.warn("[XiaoHei-分段轴] 上传失败:", e);
             btnUpload.textContent = T("uploadFail");
-            setTimeout(() => { btnUpload.textContent = T("upload"); }, 1600);
+            setTimeout(() => { setIconBtn(btnUpload, "upload", T("upload")); }, 1600);
         } finally {
             btnUpload.disabled = false;
         }

@@ -8,13 +8,14 @@
 // 只改 label / title，绝不改 name —— 后端按 name 取参数，改了会坏。
 // 工具条走 addDOMWidget({serialize:false}) 且只 append，禁止 unshift（会顶乱 widgets_values 下标）。
 const { app } = window.comfyAPI.app;
-import { ensureLangBridge, makeXHToolbar, onLangChanged, releaseButtons, applyComboLabels, showXHPicker, fixWidgetValuesFromSaved , paintBarBtn, makeGearBtn, xhPlaceBeside, xhFollowAnchor} from "./xh_ui_kit.js";
+import { ensureLangBridge, makeXHToolbar, onLangChanged, releaseButtons, applyComboLabels, showXHPicker, fixWidgetValuesFromSaved , paintBarBtn, xhPlaceBeside, xhFollowAnchor, xhIconHTML, xhDecorateButton} from "./xh_ui_kit.js";
 //  2026-11-08：1:1 复刻的 WepeNerd 24 个节点接进家族中/EN 三表（专属词条，不污染家族原有词条）
 import { WN_NODES_ZH, WN_NODES_EN, WN_COMBO, isWNNode, wnText, wnUIFull } from "./xh_wepenerd/xh_wn_i18n.mjs";
 //  2026-11-09：XiaoHei-Qwen21 编辑四件套（复刻 BlueBox）接进家族中/EN 三表
 import { QE_NODES_ZH, QE_NODES_EN, isQENode, qeText, QE_COMBO } from "./xh_qwen21_edit/xh_qe_i18n.mjs";
-//  2026-11-11：小黑·全能角色设定表（复刻 + 优化 H3-Character-Sheet-Designer）接进家族中/EN 三表
-import { CS_NODES_ZH, CS_NODES_EN, CS_WIDGETS_ZH, CS_WIDGETS_EN, CS_SLOTS_ZH, CS_SLOTS_EN } from "./xh_charsheet_i18n.mjs";
+//  2026-11-14 晚：小黑·全能角色设定表 = 原作 1:1 复刻。
+//  设计器里的 DOM 文案由 reference13_zh.mjs 单独中文化；节点标题 / 控件标签 /
+//  输入·输出端口名仍归家族三表管（见下方 CS_* 隔离表），两条线同由 window.XH_LANG 驱动。
 // XiaoHei-视频分段轴 的节点专属 UI（播放器 + 帧轨道）—— 只放控件，不调工具条/中文（那边统一管）
 import { setupXHVideoTimeline } from "./xh_video_timeline.js";
 import { getLinkById as xhGetLinkById } from "./xh_compat.js";
@@ -23,6 +24,15 @@ import { getLinkById as xhGetLinkById } from "./xh_compat.js";
 import { viewUrl as xhImgListViewUrl } from "./xh_image_list.js";
 
 ensureLangBridge();
+
+//  2026-11-13 家族图标统一：工具条按钮存了中英双语文案，切语言会重写 textContent。
+//    统一走家族装饰器，符号图案（＋ 加一个排除区）才不会在切语言后变回裸字符，
+//    也不会因为 data-xh-icon-done 幂等标记而把图标卡住。
+function setXHBtnLabel(b, t) {
+    if (!b) return;
+    delete b.dataset.xhIconDone;
+    if (!xhDecorateButton(b, t || "")) b.textContent = t || "";
+}
 
 const XH_I18N = {
     zh: {
@@ -116,7 +126,7 @@ const XH_I18N = {
             XHSegmentConcat: "分段拼接",
             XHSegmentTable: "分段表",
             XHSet: "设置",
-            XHShowText: "显示文本",
+            XHShowText: "预览任意",
             XHSimpleMath: "简易数学",
             XHSlider: "滑块",
             XHSolidMask: "实心遮罩",
@@ -328,7 +338,8 @@ const XH_I18N = {
             pose_video_mask: " 彩色块(视频)",
             reference_image_mask: " 参考图彩色块",
             // XiaoHei-视频分段轴
-            start_frame: "▶ 起始帧",
+            //  2026-11-13：参数 label 里的 Unicode ▶ 不是家族图案，去掉（英文侧本来就没有）。
+            start_frame: " 起始帧",
             seg_frames: " 本段帧数",
             segments_info: " 分段信息",
             video: " 视频",
@@ -457,7 +468,7 @@ const XH_I18N = {
                 XHSegmentConcat: "XHSegment Concat",
                 XHSegmentTable: "XHSegment Table",
                 XHSet: "XHSet",
-                XHShowText: "XHShow Text",
+                XHShowText: "Preview as Text",
                 XHSimpleMath: "XHSimple Math",
                 XHSlider: "XHSlider",
                 XHSolidMask: "XHSolid Mask",
@@ -1148,9 +1159,11 @@ function buildIdColorControl(node) {
         // 「＋ 加一个人」
         const add = document.createElement("button");
         add.type = "button";
-        add.textContent = "＋";
+        //  2026-11-13 家族图标统一：Unicode ＋ → 图标库「加」→ plus。
+        add.innerHTML = xhIconHTML("加", { size: 12, color: "current" });
         add.title = (window.XH_LANG || "zh") === "zh" ? "再加一个身份" : "Add one identity";
         add.style.cssText = "width:22px;height:22px;border:1px dashed #6a6a6a;border-radius:4px;cursor:pointer;"
+            + "display:inline-flex;align-items:center;justify-content:center;"
             + "background:#2b2b2b;color:#e8e8e8;font:13px sans-serif;line-height:1;";
         add.addEventListener("mousedown", (e) => e.preventDefault());
         add.addEventListener("click", (e) => {
@@ -1258,8 +1271,13 @@ function buildSMFColorControl(node) {
         const zh = (window.XH_LANG || "zh") === "zh";
         const on = acw && String(acw.value || "").trim().toLowerCase() === "auto";
         autoBtn.textContent = zh ? "自动" : "Auto";
-        autoBtn.style.background = on ? "#3ad17a" : "#2b2b2b";
-        autoBtn.style.color = on ? "#111" : "#e8e8e8";
+        //  2026-11-15 用户拍板：自动键点亮时不要变绿（与模式键同一诉求）。
+        //   改「中性高亮」：亮一档的石墨底 + 亮描边 + 加粗亮字，开/关闭仍然一眼可辨，
+        //   且走官方主题变量（深浅主题自动适配），不再写死 hex。
+        autoBtn.style.background = on ? "var(--color-background-info, #3b4250)" : "var(--color-background-secondary, #2b2b2b)";
+        autoBtn.style.color = on ? "var(--color-text-primary, #e9edf2)" : "var(--color-text-secondary, #c9d1e0)";
+        autoBtn.style.borderColor = on ? "var(--color-border-info, #6b7688)" : "var(--color-border-tertiary, #3a3a3a)";
+        autoBtn.style.fontWeight = on ? "700" : "600";
         autoBtn.title = zh
             ? (on ? "当前=自动跟背景（点一下改回灰白）" : "点一下：遮挡色自动探测背景色（取目标左/右/上外扩那一圈里最多的颜色，用「左扩/右扩/上扩」调远近）")
             : (on ? "current = auto (match background); click to set back to gray" : "click: auto-sample the median color around the face");
@@ -1459,9 +1477,19 @@ function mkSMFModeBtn(node) {
         const grp = manual ? L.node : L.sam;
         const it = grp.items.find((x) => x[0] === key) || grp.items[0];
         const gname = manual ? (zh ? "节点模式" : "Node mode") : (zh ? "SAM3 模式" : "SAM3 mode");
-        btn.textContent = (manual ? "① " : "② ") + gname + " · " + it[1] + " ▾";
-        btn.style.background = manual ? "#3ad17a" : "#4a6fd8";
-        btn.style.color = manual ? "#111" : "#fff";
+        //  2026-11-15 家族图标统一：尾部 Unicode "▾" → 图标库「展开」(chevrons-up-down)。
+        //   ⛔ 只替换原有符号的位置，不新增元素、不动文案；textContent 会冲掉图标 ⇒ 必须走 innerHTML。
+        btn.innerHTML = (manual ? "① " : "② ") + gname + " · " + it[1] + " "
+            + xhIconHTML("展开", { size: 11, color: "current" });
+        btn.style.display = "inline-flex";
+        btn.style.alignItems = "center";
+        btn.style.justifyContent = "center";
+        //  2026-11-15 用户拍板：模式键不要亮绿（「一点也不符合节点气质」）。
+        //   原先 manual=#3ad17a 亮绿 / sam=#4a6fd8 亮蓝，都是节点里写死的彩底 ⇒ 一并中性化。
+        //   底/字/描边全走官方主题变量（深浅主题自动适配，浅底自动配深字），两种模式靠 ①/② 文案区分。
+        btn.style.background = "var(--color-background-secondary, #343a42)";
+        btn.style.color = "var(--color-text-primary, #e9edf2)";
+        btn.style.borderColor = "var(--color-border-secondary, #5a6472)";
         btn.title = grp.title + " — " + grp.desc;
     };
     const mkGroup = (L, g, isNodeGroup, curKey, noModel) => {
@@ -1479,7 +1507,10 @@ function mkSMFModeBtn(node) {
             const b = document.createElement("button");
             b.type = "button";
             const on = k === curKey;
-            b.textContent = label + (on ? "  ✓" : "");
+            //  2026-11-13 家族图标统一：选中态原来是字符串 "  ✓"，改成图标库「勾选」。
+            //    ⛔ 不能交给 DOM 兜底：选中/取消会反复重设 textContent，幂等标记会让图标卡死。
+            b.textContent = label;
+            if (on) b.insertAdjacentHTML("beforeend", " " + xhIconHTML("勾选", { size: 11, color: "current" }));
             b.title = desc;
             b.style.cssText = "display:block;width:100%;text-align:left;margin:3px 0;padding:5px 8px;"
                 + "font:12px sans-serif;border-radius:6px;cursor:pointer;"
@@ -1562,16 +1593,53 @@ Object.assign(XH_I18N.en.nodes, WN_NODES_EN);
 //  2026-11-09：节点标题登记（widgets / slots 走 qeText 按节点隔离表）
 Object.assign(XH_I18N.zh.nodes, QE_NODES_ZH);
 Object.assign(XH_I18N.en.nodes, QE_NODES_EN);
-//  2026-11-11：小黑·全能角色设定表 —— nodes / widgets / slots 三表并入通用路径（无需特殊分支）
+//  2026-11-14 晚：角色设定表接入家族中/EN 三处覆盖。
+//  🔴 用「按节点隔离」表，不并入全局 widgets / slots：全局表里 prompt / width / height
+//  已被别的节点占用（如「提示词(内置)」「宽度」），混用会翻错，也会污染其它家族节点。
+const CS_NODES_ZH = { XiaoHeiCharacterSheet: "小黑·全能角色设定表" };
+const CS_NODES_EN = { XiaoHeiCharacterSheet: "XiaoHei Character Sheet" };
+const CS_I18N = {
+    zh: {
+        widgets: {
+            state_json: "角色表状态", character_image: "角色主图",
+            reference_image_1: "附加参考 1", reference_image_2: "附加参考 2", reference_image_3: "附加参考 3",
+            use_layout_image: "使用排版参考图", style: "风格",
+            model_format: "下游模型格式",
+        },
+        slots: {
+            prompt: "提示词", width: "宽度", height: "高度",
+            layout_image: "排版参考图", character_image: "角色主图",
+            reference_image_1: "附加参考 1", reference_image_2: "附加参考 2", reference_image_3: "附加参考 3",
+            state_json: "角色表状态", use_layout_image: "使用排版参考图", style: "风格",
+            model_format: "下游模型格式", negative_prompt: "负向提示词",
+        },
+    },
+    en: {
+        widgets: {
+            state_json: "state_json", character_image: "character_image",
+            reference_image_1: "reference_image_1", reference_image_2: "reference_image_2", reference_image_3: "reference_image_3",
+            use_layout_image: "use_layout_image", style: "style",
+            model_format: "model_format",
+        },
+        slots: {
+            prompt: "prompt", width: "width", height: "height",
+            layout_image: "layout_image", character_image: "character_image",
+            reference_image_1: "reference_image_1", reference_image_2: "reference_image_2", reference_image_3: "reference_image_3",
+            state_json: "state_json", use_layout_image: "use_layout_image", style: "style",
+            model_format: "model_format", negative_prompt: "negative_prompt",
+        },
+    },
+};
+function csText(kind, key, lang) {
+    const pack = CS_I18N[lang] || CS_I18N.zh;
+    return (pack && pack[kind] && pack[kind][key]) || null;
+}
 Object.assign(XH_I18N.zh.nodes, CS_NODES_ZH);
 Object.assign(XH_I18N.en.nodes, CS_NODES_EN);
-Object.assign(XH_I18N.zh.widgets, CS_WIDGETS_ZH);
-Object.assign(XH_I18N.en.widgets, CS_WIDGETS_EN);
-Object.assign(XH_I18N.zh.slots, CS_SLOTS_ZH);
-Object.assign(XH_I18N.en.slots, CS_SLOTS_EN);
 
 function applyLangToNode(node) {
     if (!node || !isXHNode(node.type)) return;
+    const _cs = normalizeType(node.type) === "XiaoHeiCharacterSheet";
     const _wn = isWNNode(node.type);
     const _qe = isQENode(node.type);   //  2026-11-09 Qwen21 四件套
     const lang = window.XH_LANG || "zh";
@@ -1594,8 +1662,10 @@ function applyLangToNode(node) {
                 if (w && w.name) {
                     const _wnLb = _wn ? wnText("widgets", w.name, lang) : null;
                     const _qeLb = _qe ? qeText("widgets", w.name, lang, t) : null;
+                    const _csLb = _cs ? csText("widgets", w.name, lang) : null;
                     if (_wnLb) w.label = _wnLb;
                     else if (_qeLb) w.label = _qeLb;
+                    else if (_csLb) w.label = _csLb;
                     else if (pack.widgets[w.name]) w.label = pack.widgets[w.name];
                 }
                 const tg = w && w.name && TOGGLE_ONOFF[lang] && TOGGLE_ONOFF[lang][w.name];
@@ -1611,7 +1681,8 @@ function applyLangToNode(node) {
             for (const s of arr || []) {
                 const _wnSlotLb = _wn ? wnText("slots", s && s.name, lang) : null;
                 const _qeSlotLb = _qe ? qeText("slots", s && s.name, lang, t) : null;
-                const lb = _wnSlotLb || _qeSlotLb || slotLabel(s && s.name, lang);
+                const _csSlotLb = _cs ? csText("slots", s && s.name, lang) : null;
+                const lb = _wnSlotLb || _qeSlotLb || _csSlotLb || slotLabel(s && s.name, lang);
                 if (lb) s.label = lb;
             }
         };
@@ -2449,21 +2520,135 @@ const SMF_CORE_SAM = ["shape", "prompt", "threshold", "target_scope", "id_paint"
 function xhSMF_coreOf(node) {
     const manual = xhSMF_isManual(node);
     const core = (manual ? SMF_CORE_MANUAL : SMF_CORE_SAM).slice();
+    //  2026-11-15：两个总开关「无条件常显」—— 收起态也必须够得着。
+    //    旧写法是「只有自己=开才 push 进 core」⇒ 一关就整个消失、再也点不到（死循环）。
+    if (!core.includes("exclude_enable")) core.push("exclude_enable");
+    if (!core.includes("search_enable")) core.push("search_enable");
     const gv = (k) => String((xhSM_getW(node, k) || {}).value ?? "");
     const on = (k) => !!(xhSM_getW(node, k) || {}).value;
     if (!manual) {
         let preset = "sam_locate";
         try { preset = xhSMF_presetOf(node); } catch (e) {}
-        if (preset === "sam_range" || on("search_enable")) core.push("search_enable");
         if (preset === "sam_palette") core.push("id_alpha");
         const scope = gv("target_scope");
         if (scope === "index") core.push("target_index");
         if (scope === "first_n") core.push("target_count");
         const ip = gv("id_paint");
         if (ip === "single" || ip === "palette") core.push("id_color", "id_alpha");
-        if (on("exclude_enable")) core.push("exclude_enable");
     }
     return core;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  2026-11-15 ·「一条决策链 + 三级显隐」（用户：简洁、该藏的藏、该折的折、该显的显）
+//   L0 长显：核心参数 + 排除区/搜索区总开关（永不因收起而消失）
+//   L1 因果显：当前组合下**不生效**的参数整个不挂 ⇒ 从根上消灭「调了没反应」的假参数
+//   L2 分区折叠：其余参数归 4 区，各区独立收放（状态写 properties ⇒ 载入不丢）
+//  🔴 铁律：一个参数不删、值不动、端口不动、SMF_ORDER_NOW / 存档位不动，只重排 w.hidden。
+// ════════════════════════════════════════════════════════════════════════════
+const SMF_SECTIONS = [
+    { key: "find", zh: "找目标", en: "Find",
+      keys: ["prompt", "threshold", "refine_iterations", "target_scope", "target_index",
+             "target_count", "id_sort", "id_paint", "fallback_draw"] },
+    { key: "color", zh: "颜色与融合", en: "Color",
+      keys: ["id_color", "id_alpha", "shape_color", "opacity", "blur_radius",
+             "exclude_color", "color_pick_ref", "depth_mode", "depth_near"] },
+    { key: "zones", zh: "圈定范围", en: "Zones",
+      keys: ["exclude_cx", "exclude_cy", "exclude_w", "exclude_h", "exclude_zones",
+             "search_cx", "search_cy", "search_w", "search_h", "search_zones"] },
+    { key: "shape", zh: "形状微调", en: "Shape",
+      keys: ["shape_scale", "mask_margin", "expand_left", "expand_right",
+             "expand_top", "expand_bottom", "rotation", "invert"] },
+];
+const SMF_SECTION_OF = {};
+for (const _sec of SMF_SECTIONS) for (const _k of _sec.keys) SMF_SECTION_OF[_k] = _sec.key;
+
+// L1：当前组合下后端根本不读的参数（依据 docs/小黑万能遮罩详解.md §参数表 / §211 / §287 / §370）
+function xhSMF_inertOf(node) {
+    const s = new Set();
+    const gv = (k) => String((xhSM_getW(node, k) || {}).value ?? "");
+    const on = (k) => !!(xhSM_getW(node, k) || {}).value;
+    const manual = xhSMF_isManual(node);
+    if (manual) for (const k of SMF_SAM_ONLY) s.add(k);       // 手动模式不跑 SAM3
+    const scope = gv("target_scope");
+    if (scope !== "index") s.add("target_index");              // 没选「第几个」⇒ 序号无效
+    if (scope !== "first_n") s.add("target_count");            // 没选「前几个」⇒ 数量无效
+    if (gv("id_paint") === "off") { s.add("id_color"); s.add("id_alpha"); }   // ID 上色关 ⇒ 色号/浓度是假参数
+    //  手动模式下红框 = 遮罩框本体（后端直接拿它画），exclude_enable 关着也生效 ⇒ 不藏
+    if (!manual && !on("exclude_enable"))
+        for (const k of ["exclude_cx", "exclude_cy", "exclude_w", "exclude_h", "exclude_color", "exclude_zones"]) s.add(k);
+    if (!on("search_enable"))
+        for (const k of ["search_cx", "search_cy", "search_w", "search_h", "search_zones"]) s.add(k);
+    if (gv("depth_mode") === "off") s.add("depth_near");       // 没开深度 ⇒ 「只留最近的」无效
+    const shape = gv("shape");
+    if (shape === "head") {                                    // head 只看四向外扩
+        s.add("mask_margin"); s.add("shape_scale"); s.add("rotation");
+    } else {                                                   // 其余形状四向外扩不参与
+        for (const k of ["expand_left", "expand_right", "expand_top", "expand_bottom"]) s.add(k);
+    }
+    return s;
+}
+
+// L2：分区展开状态（properties 持久化，载入不丢；默认全折 ⇒ 点齿轮不再一泄 40 项）
+function xhSMF_sectionState(node) {
+    let s = {};
+    try { node.properties = node.properties || {}; s = node.properties.xh_smf_sections || {}; } catch (e) { return {}; }
+    const out = {};
+    for (const sec of SMF_SECTIONS) out[sec.key] = !!s[sec.key];
+    return out;
+}
+function xhSMF_toggleSection(node, key) {
+    try {
+        node.properties = node.properties || {};
+        const s = node.properties.xh_smf_sections || (node.properties.xh_smf_sections = {});
+        s[key] = !s[key];
+        if (s[key] && node._xhSMFCollapsed) setSMFCollapsed(node, false);  // 点分区⇒自动展开整体，一键直达
+        applySMFMode(node);
+        node.setDirtyCanvas?.(true, true);
+    } catch (e) {}
+}
+
+// 摘要逐词分色（2026-11-15 用户要求「每一个词都有颜色、带不同颜色」）。
+//  语义色沿用家族既有体系：金铜=用途、蓝=形状、红=排除区、绿=搜索区（与画布红绿框同源），
+//  紫=提示词、橙=ID上色；状态字跟所属词同色（关则压暗）。分隔符保持中性暗灰，避免整行花掉。
+const SMF_SUM_TONE = {
+    preset:  { c: "#e6b800", bg: "rgba(230,184,0,.16)" },   // 家族金铜（唯一允许的常亮金）
+    prompt:  { c: "#c9a7f5", bg: "rgba(201,167,245,.14)" },
+    shape:   { c: "#8ab6f0", bg: "rgba(138,182,240,.14)" },
+    exclude: { c: "#f08a8a", bg: "rgba(240,138,138,.16)" },
+    search:  { c: "#7fd6a0", bg: "rgba(127,214,160,.15)" },
+    id:      { c: "#f0b45f", bg: "rgba(240,180,95,.15)" },
+};
+// 摘要分段：pure text 由 xhSMF_summaryOf 拼出（tooltip / 测试桩 / 兼容全靠它），
+//  渲染层用同一份分段逐词上色 ⇒ 两边永远不会漂移。sep = 该词前面的连接符。
+function xhSMF_summaryParts(node) {
+    const zh = (window.XH_LANG || "zh") === "zh";
+    const gv = (k) => { const w = xhSM_getW(node, k); return w ? String(w.value) : ""; };
+    const on = (k) => !!(xhSM_getW(node, k) || {}).value;
+    let key = "sam_locate";
+    try { key = xhSMF_presetOf(node); } catch (e) {}
+    const L = zh ? SMF_GROUP_UI.zh : SMF_GROUP_UI.en;
+    const all = L.node.items.concat(L.sam.items);
+    const JOIN = " · ";
+    const P = [];
+    const put = (t, tone, sep, dim) => { if (t) P.push({ t: String(t), tone, sep: sep || "", dim: !!dim }); };
+    put((all.find((x) => x[0] === key) || all[0])[1], "preset", "");
+    if (!xhSMF_isManual(node) && gv("prompt")) put(gv("prompt"), "prompt", JOIN);
+    const sh = gv("shape");
+    if (sh) put(sh === "sam_mask" ? (zh ? "SAM3遮罩" : "SAM3 mask")
+        : sh === "head" ? (zh ? "目标框以上" : "head box") : sh, "shape", JOIN);
+    const exOn = on("exclude_enable"), seOn = on("search_enable");
+    put(zh ? "排除区" : "exclude", "exclude", JOIN);
+    put(exOn ? (zh ? "开" : "on") : (zh ? "关" : "off"), "exclude", " ", !exOn);
+    put(zh ? "搜索区" : "search", "search", JOIN);
+    put(seOn ? (zh ? "开" : "on") : (zh ? "关" : "off"), "search", " ", !seOn);
+    const ip = gv("id_paint");
+    if (ip && ip !== "off") put((zh ? "ID上色 " : "ID ") + ip, "id", JOIN);
+    return P;
+}
+// 一句话摘要：收起时也能一眼确认「我现在配成了啥」（纯读现有参数，不另存状态）
+function xhSMF_summaryOf(node) {
+    return xhSMF_summaryParts(node).map((p) => p.sep + p.t).join("");
 }
 
 // 数值自愈：ComfyUI 1.58 起对 min/max 做校验（value_smaller_than_min）。
@@ -2501,12 +2686,14 @@ function xhSMF_sanitize(node) {
 // 折叠状态跨实例存活：LGraph.configure 会销毁重建节点实例 ⇒ JS 实例字段必丢，
 // node.properties 是官方唯一保证恢复 + 序列化的载体。
 function xhSMF_restoreState(node) {
-    if (!node) return true;
-    try { node.properties = node.properties || {}; } catch (e) { return true; }
-    const col = node.properties.xh_smf_collapsed !== false;   // 没存过 ⇒ 默认收起
-    node._xhSMFCollapsed = col;
-    try { node._xhSMFGear && node._xhSMFGear._xhGearSet && node._xhSMFGear._xhGearSet(col); } catch (e) {}
-    return col;
+    if (!node) return false;
+    try { node.properties = node.properties || {}; } catch (e) { return false; }
+    //  2026-11-15：总折叠键删掉后，这一层「全局收起」彻底退役 ⇒ 恒定展开。
+    //   折叠唯一真源 = 四个分区（默认全折），所以恒定 false 反而更简洁：参数仍按分区藏着。
+    //   ⛔ 老存档里的 xh_smf_collapsed=true 必须忽略：否则 applySMFMode 会把所有非核心参数压住，
+    //      分区按钮点开也露不全 ⇒ 看起来像「点了没反应」。
+    node._xhSMFCollapsed = false;
+    return false;
 }
 
 // Vue(Nodes 2.0) 的 widget 可见性是 computed 派生，且 widget 可能晚于 onNodeCreated 建好
@@ -2521,7 +2708,7 @@ function xhSMF_scheduleApply(node) {
     }, d));
 }
 
-// 工具条「↺ 默认」：老工作流参数被改乱 / 提示「输入超出范围」时一键归位
+// 工具条「重置 · 默认」键（图标走家族「重置」）：老工作流参数被改乱 / 提示「输入超出范围」时一键归位
 function mkSMFResetBtn(node) {
     const b = document.createElement("button");
     b.type = "button";
@@ -2532,7 +2719,13 @@ function mkSMFResetBtn(node) {
     //   改成按当前语言重刷，并挂进 _xhFillRefresh 链（包一层，不动别人挂的）。
     const refresh = () => {
         const zh = (window.XH_LANG || "zh") === "zh";
-        b.textContent = zh ? "↺ 默认" : "↺ Reset";
+        //  2026-11-15：Unicode "↺" → 家族「重置」(rotate-ccw)；每次 refresh 先清空再塞，幂等。
+        b.textContent = "";
+        b.insertAdjacentHTML("afterbegin", xhIconHTML("重置", { size: 11, color: "current" }));
+        b.appendChild(document.createTextNode(" " + (zh ? "默认" : "Reset")));
+        b.style.display = "inline-flex";
+        b.style.alignItems = "center";
+        b.style.justifyContent = "center";
         b.title = zh
             ? "一键把所有参数写回出厂值（老工作流参数被改乱、或提示「输入超出范围」时点它）"
             : "Reset every parameter to its factory default";
@@ -2675,6 +2868,14 @@ function setSMFCollapsed(node, collapsed) {
     node._xhSMFCollapsed = col;
     //  v1.48.0：写进 properties ⇒ 载入工作流后不丢，齿轮图标与参数状态也不会对不上
     try { node.properties = node.properties || {}; node.properties.xh_smf_collapsed = col; } catch (e) {}
+    //  展开时若四个分区全折着，自动亮起「找目标」区给即时反馈（避免「点了没反应」）。
+    //  2026-11-15：总折叠键删除后本函数仅剩分区按钮的兜底调用，逻辑保留不删以防老档兼容。
+    if (!col) {
+        try {
+            const s = node.properties.xh_smf_sections || (node.properties.xh_smf_sections = {});
+            if (!SMF_SECTIONS.some((sec) => !!s[sec.key])) s.find = true;
+        } catch (e) {}
+    }
     try { node._xhSMFGear && node._xhSMFGear._xhGearSet && node._xhSMFGear._xhGearSet(col); } catch (e) {}
     applySMFMode(node);
     try { node.setDirtyCanvas?.(true, true); } catch (e) {}
@@ -2682,9 +2883,6 @@ function setSMFCollapsed(node, collapsed) {
 function applySMFMode(node) {
     if (!node) return;
     const col = !!node._xhSMFCollapsed;
-    //  v1.48.0：判定统一 —— 按钮 / 后端 / 这里全用 xhSMF_isManual（含「没接模型」）。
-    //   修前只看 mask_mode 下拉值 ⇒ 按钮显示「① 节点模式」，SAM 参数却照样摊一屏。
-    const manual = xhSMF_isManual(node);
     const hide = (k, on) => {
         const w = xhSM_getW(node, k);
         if (!w) return;
@@ -2694,24 +2892,25 @@ function applySMFMode(node) {
         //  不动 DOM display：Vue widget 的 element 可能是节点容器，硬设 none 会把整块节点藏掉，
         //    且恢复时 display="" 会冲掉原本的 flex 布局。官方两条读法 + 多帧重算已足够。
     };
+    //  2026-11-15：三级显隐统一在这里判定（原先「收起只留 core / 展开全放」会一泄 40 项，
+    //    且 ID上色关、深度关、形状不对时仍挂着一堆调了没反应的假参数）。
+    const inert = xhSMF_inertOf(node);
+    const core = new Set(xhSMF_coreOf(node));
+    const secOpen = xhSMF_sectionState(node);
     hide("mask_mode", true);   // 模式统一由工具条分组浮层管，原生下拉视觉隐藏（值照存）
-    for (const k of SMF_ADV_KEYS) hide(k, col);
-    for (const k of SMF_SAM_ONLY) hide(k, col || manual);
-    //  v1.48.0「缩」：收起时只留当前模式/用途真正用得上的 4~5 个参数；
-    //   展开时把非 SAM 专属的全放出来（要细调照样够用）。
-    const core = xhSMF_coreOf(node);
     for (const k of SMF_ORDER_NOW) {
         if (k === "mask_mode") continue;
-        if (manual && SMF_SAM_ONLY.includes(k)) continue;   // 节点模式下 SAM 参数永远不露
-        hide(k, col ? !core.includes(k) : false);
+        // L0：控制台挂载成功后两个总开关由红绿胶囊接管 ⇒ 原生 widget 只存值、不再重复画
+        if (node._xhSMFDeckReady && (k === "exclude_enable" || k === "search_enable")) { hide(k, true); continue; }
+        if (inert.has(k)) { hide(k, true); continue; }        // L1 假参数：任何状态都不挂
+        if (core.has(k)) { hide(k, false); continue; }         // L0 长显
+        if (col) { hide(k, true); continue; }                  // 收起态：其余全收
+        const sec = SMF_SECTION_OF[k];
+        hide(k, sec ? !secOpen[sec] : false);                  // L2 展开态：按分区各自收放
     }
     try { smfIdColorMode(node); } catch (e) {}
-    try {
-        const wdm = xhSM_getW(node, "depth_mode");
-        const dOff = !wdm || String(wdm.value) === "off";
-        hide("depth_near", col || dOff);
-    } catch (e) {}
-    try { smfApplyShapeOptions(node, manual); } catch (e) {}
+    try { smfApplyShapeOptions(node, xhSMF_isManual(node)); } catch (e) {}
+    try { node._xhSMFDeckRefresh && node._xhSMFDeckRefresh(); } catch (e) {}
     try { node._xhModeBtnRefresh && node._xhModeBtnRefresh(); } catch (e) {}
     try { node.setDirtyCanvas?.(true, true); } catch (e) {}
 }
@@ -2721,7 +2920,10 @@ function xhSMFModeHook(node) {
     applySMFMode(node);
     // 模式一变 / 深度用法一变 ⇒ 重算显隐（深度=关时把「只留最近的」藏起来）
     //  2026-10-25：id_paint 一变 ⇒ ID 颜色色板三模式联动（palette→single 时置灰要立刻解除）
-    for (const wname of ["mask_mode", "depth_mode", "id_paint"]) {
+    //  2026-11-15：因果显的触发源补齐 —— 形状 / 要哪几个目标 / 两个总开关一变，
+    //    立刻重算 inert（否则刚打开的分区里还挂着上一组合的假参数）。
+    for (const wname of ["mask_mode", "depth_mode", "id_paint", "shape", "target_scope",
+                         "exclude_enable", "search_enable"]) {
         const wm = (node.widgets || []).find((w) => w && w.name === wname);
         if (!wm || wm._xhSMFCbHooked) continue;
         wm._xhSMFCbHooked = true;
@@ -2756,10 +2958,127 @@ function xhSMF_setup(node) {
             cx: "search_cx", cy: "search_cy", w: "search_w", h: "search_h", zones: "search_zones",
             enable: "search_enable",
         },
+        deck: true,   // 2026-11-15：常显控制台（双开关 / 分区 / 摘要）挂进已有 wrap
     });
     try { xhSMFModeHook(node); } catch (e) {}    //  v1.9.11：模式切换 → SAM 专属参数自动显隐
     return r;
 }
+// 2026-11-15：常显控制台 —— 双开关 + 分区折叠 + 一句话摘要。
+//  ⛔ 不新增 addDOMWidget：本机前端不认 serialize:false，多一个 DOM 控件照样写进
+//     widgets_values（40→41）⇒ xhSMF_migrate 的档位判定全失效、老存档会迁移错。
+//    所以挂进「已有的框编辑器 wrap」内部，只加高度、零新增控件。
+function mkSMFDeck(node) {
+    //  2026-11-15：四个分区各配一枚家族语义图标（全部经 semantic.mjs 校验指向真实 svg）。
+    //    find=搜索/search · color=颜色选择/palette · zones=框选/square-dashed · shape=形状/shapes
+    const SEC_ICONS = { find: "搜索", color: "颜色选择", zones: "框选", shape: "形状" };
+    const root = document.createElement("div");
+    root.style.cssText = "width:100%;box-sizing:border-box;display:grid;gap:4px;margin-bottom:6px;";
+    const zhNow = () => (window.XH_LANG || "zh") === "zh";
+    const mkBtn = () => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.style.cssText = "flex:1;min-width:0;padding:3px 6px;border-radius:5px;cursor:pointer;"
+            + "font:11px sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+            + "background:#232323;color:#c9d1e0;border:1px solid #3a3a3a;";
+        ["pointerdown", "mousedown", "dblclick", "keydown", "click"].forEach((ev) =>
+            b.addEventListener(ev, (e) => e.stopPropagation()));
+        return b;
+    };
+    // 行 1：范围双开关（红=排除区 / 绿=搜索区）—— 点一下直接写回原生 widget，值与存档位都不动
+    const rowSw = document.createElement("div");
+    rowSw.style.cssText = "display:flex;gap:6px;";
+    const mkSwitch = (wname, zhT, enT, onCol) => {
+        const b = mkBtn();
+        b.dataset.zh = zhT; b.dataset.en = enT; b.dataset.w = wname; b.dataset.col = onCol;
+        b.onclick = (e) => {
+            e.stopPropagation();
+            const w = xhSM_getW(node, wname);
+            if (!w) return;
+            xhSM_setW(w, !w.value);
+            try { applySMFMode(node); } catch (err) {}
+            try { node.setDirtyCanvas?.(true, true); } catch (err) {}
+            refresh();
+        };
+        return b;
+    };
+    const swEx = mkSwitch("exclude_enable", "排除区", "Exclude", "#f85149");
+    const swSe = mkSwitch("search_enable", "搜索区", "Search", "#3fb950");
+    rowSw.appendChild(swEx); rowSw.appendChild(swSe);
+    // 行 2：四个分区，各自收放（带当前可用项数）
+    const rowSec = document.createElement("div");
+    rowSec.style.cssText = "display:flex;gap:4px;";
+    const secBtns = {};
+    for (const sec of SMF_SECTIONS) {
+        const b = mkBtn();
+        b.onclick = (e) => { e.stopPropagation(); xhSMF_toggleSection(node, sec.key); refresh(); };
+        secBtns[sec.key] = b;
+        rowSec.appendChild(b);
+    }
+    // 行 3：一句话摘要（2026-11-15 逐词分色）
+    const sum = document.createElement("div");
+    sum.style.cssText = "font:11px sans-serif;color:#8a93a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.9;";
+    const paintSummary = () => {
+        sum.textContent = "";
+        for (const p of xhSMF_summaryParts(node)) {
+            if (p.sep) {
+                const d = document.createElement("span");
+                d.textContent = p.sep;
+                d.style.cssText = "color:#5f6a78;font-weight:400;";
+                sum.appendChild(d);
+            }
+            const tone = SMF_SUM_TONE[p.tone] || SMF_SUM_TONE.shape;
+            const s = document.createElement("span");
+            s.textContent = p.t;
+            s.style.cssText = "color:" + tone.c + ";background:" + tone.bg + ";"
+                + "border-radius:4px;padding:1px 5px;font-weight:600;"
+                + (p.dim ? "opacity:.6;" : "");
+            sum.appendChild(s);
+        }
+        sum.title = sum.textContent;   // tooltip 仍是纯文本，不含样式
+    };
+    root.appendChild(rowSw); root.appendChild(rowSec); root.appendChild(sum);
+    const paintSwitch = (b, wname) => {
+        const zh = zhNow();
+        const isOn = !!(xhSM_getW(node, wname) || {}).value;
+        const label = zh ? b.dataset.zh : b.dataset.en;
+        b.textContent = label + " · " + (isOn ? (zh ? "开" : "on") : (zh ? "关" : "off"));
+        b.style.borderColor = isOn ? b.dataset.col : "#3a3a3a";
+        b.style.color = isOn ? b.dataset.col : "#8a93a6";
+        b.style.background = isOn ? "rgba(255,255,255,.06)" : "#232323";
+    };
+    const refresh = () => {
+        try {
+            paintSwitch(swEx, "exclude_enable");
+            paintSwitch(swSe, "search_enable");
+            const st = xhSMF_sectionState(node), inert = xhSMF_inertOf(node), zh = zhNow();
+            for (const sec of SMF_SECTIONS) {
+                const b = secBtns[sec.key];
+                const n = sec.keys.filter((k) => !inert.has(k)).length;
+                //  2026-11-15：▾/▸ 裸字符 → 每区一枚家族语义图标；展开态靠底色区分，不再靠箭头。
+                //  ⛔ 图标占的是原来符号的位置（不新增一道），文字原样保留。
+                b.textContent = "";
+                b.insertAdjacentHTML("afterbegin", xhIconHTML(SEC_ICONS[sec.key] || "分组", { size: 11, color: "current" }));
+                const tx = document.createElement("span");
+                tx.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;";
+                tx.textContent = " " + (zh ? sec.zh : sec.en) + " " + n;
+                b.appendChild(tx);
+                b.style.display = "inline-flex";
+                b.style.alignItems = "center";
+                b.style.justifyContent = "center";
+                b.style.borderColor = st[sec.key] ? "#4a6fd8" : "#3a3a3a";
+                b.style.color = st[sec.key] ? "#dbe6ff" : "#8a93a6";
+                b.style.background = st[sec.key] ? "rgba(74,111,216,.18)" : "#232323";
+            }
+            paintSummary();
+        } catch (e) {}
+    };
+    node._xhSMFDeckRefresh = refresh;
+    const prevFill = node._xhFillRefresh;
+    node._xhFillRefresh = () => { try { prevFill && prevFill(); } catch (e) {} try { refresh(); } catch (e) {} };
+    refresh();
+    return root;
+}
+
 function xhBox_setup(node, N) {
     if (node._xhBBox) return;                         // 幂等
     const wrap = document.createElement("div");
@@ -2775,7 +3094,7 @@ function xhBox_setup(node, N) {
     //   每组 = 主框（第 1 个框：el + 序号 tag + 4 个缩放手柄，手柄挂 ov）+ 附加框列表（第 2..N 个）。
     const GRPS = [{
         cx: N.cx, cy: N.cy, w: N.w, h: N.h, zones: N.zones,
-        bg: N.bg, border: N.border, tagCol: "#f2b3ae",
+        bg: N.bg, border: N.border, tagCol: "#ff9a90",
         //  2026-10-25：红组也接上总开关（跟绿组对称）—— 「启用排除区」关着 ⇒ 红框整套隐藏 + 红按钮禁用。
         //   v1.17.6 起 exclude_enable 默认关 ⇒ 新节点拖出来画布干干净净，想排除再开。
         enable: "exclude_enable",
@@ -2785,7 +3104,7 @@ function xhBox_setup(node, N) {
     if (N.search) {
         GRPS.push({
             cx: N.search.cx, cy: N.search.cy, w: N.search.w, h: N.search.h, zones: N.search.zones,
-            bg: "rgba(58,209,122,.20)", border: "#3ad17a", tagCol: "#a8e6bd",
+            bg: "rgba(58,209,122,.20)", border: "#3ad17a", tagCol: "#7ce8a8",
             //  总开关：搜索区关着时绿框整套隐藏（不然默认关还画个大绿框，用户以为出 bug）
             enable: N.search.enable || "search_enable",
             tipZh: "搜索区1：SAM3 只在绿框里找，区外涂黑(手遮模式下=形状只在这里画) · 拖【边缘】缩放 · 拖【中心】移动 · 下方「＋」加搜索区2、3、4…",
@@ -2808,7 +3127,12 @@ function xhBox_setup(node, N) {
         el.style.cssText = "position:absolute;box-sizing:border-box;background:" + g.bg + ";border:2px dashed " + g.border + ";";
         ov.appendChild(el);
         const tag = document.createElement("div");
-        tag.style.cssText = "position:absolute;left:2px;top:-15px;color:" + g.tagCol + ";font:10px sans-serif;white-space:nowrap;pointer-events:none;";
+        //  2026-11-15：标签压在【图片本身】上，浅粉 10px 在浅色图上直接化掉（用户实报）。
+        //   改成「深底胶囊 + 亮字 + 组色左条」⇒ 任何底图都清楚；总高仍 15px、top 不变 ⇒ 零布局影响。
+        tag.style.cssText = "position:absolute;left:2px;top:-15px;color:" + g.tagCol + ";"
+            + "background:rgba(20,20,20,.88);border-left:3px solid " + g.border + ";"
+            + "padding:1px 6px 1px 5px;border-radius:0 3px 3px 0;"
+            + "font:500 11px/13px sans-serif;white-space:nowrap;pointer-events:none;";
         el.appendChild(tag);
         const hs = {};
         for (const k of ["tl", "tr", "bl", "br"]) {
@@ -2827,6 +3151,14 @@ function xhBox_setup(node, N) {
     //  2026-10-25：ID 颜色色板行 —— 挂框编辑器 wrap 顶部（stage 之前）；三模式联动见 smfIdColorMode。
     //    必须挂在这（xhBox_setup，万能遮罩的编辑器）而不是 xhSM_setup —— 后者只给老节点 XHShapeMaskOverlay 用；
     //   v11 曾加错地方 ⇒ 万能遮罩上色板整个不显示。高度 +20 同步进 getMinHeight，不然被定高裁掉。
+    //  2026-11-15：常显控制台（双开关 / 分区 / 摘要）—— 只挂进已有 wrap，不新增 DOM widget。
+    //    挂成功才置 _xhSMFDeckReady ⇒ applySMFMode 才敢把原生两个开关藏起来（失败时原生照常兜底）。
+    if (N.deck) {
+        try {
+            const _deck = mkSMFDeck(node);
+            if (_deck) { wrap.appendChild(_deck); node._xhSMFDeckReady = true; }
+        } catch (e) { console.warn("[XiaoHei] 万能遮罩控制台挂载失败:", e); }
+    }
     try { const _idRow = mkSMFIdColorRow(node); if (_idRow) wrap.appendChild(_idRow); } catch (e) { console.warn("[XiaoHei] ID 色板挂载失败:", e); }
     wrap.appendChild(stage); wrap.appendChild(tip);
 
@@ -2837,7 +3169,7 @@ function xhBox_setup(node, N) {
     try {
         node.addDOMWidget(N.dom, "custom", wrap, {
             serialize: false, hideOnZoom: false,
-            getMinHeight: () => Math.round((cv.height || 200) + (N.zones ? 62 : 34) + (N.search ? 31 : 0) + 20),
+            getMinHeight: () => Math.round((cv.height || 200) + (N.zones ? 62 : 34) + (N.search ? 31 : 0) + 20 + (N.deck ? 78 : 0)),
         });
     } catch (e) { console.warn("[XiaoHei] 区域限定框编辑器挂载失败:", e); }
 
@@ -2852,7 +3184,7 @@ function xhBox_setup(node, N) {
             const b = document.createElement("button");
             b.style.cssText = "flex:1;padding:4px 6px;border:1px solid #3a3a3a;border-radius:5px;background:#232323;color:#c9d1e0;font:11px sans-serif;cursor:pointer;";
             b.dataset.zh = zhT; b.dataset.en = enT;
-            b.textContent = (window.XH_LANG || "zh") === "zh" ? zhT : enT;
+            setXHBtnLabel(b, (window.XH_LANG || "zh") === "zh" ? zhT : enT);
             b.addEventListener("click", fn);
             bar.appendChild(b);
             return b;
@@ -3032,10 +3364,19 @@ function xhBox_setup(node, N) {
         }
         const del = document.createElement("div");
         del.style.cssText = "position:absolute;right:-9px;top:-9px;width:16px;height:16px;border-radius:50%;background:" + g.border + ";color:#fff;font:bold 12px/15px sans-serif;text-align:center;cursor:pointer;";
-        del.textContent = "×";
+        //  2026-11-15：乘号 "×" → 家族「关闭」(x) 真图标，16px 圆里居中。
+        del.innerHTML = xhIconHTML("关闭", { size: 10, color: "current" });
+        del.style.display = "flex";
+        del.style.alignItems = "center";
+        del.style.justifyContent = "center";
         el.appendChild(del);
         const tag = document.createElement("div");
-        tag.style.cssText = "position:absolute;left:2px;top:-15px;color:" + g.tagCol + ";font:10px sans-serif;white-space:nowrap;";
+        //  2026-11-15：附加框（排除区2/3/4…、搜索区2/3/4…）同一套深底亮字，跟主框保持一致；
+        //   顺手补 pointer-events:none ⇒ 标签不再挡住框内拖拽。
+        tag.style.cssText = "position:absolute;left:2px;top:-15px;color:" + g.tagCol + ";"
+            + "background:rgba(20,20,20,.88);border-left:3px solid " + g.border + ";"
+            + "padding:1px 6px 1px 5px;border-radius:0 3px 3px 0;"
+            + "font:500 11px/13px sans-serif;white-space:nowrap;pointer-events:none;";
         el.appendChild(tag);
         ov.appendChild(el);
         return { el, hs, del, tag };
@@ -3237,10 +3578,10 @@ function xhBox_setup(node, N) {
                 // 工具条文字跟着语言切换翻（便宜，一帧一次无感）；重启提示优先级更高，不被覆盖
                 const _langZh = (window.XH_LANG || "zh") === "zh";
                 if (ed.btnAdd) ed.btnAdd.forEach((b, gi) => {
-                    if (!(ed.btnMiss && ed.btnMiss[gi])) b.textContent = _langZh ? b.dataset.zh : b.dataset.en;
+                    if (!(ed.btnMiss && ed.btnMiss[gi])) setXHBtnLabel(b, _langZh ? b.dataset.zh : b.dataset.en);
                 });
                 if (ed.btnClr) ed.btnClr.forEach((b, gi) => {
-                    if (!(ed.btnMiss && ed.btnMiss[gi])) b.textContent = _langZh ? b.dataset.zh : b.dataset.en;
+                    if (!(ed.btnMiss && ed.btnMiss[gi])) setXHBtnLabel(b, _langZh ? b.dataset.zh : b.dataset.en);
                 });
                 //  2026-10-25：后端缺对应 zones 参数（=ComfyUI 没重启）、或绿组总开关关着 ⇒ 该组按钮禁掉+黄字
                 if (ed.btnAdd) {
@@ -3419,33 +3760,31 @@ app.registerExtension({
                     appendNodes.push(mkSMFResetBtn(this));   //  v1.48.0 一键恢复默认
                     const ctl = buildSMFColorControl(this);    // 工具条右侧加「遮挡色 / 排除块色」色板
                     if (ctl) appendNodes.push(ctl);
-                    // 更多参数（家族通用件 makeGearBtn）：排工具条最左，收起少动的高级参数
-                    const gear = makeGearBtn({
-                        collapsed: true,
-                        titleFn: (col) => {
-                            const zh = (window.XH_LANG || "zh") === "zh";
-                            return zh ? (col ? "展开高级参数" : "收起高级参数")
-                                      : (col ? "Show advanced parameters" : "Hide advanced parameters");
-                        },
-                        onToggle: (col) => setSMFCollapsed(this, col),
-                    });
-                    this._xhSMFGear = gear;
-                    prependNodes.push(gear);
+                    //  2026-11-15 用户拍板：工具条最左那个白底 ▾ 总折叠键删掉。
+                    //   它是上一代「全收/全放」开关，和下面四个分区按钮叠成两层折叠、互相抢状态；
+                    //   分区按钮已能各自收放，删掉后工具条少一个抢眼的控件，节点更简洁。
+                    //   ⛔ 不 push 任何 prependNodes（makeXHToolbar 收空数组没问题）。
+                    //   setSMFCollapsed 仍保留（分区按钮展开时会调它），restoreState 里把全局折叠恒定为展开。
                 }
                 applyLangToNode(this);
                 //  2026-11-08：复刻件自带大量 DOM widget ⇒ 不挂内容区工具条，
                 //   避免多一个 serialize:false 行顶乱 widgets_values；中/EN 走官方选中工具条
                 // （xh_node_toolbar.js 已认 XH_ 类，选中节点即出现「中/EN」）。
-                if (!isWNNode(nodeData.name)) makeXHToolbar(this, { appendNodes, prependNodes });
+                //  角色设定表自带原作 DOM 设计器，再挂一条家族工具条 = 多一个
+                //  serialize:false 的 DOM 控件（widgets_values 有串位风险）；
+                //  中/EN 与帮助统一走官方选中工具条（xh_node_toolbar.js 认 XiaoHei 前缀）。
+                if (!isWNNode(nodeData.name) && normalizeType(nodeData.name) !== "XiaoHeiCharacterSheet") {
+                    makeXHToolbar(this, { appendNodes, prependNodes });
+                }
                 // XiaoHei-身份配色：节点 body 里挂「身份色板」（一排色块 + ＋加一个人）
                 //    必须在 makeXHToolbar **之后**调用 —— 工具条用 pinWidgetToTop 置顶到
                 //     widgets 最前；身份色板是 DOM widget，晚挂才排在参数区下面。
                 if (normalizeType(nodeData.name) === "XHIdentityColorize") {
                     try { buildIdColorControl(this); } catch (e) { console.warn("[XiaoHei ImageTools] 身份色板挂载失败:", e); }
                 }
-                // 默认收起（只对万能遮罩）：面板只留形状/缩放/透明度/反转/提示词这些常用的
+                // 万能遮罩：折叠只由四个分区按钮管（默认全折），不再有工具条总折叠键
                 if (normalizeType(nodeData.name) === "XHSmartFaceMask") {
-                    xhSMF_restoreState(this);     //  v1.48.0 默认收起，且写进 properties（载入不丢）
+                    xhSMF_restoreState(this);     //  恒定展开，参数显隐交给分区状态
                     xhSMF_sanitize(this);
                     xhSMF_scheduleApply(this);    //  Vue 侧 widget 晚建 ⇒ 多帧重试
                 }
@@ -3471,7 +3810,7 @@ app.registerExtension({
             } catch (e) {}
             try { fixWidgetValuesFromSaved(this, info); } catch (e) {}
             //  2026-11-08：读档会拿存档里的端口 label 盖掉显示层 ⇒ 重新按当前语言刷一遍
-            try { if (isWNNode(nodeData.name) || isQENode(nodeData.name)) applyLangToNode(this); } catch (e) {}
+            try { if (isWNNode(nodeData.name) || isQENode(nodeData.name) || normalizeType(nodeData.name) === "XiaoHeiCharacterSheet") applyLangToNode(this); } catch (e) {}
             try {
                 // 值回填完**之后**再重算「模式显隐 / 形状档位」—— 顺序不能反，否则档位是拿旧值算的
                 if (normalizeType(nodeData.name) === "XHSmartFaceMask") {

@@ -399,7 +399,8 @@ function openSoundPanel(node) {
     n.textContent = zh ? "声音播放 设置" : "Sound Player settings";
     const x = document.createElement("span");
     x.className = "x";
-    x.textContent = "✕";
+    //  2026-11-13 家族图标统一：Unicode ✕ → 图标库「关闭」→ x。
+    x.innerHTML = xhIconHTML("关闭", { size: 12, color: "current" });
     x.addEventListener("click", (e) => { e.stopPropagation(); closeSoundPanel(); });
     head.append(g, n, x);
 

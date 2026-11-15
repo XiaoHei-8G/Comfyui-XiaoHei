@@ -4,6 +4,7 @@
 // ╚═══════════════════════════════════════════════════════════════╝
 
 import { pixAsset } from "../shared/api_url.mjs";
+import { xhIconHTML } from "../xh_ui_kit.js";
 
 // ── Button ───────────────────────────────────────────────────
 export function createButton(text, opts = {}) {
@@ -43,7 +44,8 @@ export function createPanel(title, opts = {}) {
   if (opts.collapsible) {
     const arrow = document.createElement("span");
     arrow.className = "pxf-panel-title-arrow";
-    arrow.textContent = "▼";
+    // 2026-11-13：换家族图标库 chevron-down（原来是 Unicode ▼ 文字符号）。
+    arrow.innerHTML = xhIconHTML("chevron-down", { size: 10, color: "current" });
     titleEl.appendChild(arrow);
   }
 
@@ -336,7 +338,7 @@ export function createZoomControls(onZoomIn, onZoomOut, onFit) {
   bar.appendChild(
     createButton("\u2212", {
       variant: "sm",
-      title: "Zoom out",
+      title: "缩小",
       onClick: onZoomOut,
     }),
   );

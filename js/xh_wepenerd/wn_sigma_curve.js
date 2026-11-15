@@ -1,4 +1,5 @@
 import { app } from "../../../scripts/app.js";
+import { xhDecorateButton } from "../xh_ui_kit.js";
 import {
     MIN_GAP, MAX_POINTS, MODES, PRESETS, DEFAULT_CURVE, fitCurve, makeEvaluator,
     normalizePoints, parseCurve, parseSigmaList, round, samplePositions, sampleSigmas, serializeCurve,
@@ -44,7 +45,11 @@ function el(tag, cls, text) {
 }
 
 function button(text, title) {
-    const b = el("button", null, text); b.title = title; b.type = "button"; return b;
+    //  2026-11-13 家族图标统一：撤销 / 重做 / 删除按钮原来是 Unicode ↶ ↷ ✕，
+    //    统一在按钮工厂这一层走家族装饰器，纯文字按钮（Log / Snap / Copy…）原样不动。
+    const b = el("button", null, null);
+    if (!xhDecorateButton(b, text)) b.textContent = text;
+    b.title = title; b.type = "button"; return b;
 }
 
 const widget = (node, name) => node.widgets?.find((w) => w.name === name);

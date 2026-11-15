@@ -18,7 +18,7 @@
 //   （后端 /xh_chainprompt/set_slots 路由同轮清理，register_routes 已成空函数）。
 const { app } = window.comfyAPI.app;
 const { api } = window.comfyAPI.api;
-import { ensureLangBridge, makeXHToolbar, onLangChanged, releaseButtons, lockDomWidgetHeight, forceCompactOnSpawn, isSizeLike, makeGearBtn, makeBarBtn, paintBarBtn, BAR_COLORS, xhPinFamilyIndex, xhApplyNamedWidgetValues, xhSanitizeWidgetTypes, xhSanitizeFamilyTypes } from "./xh_ui_kit.js";
+import { ensureLangBridge, makeXHToolbar, onLangChanged, releaseButtons, lockDomWidgetHeight, forceCompactOnSpawn, isSizeLike, makeGearBtn, makeBarBtn, paintBarBtn, BAR_COLORS, xhPinFamilyIndex, xhApplyNamedWidgetValues, xhSanitizeWidgetTypes, xhSanitizeFamilyTypes, xhDecorateButton, xhIconHTML } from "./xh_ui_kit.js";
 
 // ① 语言桥：window.XH_LANG 变 accessor —— 赋值即写 localStorage + 广播 xh:lang-changed
 ensureLangBridge();
@@ -63,7 +63,7 @@ const XH_I18N = {
         gearHide: "收起参数（只留提示词框）",
         gearShow: "展开参数设置",
         copyOneTip: "复制这一段（只复制正文）",
-        startBtn: (n) => `▶ 起跑 ${n}`,
+        startBtn: (n) => ` 起跑 ${n}`,
         startTip: "选从第几段开始跑（选过就以它为准，盖过「起始段」连线；选第1段=恢复跟线）",
         startSet: (n) => `从第 ${n} 段起跑`,
         copy: "复制",
@@ -114,7 +114,7 @@ const XH_I18N = {
         gearHide: "Collapse params (keep prompt boxes only)",
         gearShow: "Expand params",
         copyOneTip: "Copy this segment only",
-        startBtn: (n) => `▶ Start ${n}`,
+        startBtn: (n) => ` Start ${n}`,
         startTip: "Pick the first segment to run (overrides wired start_index; pick #1 to follow the wire again)",
         startSet: (n) => `Start at #${n}`,
         copy: "Copy",
@@ -560,7 +560,8 @@ function paintSlotCopyBtns(node) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "__xh_cp_copy1";
-        btn.textContent = "复制";
+        //  2026-11-13 家族图标统一：行内复制按钮补上图标库「复制」，反馈不再用 Unicode ✓。
+        btn.innerHTML = xhIconHTML("复制", { size: 11, color: "current" }) + " 复制";
         btn.title = pack().copyOneTip;
         // 方案 B：行内小按钮同源配色（暗底 #252525 + 1px rgba(255,255,255,.10)），
         // 只保留"行内小号"的尺寸差异（17px / 10px 字），不再自成一套淡紫皮。
@@ -569,12 +570,15 @@ function paintSlotCopyBtns(node) {
             "border-radius:4px;border:1px solid " + BAR_COLORS.BORDER + ";" +
             "background:" + BAR_COLORS.SURFACE + ";color:" + BAR_COLORS.TEXT + ";" +
             "font-size:10px;line-height:1;font-weight:600;cursor:pointer;opacity:0;pointer-events:none;" +
+            "display:inline-flex;align-items:center;justify-content:center;gap:2px;" +
             "transition:opacity .12s,background .12s,border-color .12s;";
         btn.addEventListener("pointerdown", (e) => e.stopPropagation(), true);
         btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const ok = await copyOnePrompt(w);
-            pulseButton(btn, { text: ok ? "✓" : "空", ok });
+            pulseButton(btn, ok
+                ? { html: xhIconHTML("勾选", { size: 12, color: "current" }), ok: true }
+                : { text: "空", ok: false });
         });
         row.appendChild(btn);
     }
@@ -1281,14 +1285,17 @@ async function copyAllPrompts(node) {
  */
 function pulseButton(btn, opts = {}) {
     if (!btn) return;
-    const oldText = btn.textContent;
+    //  2026-11-13 修：原来只存 textContent，按钮上若带家族图标（mask span 没有文本），
+    //    闪完恢复会把图案抹掉 ⇒ 复制按钮点一次就变空白。改存完整 innerHTML。
+    const oldHTML = btn.innerHTML;
     const oldBg = btn.style.background;
     const oldBorder = btn.style.borderColor;
     const oldTransition = btn.style.transition;
     const color = opts.color || (opts.ok !== false ? "#4BA14B" : "#E53935");
 
     btn._xh_cp_pulsing = true;
-    if (opts.text) btn.textContent = opts.text;
+    if (opts.html) btn.innerHTML = opts.html;
+    else if (opts.text) btn.textContent = opts.text;
 
     // ③ 弹跳
     btn.style.transition = "transform .12s ease-out, background .12s, border-color .12s";
@@ -1307,7 +1314,7 @@ function pulseButton(btn, opts = {}) {
             btn.style.background = oldBg;
             btn.style.borderColor = oldBorder;
             btn.style.transition = oldTransition;
-            btn.textContent = oldText;      //  必须恢复文字，否则永久停在「已复制 4 段!」
+            btn.innerHTML = oldHTML;      //  必须恢复原内容（含图标），否则永久停在「已复制 4 段!」
             btn._xh_cp_pulsing = false;
         }
     }, 140);
@@ -1380,7 +1387,8 @@ function paintStartBtn(node) {
     const btn = node._xh_cp_start_btn;
     if (!btn || btn._xh_cp_pulsing) return;
     const i = startIndexOf(node);
-    btn.textContent = pack().startBtn(i + 1);
+    //  2026-11-13：文案里清理 emoji 留下的前导空格 → 家族「播放」图标（起跑）。
+    if (!xhDecorateButton(btn, pack().startBtn(i + 1))) btn.textContent = pack().startBtn(i + 1);
     btn.title = pack().startTip;
     const active = i > 0;
     // 方案 B：同paintClearBtn—— neutral / active 两档，与全家族同源。

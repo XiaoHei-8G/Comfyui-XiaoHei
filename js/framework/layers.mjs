@@ -51,7 +51,11 @@ function _layerActionBtn(iconName, title, onClick, cls = "") {
   // default layers icon base, routing it through pixAsset ourselves.
   // Never hand this a raw "/pixaroma/assets/..." string - that path is blocked
   // at the edge on a hosted ComfyUI. See js/shared/api_url.mjs.
-  if (iconName.startsWith("/")) {
+  // 2026-11-13：pixAsset() 现在返回家族图标库的绝对 URL（http(s)://... 或 data:），
+  // 不再一定是根相对 "/..."；只判 startsWith("/") 会把绝对 URL 当成「裸图标名」，
+  // 拼成 icons/layers/http://...svg 后破图。凡是已构建的 URL 都直接当 src 用。
+  if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(iconName) ||
+      iconName.startsWith("/") || iconName.startsWith("data:")) {
     const img = document.createElement("img");
     img.src = iconName;
     img.width = 14;

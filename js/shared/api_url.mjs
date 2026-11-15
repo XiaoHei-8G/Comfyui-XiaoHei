@@ -34,6 +34,7 @@
 // route family both ways and diffing the status codes.
 
 import { api } from "../../../scripts/api.js";
+import { XH_PAINT_ICON_MAP } from "./xh_paint_icon_map.mjs";
 
 /**
  * Absolute-safe URL for a ComfyUI or Pixaroma route.
@@ -84,7 +85,35 @@ export function pixApiUrl(route) {
  * "${x}" inside double quotes is literal text, not interpolation, and fails
  * silently with no syntax error anywhere.
  */
+
+/** 家族自有图标库目录（与 xh_icons/index.mjs 的 BASE 指向同一处）。 */
+const XH_FAM_ICON_BASE = new URL("../xh_icons/svg/", import.meta.url);
+
+/** 透明占位图：家族库里确实没有的图案按用户要求留空，不显示破图、不显示别家图案。 */
+const XH_BLANK_ICON = "data:image/svg+xml," + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'
+);
+
 export function pixAsset(tail) {
   const rel = String(tail).replace(/^\/+/, "");
+
+  // ── 2026-11-13 家族图案统一（用户点名：画板里的小图案全是 Pixaroma 的，全换掉） ──
+  // 画板的 212 枚图案全部经由本函数取 URL，所以在这里一处重定向即可覆盖所有调用点
+  // （framework/、shared/、xh_paint/ 共 20+ 文件），不用逐个改 <img> 工厂。
+  //   · 家族图标库有对应图案 → 走 js/xh_icons/svg 的 Lucide 图标（ISC，随包、不联网）。
+  //     和 xhIconUrl() 一样用 import.meta.url 推导，部署到托管版也不会丢 base。
+  //   · 家族确实没有（34 枚：3D 专属物件 / 模型格式 / 第三方品牌）→ 1x1 透明图，
+  //     按用户要求「先空着」，位置留白但按钮和点击行为不变，绝不硬凑语义不符的图。
+  //   · 非图标资源（fonts/、xh_logo.svg 等）不匹配本正则，原样走后端 asset 路由。
+  // 这层是纯显示层替换：不改画板功能、不改工作流 json、不动任何版本号。
+  const m = /^icons\/(ui|layers|note|3D)\/([^/]+)\.svg$/.exec(rel);
+  if (m) {
+    const fam = XH_PAINT_ICON_MAP[m[1]]?.[m[2]];
+    if (typeof fam === "string" && fam) {
+      return new URL(fam + ".svg", XH_FAM_ICON_BASE).href;
+    }
+    return XH_BLANK_ICON;
+  }
+
   return pixApiUrl("/xh/paint/api/asset?path=" + encodeURIComponent(rel));
 }

@@ -340,21 +340,14 @@ function mountToolbarButton() {
   const btn = makeToolbarButton(iconHTML, "XiaoHei 设置", () => togglePanel());
   try { btn.setAttribute("aria-label", "XiaoHei 设置"); } catch (e) {}
   btn.dataset.xhTbSettings = "1";
-  //  家族门面：顶栏这颗「XH」常态就是**品牌色**（类里的 !important 会盖掉 inline）
-  try { btn.classList.add("xh-tb-brand"); } catch (e) {}
-  //  2026-10-29：**家族门面用品牌色**（琥珀金）——
-  //    顶栏这一颗「XH」就是全家族唯一的招牌，与 Pixaroma 的橘红小方块同一思路。
-  //    浅底必须配深字 ⇒ 字用品牌色上的深墨。
-  try {
-    const B = (window.XH_BRAND || {});
-    const bg = (window.XH_brandButtonBg ? window.XH_brandButtonBg() : (B.MAIN || "#E8A33C"));
-    const tx = (window.XH_brandButtonTx ? window.XH_brandButtonTx() : (B.TX || "#1c1c1c"));
-    btn.style.background = bg;
-    btn.style.color = tx;
-    btn.style.border = "1px solid " + (B.BORDER || "rgba(0,0,0,.22)");
-    btn.style.fontWeight = "700";
-    btn.style.letterSpacing = ".5px";
-  } catch (e) {}
+  //  2026-11-15 用户：「不要让它一直显现出我们的黄色，点它的时候它才显示」。
+  //    ⇒ 拆掉常态品牌色：既不挂 .xh-tb-brand，也⛔ 不写 inline style 主色
+  //      （panel_extension.md §2 明令：inline style 写死主色 = 一直亮 + 外观跟官方不一致）。
+  //    现在跟另外三颗完全同款：常态官方灰（--secondary 底 + --foreground 的浅色爪印），
+  //    hover / :active 亮一下家族黄；点开设置面板由 togglePanel() 里的
+  //    setToolbarButtonOpen() 挂 .xh-tb-open 保持家族黄，关面板自动退回官方灰。
+  //    图案是 CSS mask + currentColor，底色一变爪印自动翻深墨，不用另配一套图标。
+  //    门面身份靠「小黑爪印」图案本身，⛔ 不靠常亮底色抢视觉焦点。
   group.appendChild(btn);
   settingsGroupEl.before(group);
   window.__xhSettingsTbBtn = btn;

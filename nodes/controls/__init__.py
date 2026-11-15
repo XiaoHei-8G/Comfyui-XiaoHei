@@ -23,9 +23,10 @@
                                                                      comfy_extras/nodes_resolution.py 的
                                                                      ResolutionSelector；参数/输出与官方
                                                                      逐字一致，可直接替换）
-    show_text.py         ← XHShowText           XiaoHei-显示文本        1 节点（真后端，机制照抄官方
-                                                                     pysssss ShowText：执行时把文本
-                                                                     回写存档 + ui 发前端显示）
+    show_text.py         ← XHShowText           预览任意                1 节点（2026-11-14 起逐行复刻
+                                                                     官方 comfy_extras/nodes_preview_any.py
+                                                                     的 PreviewAny：source(*)→STRING；
+                                                                     前端复用官方 textPreviewWidgets）
     beat_cue.py          ← XHBeatCueTable       XiaoHei-音乐卡点表      1 节点（真后端，2026-10-14 新增：
                                                                      给音乐算出「每一刀切在第几秒」的
                                                                      卡拍表。**纯 numpy 零第三方依赖**，

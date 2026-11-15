@@ -537,7 +537,7 @@
 #    分发 / 压缩命名规范：Comfyui-XiaoHei_v{主}.{次}.{修}_{YYYYMMDD}.zip
 #    改完节点包后升级对应位，再重新压缩，文件名版本号才对得上。
 # ---------------------------------------------------------------------------
-VERSION = "1.0.2"  # 小黑 XiaoHei 品牌；填 GitHub 仓库链接 + 修正版本号标注（前身 Comfyui-XH_Toolbox v1.59.1）
+VERSION = "1.0.3"  # 长循环兼容补丁：缓存祖先遍历改显式栈，100 轮循环不再撞 Python 递归上限
 
 # ---------------------------------------------------------------------------
 #  子模块加载：逐个 try，缺谁只少谁（2026-10-05 改造，为「分发给别人」而做）
@@ -872,6 +872,21 @@ except Exception as _e:
     _fail("prompt_stack", "XiaoHei-提示词堆叠（复刻 Prompt Stack）", [], _e)
     _M_PS = _D_PS = {}
 
+# 2026-11-15：1:1 复刻 ComfyUI-Pixaroma 的 Prompt Pack（MIT, Copyright (c) 2026 pixaroma）。
+#   一整块提示词粘进来，三颗小方片选分隔方式，点「运行」一条提示词排队跑一次工作流；
+#   状态存 node.properties.xhPackState，前端注入隐藏输入 XHPromptPackState，
+#   后端只把当前这一轮那条原样输出。界面全中文、配色只取官方 CSS 变量、
+#   图案走自有图标库；resize 下限一律常量，DOM 不反向决定 node.size。
+#   class_type = XH_PromptPack，显示名 XiaoHei-提示词批量。
+try:
+    from .nodes.prompt_pack import (
+        NODE_CLASS_MAPPINGS as _M_PP,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_PP,
+    )
+except Exception as _e:
+    _fail("prompt_pack", "XiaoHei-提示词批量（复刻 Prompt Pack）", [], _e)
+    _M_PP = _D_PP = {}
+
 # 2026-11-08：复刻 ComfyUI-OpenH3-VideoTools（Tensor Alchemist, GPL-3.0）的 5 个节点，
 #   并把 ComfyUI-OpenH3-Regenerate2K（Songssx, MIT）的 3 个节点一并**自持**进来。
 #   为什么自持：原版「精修总控」内部硬查这 3 个节点的 ID，查不到直接 RuntimeError
@@ -942,6 +957,7 @@ _PARTS = tuple(
         ("label_pix", _M_LP, _D_LP),
         ("tag_prompt", _M_TAG, _D_TAG),
         ("prompt_stack", _M_PS, _D_PS),
+        ("prompt_pack", _M_PP, _D_PP),
         ("openh3", _M_OH3, _D_OH3),
         ("qwen21_edit", _M_QE, _D_QE),
         ("charsheet", _M_CS, _D_CS),
@@ -960,6 +976,19 @@ try:
     _xh_sam3_patch()
 except Exception as _e:      # noqa: BLE001
     print(f"[XiaoHei]  SAM3 稳像补丁未挂载（其余功能正常）：{_e}")
+
+# ---------------------------------------------------------------------------
+#  长循环兼容补丁（v1.0.3）
+# 官方缓存签名用递归遍历祖先；XiaoHei-循环开始展开 100 轮后祖先链上千层，
+# 撞 Python 递归上限 1000 ⇒ 执行前就 RecursionError（官方 ForLoopStart 同样会爆）。
+# 这里只在启动时把那一个方法换成等价的显式栈 DFS，不改官方文件 / 不改工作流 /
+# 不关缓存，普通工作流签名结果完全不变。关掉：XH_DISABLE_CACHE_PATCH=1。
+# ---------------------------------------------------------------------------
+try:
+    from . import xh_cache_patch as _xh_cache_patch
+    _xh_cache_patch.apply_patch()
+except Exception as _e:      # noqa: BLE001
+    print(f"[XiaoHei]  长循环兼容补丁未挂载（其余功能正常）：{_e}")
 
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}

@@ -474,15 +474,15 @@ proto._updateToolOptions = function () {
     // ── Brush shapes (left) ──
     if (this.tool === "brush" || this.tool === "pencil") {
       const SHAPES = [
-        { id: "round", svg: "round.svg" },
-        { id: "square", svg: "square.svg" },
-        { id: "triangle", svg: "triangle.svg" },
-        { id: "diamond", svg: "diamond.svg" },
-        { id: "star", svg: "star.svg" },
-        { id: "flat", svg: "flat.svg" },
+        { id: "round", svg: "round.svg", label: "圆头" },
+        { id: "square", svg: "square.svg", label: "方头" },
+        { id: "triangle", svg: "triangle.svg", label: "三角" },
+        { id: "diamond", svg: "diamond.svg", label: "菱形" },
+        { id: "star", svg: "star.svg", label: "星形" },
+        { id: "flat", svg: "flat.svg", label: "平头" },
       ];
       SHAPES.forEach((sh) => {
-        const btn = mkIconBtn(sh.svg, sh.id, this.brush.shape === sh.id, "ppx-brush-shape");
+        const btn = mkIconBtn(sh.svg, sh.label, this.brush.shape === sh.id, "ppx-brush-shape");
         btn.addEventListener("click", () => {
           this.brush.shape = sh.id;
           this.engine._stampKey = "";

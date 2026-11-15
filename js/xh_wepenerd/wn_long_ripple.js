@@ -6,7 +6,7 @@
 //   ③ 悬浮说明：节点说明 / 输入端口 / 输出端口 / widget 全部按 XiaoHei-LANG 中英双向切换。
 //      英文原文是唯一真源，翻译一律走 wnUIFull()，不写死中文，切 EN 能还原。
 import { app } from "../../../scripts/app.js";
-import { currentLang, onLangChanged, lockDomWidgetHeight } from "../xh_ui_kit.js";
+import { currentLang, onLangChanged, lockDomWidgetHeight, xhDecorateButton } from "../xh_ui_kit.js";
 import { repaint } from "../shared/repaint.mjs";
 import { wrapText } from "../shared/text_wrap.mjs";
 import { wnBiLine, wnUIFull, wnDesc, wnText } from "./xh_wn_i18n.mjs";
@@ -423,7 +423,9 @@ function panelModel(S) {
 function makeButton(parent, label, opts, onClick) {
     const b = document.createElement("button");
     b.type = "button";
-    b.textContent = label;
+    //  2026-11-13 家族图标统一：＋ / − / 加切点 / 删末个 之类符号按钮统一走家族装饰器，
+    //    普通文字按钮（镜头类型 H / S 等）保持原样。
+    if (!xhDecorateButton(b, label)) b.textContent = label;
     b.style.cssText = "box-sizing:border-box;height:20px;padding:0 6px;margin:0;"
         + "border:0.5px solid #5a5a5a;border-radius:4px;background:#3a3a3a;color:#e8e8e8;"
         + "font:11px Arial,'Microsoft YaHei',sans-serif;cursor:pointer;white-space:nowrap;"

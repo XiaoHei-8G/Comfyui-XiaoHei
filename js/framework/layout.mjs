@@ -90,7 +90,7 @@ export function createEditorLayout(config) {
     zoomWrap.className = "pxf-titlebar-zoom";
     const zoomOut = createButton("", {
       variant: "sm",
-      title: "Zoom out",
+      title: "缩小",
       iconSrc: pixAsset("icons/ui/minus.svg"),
       onClick: () => {
         if (onZoomOut) onZoomOut();
@@ -98,7 +98,7 @@ export function createEditorLayout(config) {
     });
     const zoomFit = createButton("适应", {
       variant: "accent",
-      title: "Fit to view",
+      title: "适应视图",
       onClick: () => {
         if (onZoomFit) onZoomFit();
       },
@@ -108,7 +108,7 @@ export function createEditorLayout(config) {
     zoomLabelEl.textContent = "100%";
     const zoomIn = createButton("", {
       variant: "sm",
-      title: "Zoom in",
+      title: "放大",
       iconSrc: pixAsset("icons/ui/plus.svg"),
       onClick: () => {
         if (onZoomIn) onZoomIn();
@@ -132,13 +132,13 @@ export function createEditorLayout(config) {
     undoBtn = createButton("撤销", {
       variant: "accent",
       iconSrc: pixAsset("icons/ui/undo.svg"),
-      title: "Undo (Ctrl+Z)",
+      title: "撤销 (Ctrl+Z)",
       onClick: onUndo,
     });
     redoBtn = createButton("重做", {
       variant: "accent",
       iconSrc: pixAsset("icons/ui/redo.svg"),
-      title: "Redo (Ctrl+Shift+Z)",
+      title: "重做 (Ctrl+Shift+Z)",
       onClick: onRedo,
     });
     undoBtn.style.cssText = "padding:5px 14px;font-size:12px;";
@@ -247,7 +247,7 @@ export function createEditorLayout(config) {
   const closeBtn = createButton("保存到磁盘", {
     variant: "standard",
     iconSrc: pixAsset("icons/ui/download.svg"),
-    title: "Save image to disk",
+    title: "保存图片到磁盘",
     onClick: () => {
       if (layout.onSaveToDisk) layout.onSaveToDisk();
     },

@@ -61,6 +61,7 @@
 import { app } from "../../../scripts/app.js";
 import { isVueNodes } from "./nodes2.mjs";
 import { openPixaromaColorPickerPopup, BUTTON_PALETTE } from "./color_picker.mjs";
+import { xhIconHTML } from "../xh_ui_kit.js";
 
 export const BRAND = "#E8A33C";
 
@@ -697,7 +698,8 @@ function buildComboRow(row, onChange) {
   const cur = () => nodeSetting(row.setting, row.defaultValue);
   const paint = () => { val.textContent = String(cur() ?? ""); };
   paint();
-  const caret = el("span", "pix-nset-caret", "▼");
+  const caret = el("span", "pix-nset-caret", "");
+  caret.innerHTML = xhIconHTML("chevron-down", { size: 10, color: "current" });
   wrap.append(val, caret);
 
   wrap.addEventListener("click", (e) => {
@@ -945,7 +947,8 @@ export function openAccentPanel(node) {
 
   const head = el("div", "pix-nset-t");
   head.append(el("span", "g", ""), el("span", "n", title + " settings"));
-  const x = el("span", "x", "✕");
+  const x = el("span", "x", "");
+  x.innerHTML = xhIconHTML("关闭", { size: 10, color: "current" });
   x.addEventListener("click", closeNodeSettingsPanel);
   head.appendChild(x);
 

@@ -901,8 +901,8 @@ function buildPanel() {
     '    <span class="xhwb-name">工作流浏览器</span>' +
     '    <span class="xhwb-count" id="xh-wfb-count"></span>' +
     '    <span class="xhwb-sp"></span>' +
-    '    <button class="xhwb-wbtn" id="xh-wfb-reset" title="重置窗口到默认大小/位置">⤢</button>' +
-    '    <button class="xhwb-wbtn" id="xh-wfb-close">✕</button>' +
+    '    <button class="xhwb-wbtn" id="xh-wfb-reset" title="重置窗口到默认大小/位置">' + xhIconHTML("maximize-2", { size: 13, color: "current" }) + '</button>' +
+    '    <button class="xhwb-wbtn" id="xh-wfb-close">' + xhIconHTML("关闭", { size: 13, color: "current" }) + '</button>' +
     "  </div>" +
     '  <div class="xhwb-bar">' +
     '    <div class="xhwb-search" style="display:flex;align-items:center;gap:6px;">' + xhIconHTML("search", { size: 14, color: "current" }) + '<input id="xh-wfb-q" placeholder="搜索名字、模型、文件夹…" style="flex:1;width:auto;min-width:0"></div>' +
@@ -1121,7 +1121,8 @@ function renderSide() {
       // ▶ 展开/收起：点它不能同时选中文件夹，也不能触发拖放
       const c = document.createElement("span");
       c.className = "xhwb-chev" + (opts.twisty.open ? " open" : "");
-      c.textContent = "▶";
+      //  2026-11-13 家族图标统一：文件夹展开三角原来是 Unicode ▶，换成图标库 chevron-right。
+      c.innerHTML = xhIconHTML("chevron-right", { size: 12, color: "current" });
       c.title = opts.twisty.open ? "收起" : "展开";
       c.addEventListener("click", (e) => {
         e.preventDefault();
@@ -1499,7 +1500,7 @@ function renderDetail() {
   // 复制文件路径
   const copyBtn = btn("复制路径", () => {
     const full = ((STATE.data && STATE.data.root) || "") + "/" + f.rel;
-    try { navigator.clipboard.writeText(full); copyBtn.textContent = "已复制 ✓"; } catch (e) { copyBtn.textContent = full; }
+    try { navigator.clipboard.writeText(full); copyBtn.innerHTML = xhIconHTML("勾选", { size: 12, color: "current" }) + " 已复制"; } catch (e) { copyBtn.textContent = full; }
     setTimeout(() => { copyBtn.textContent = "复制路径"; }, 1600);
   });
   det.appendChild(acts);
@@ -1559,7 +1560,7 @@ function renderDetail() {
       const text = f.name + "\n" + mods.join("\n");
       try {
         navigator.clipboard.writeText(text);
-        copyAll.innerHTML = copyAllIco + " 已复制 ✓";
+        copyAll.innerHTML = xhIconHTML("勾选", { size: 13, color: "current" }) + " 已复制";
       } catch (e) { copyAll.innerHTML = copyAllIco + " 复制失败"; }
       setTimeout(() => { copyAll.innerHTML = copyAllIco + " 复制全部文件名"; }, 1500);
     };
