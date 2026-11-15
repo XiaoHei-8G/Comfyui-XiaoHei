@@ -36,3 +36,22 @@ workflows/
 # 系统文件
 Thumbs.db
 .DS_Store
+
+# 授权受限素材（第三方美术）：本地开发保留，禁止进 git / Registry 包
+/js/artwork.js
+/js/avatar.js
+/js/h3_character_sheet_designer.js
+/js/h3_character_sheet_designer_reference13.js
+/js/integration.js
+/js/multi_state.js
+/js/output_preview.js
+/js/reference13_artwork.js
+/js/reference13_integration.js
+/js/reference13_state.js
+/js/reference13_style.css
+/js/reference13_ui.js
+/js/state.js
+/js/style.css
+/js/ui.js
+/js/assets/
+/nodes/charsheet/py/web/assets/
