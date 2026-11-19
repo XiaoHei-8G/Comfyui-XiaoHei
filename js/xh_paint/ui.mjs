@@ -2,6 +2,7 @@
 // Pixaroma Paint Studio — Color panel, tool options bar, layer panel sync,
 //   document properties, cursor overlay, save, BG color popup
 // ============================================================
+import { xhIconHTML } from "../xh_ui_kit.js";
 import {
   PaintStudio,
   PaintAPI,
@@ -159,10 +160,10 @@ proto._updateColorUI = function (preserveHSV) {
   if (this.el.bgSwatch) this.el.bgSwatch.style.background = this.bgColor2;
   if (this.el.fgSwatch)
     this.el.fgSwatch.style.borderColor =
-      this.colorMode === "fg" ? "#E8A33C" : "#555";
+      this.colorMode === "fg" ? "var(--xh-primary,#E8A33C)" : "#555";
   if (this.el.bgSwatch)
     this.el.bgSwatch.style.borderColor =
-      this.colorMode === "bg" ? "#E8A33C" : "#555";
+      this.colorMode === "bg" ? "var(--xh-primary,#E8A33C)" : "#555";
   if (this.el.hexInput) this.el.hexInput.value = hex.slice(1).toUpperCase();
   if (!preserveHSV) {
     const { r, g, b } = hexToRgb(hex);
@@ -213,7 +214,7 @@ proto._showBgColorPicker = function (e, anchor) {
   let left = rect.left;
   if (top + 120 > window.innerHeight) top = rect.top - 120;
   if (left + 160 > window.innerWidth) left = window.innerWidth - 166;
-  popup.style.cssText = `position:fixed;top:${top}px;left:${left}px;z-index:20000;background:#1a1c1d;border:1px solid #E8A33C;border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 8px 24px rgba(0,0,0,.7);min-width:150px;`;
+  popup.style.cssText = `position:fixed;top:${top}px;left:${left}px;z-index:20000;background:#1a1c1d;border:1px solid var(--xh-primary,#E8A33C);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 8px 24px rgba(0,0,0,.7);min-width:150px;`;
 
   const inp = document.createElement("input");
   inp.type = "color";
@@ -514,7 +515,8 @@ proto._updateToolOptions = function () {
     const resetBtn = document.createElement("button");
     resetBtn.className = "pxf-btn-sm";
     resetBtn.title = "重置画笔为默认";
-    resetBtn.textContent = "\u21ba";
+    resetBtn.dataset.xhIconDone = "1";
+    resetBtn.innerHTML = xhIconHTML("rotate-ccw", { size: 13, color: "current" });
     resetBtn.style.cssText = "width:24px;height:22px;font-size:13px;flex-shrink:0;";
     resetBtn.addEventListener("click", () => {
       const defaults = {
@@ -612,7 +614,7 @@ proto._updateToolOptions = function () {
 
   if (this.tool === "pick") {
     const lbl = document.createElement("label");
-    lbl.style.color = "#E8A33C";
+    lbl.style.color = "var(--xh-primary,#E8A33C)";
     lbl.textContent =
       "点击或拖动取色  \u00b7  Alt+点击 取为背景色";
     bar.appendChild(lbl);
@@ -679,12 +681,12 @@ proto._updateToolOptions = function () {
         // Fill/Stroke toggle button
         const fillBtn = document.createElement("div");
         fillBtn.className = "ppx-shape-btn" + (this.shapeFill ? " active" : "");
-        fillBtn.textContent = "\u25cf 填充";
+        fillBtn.innerHTML = xhIconHTML("paint-bucket", { size: 12, color: "current" }) + "<span>填充</span>";
         fillBtn.style.cssText = "width:48px;font-size:10px;";
         const strokeBtn = document.createElement("div");
         strokeBtn.className =
           "ppx-shape-btn" + (!this.shapeFill ? " active" : "");
-        strokeBtn.textContent = "\u25cb 描边";
+        strokeBtn.innerHTML = xhIconHTML("pen-tool", { size: 12, color: "current" }) + "<span>描边</span>";
         strokeBtn.style.cssText = "width:54px;font-size:10px;";
         fillBtn.addEventListener("click", () => {
           this.shapeFill = true;

@@ -5,6 +5,7 @@
 //    四个小方片直接点，选「自定义」才在下一层露出一行小输入框。
 import { getNodeScreenRect, placeBeside, followNode, makeDraggable } from "../shared/node_panel.mjs";
 import { readState, patchState, SEPS } from "./core.mjs";
+import { xhIconHTML } from "../xh_ui_kit.js";
 
 const CSS_ID = "xh-stack-settings-css";
 const CSS = `
@@ -90,7 +91,7 @@ export function openStackSettings(node, onChange) {
   const panel = el("div", "xh-pss-set");
   const head = el("div", "xh-pss-set-h");
   head.append(el("span", null, "提示词堆叠 · 设置"));
-  const x = el("span", "x", "✕"); x.title = "关闭";
+  const x = el("span", "x"); x.dataset.xhIconDone = "1"; x.innerHTML = xhIconHTML("x", { size: 14, color: "current" }); x.title = "关闭";
   x.addEventListener("click", closeStackSettings);
   head.appendChild(x);
   panel.appendChild(head);

@@ -17,7 +17,7 @@ DEFAULT_STATE_JSON = serialize_reference13_state({
 
 
 class MiniMaxH3ImageCharacterSheetDesigner:
-    CATEGORY = 'H3/Character Sheet'
+    CATEGORY = '小黑家族'
     DESCRIPTION = ('Dedicated to MiniMax H3 Image. Connect character_image, layout_image, '
                    'reference_image_1, reference_image_2 and reference_image_3 to '
                    'MiniMax H3 Image Conditioning images.image_0 through image_4. '

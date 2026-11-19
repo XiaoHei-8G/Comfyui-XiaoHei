@@ -65,4 +65,4 @@ class XH_PromptStack:
 
 
 NODE_CLASS_MAPPINGS = {"XH_PromptStack": XH_PromptStack}
-NODE_DISPLAY_NAME_MAPPINGS = {"XH_PromptStack": "XiaoHei-提示词堆叠"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XH_PromptStack": "提示词堆叠 小黑"}

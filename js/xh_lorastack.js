@@ -1,6 +1,6 @@
 // XiaoHei-LoRA堆栈 前端 —— Nodes 2.0 原生 DOM UI
 // 视觉排版 100% 照抄 ComfyUI-Pixaroma 的 LoRA Loader（Add 大按钮 / 全开关 pill+计数+iOS 滑块 /
-// gear / 每行 名称框·权重▲▼·i信息钮·iOS开关 / 缺失 ），配色保留 XiaoHei 家族中性灰（--xh-acc 点缀）。
+// gear / 每行 名称框·权重▲▼·i信息钮·iOS开关 / 缺失 ），点缀色 --xh-acc 跟随主题预设（2026-11-17）。
 // 触发词 chips：点 i 弹信息面板，词从 LoRA 文件头（safetensors JSON 头）离线读取，点 chip 切换选中，
 // 勾选的词从 TRIGGERS 口输出（与 Pixaroma 完全一致）。XiaoHei 自有的文件夹树下拉 / 调色板 / 中英切换保留为副条。
 // 设计铁律：UI 全走 addDOMWidget；行的增删只在自己 DOM 内部；数据唯一载体是后端 STRING widget（loras_json）。
@@ -20,8 +20,9 @@ const NODE_TYPES = new Set([NODE_TYPE, NODE_TYPE_PURE]);
 const isPureType = (t) => t === NODE_TYPE_PURE;
 const LANG_KEY = "xh_node_lang";
 
-// XiaoHei 家族点缀色（中性灰里的一抹高亮，不抄 Pixaroma 的橙）。hover / 开关-on / 选中 chip 都用它。
-const XH_ACCENT = "#7d8590";
+// XiaoHei 点缀色：跟随主题预设主色（2026-11-17）。用 CSS var 引用，切主题时自动跟着变，
+// hover / 开关-on / 选中 chip / Add 按钮 / 设置面板按钮全走这一条链。
+const XH_ACCENT = "var(--xh-primary,#E8A33C)";
 
 // 齿轮图标：照抄 ComfyUI-Pixaroma 的 icons/note/gear.svg（厚实实心齿轮，非 emoji，
 // emoji 在不同系统形状/颜色不一致）。用 fill:currentColor，hover 时由 .xh-pll-gear 的 color 着色。
@@ -192,7 +193,7 @@ function injectStyle() {
     /* 顶部 Add / 全开关 / gear 簇 */
     .xh-pll-band{display:flex;flex-direction:column;gap:5px;margin-bottom:6px;}
     .xh-pll-add{width:100%;height:28px;border:0;border-radius:6px;background:var(--xh-acc,${XH_ACCENT});
-        color:#fff;font:600 12px 'Segoe UI',sans-serif;cursor:pointer;display:flex;align-items:center;
+        color:var(--xh-on-primary,#fff);font:600 12px 'Segoe UI',sans-serif;cursor:pointer;display:flex;align-items:center;
         justify-content:center;gap:6px;}
     .xh-pll-add:hover{filter:brightness(1.1);}
     .xh-pll-toprow{display:flex;align-items:stretch;gap:6px;height:26px;}
@@ -352,7 +353,7 @@ function injectStyle() {
     .xh-pll-set-row select:focus,.xh-pll-set-row input:focus{outline:none;border-color:var(--xh-acc,${XH_ACCENT});}
     .xh-pll-set-done{margin:4px 13px 13px;}
     .xh-pll-set-done button{width:100%;height:30px;border:0;border-radius:6px;
-        background:var(--xh-acc,${XH_ACCENT});color:#fff;font:600 12px 'Segoe UI';cursor:pointer;}
+        background:var(--xh-acc,${XH_ACCENT});color:var(--xh-on-primary,#fff);font:600 12px 'Segoe UI';cursor:pointer;}
     .xh-pll-set-done button:hover{filter:brightness(1.08);}
     `;
     const el = document.createElement("style");

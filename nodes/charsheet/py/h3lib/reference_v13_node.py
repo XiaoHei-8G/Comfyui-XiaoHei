@@ -13,7 +13,7 @@ from .multi_reference_node import validate_reference_image
 
 
 class H3CharacterSheetDesignerReferenceV13:
-    CATEGORY = 'H3/Character Sheet'
+    CATEGORY = '小黑家族'
     DESCRIPTION = ('v1.3.0. 13-view H3 sheet with one required character image and three optional same-character references. '
                    'Wire character_image, layout_image, reference_image_1, reference_image_2 and reference_image_3 '
                    'to H3 ref_images.ref_image_0, 1, 2, 3 and 4. Picture numbers skip None images. '

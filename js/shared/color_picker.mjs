@@ -32,7 +32,7 @@ export const PIXAROMA_PALETTE = [
   "#666666","#4d4d4d","#333333","#1a1a1a","#0a0a0a","#000000",
   // Row 2: vibrants across the hue spectrum
   "#ff5555","#ff8c42","#ffd166","#a3e635","#4ade80","#22d3ee",
-  "#5a8cff","#818cf8","#c075f6","#f472b6","#ec4899","#f66744",
+  "#5a8cff","#818cf8","#c075f6","#f472b6","#ec4899","#E8A33C",
   // Row 3: muted / earth tones for accent variety
   "#7c2d12","#a16207","#65a30d","#0e7490","#1e40af","#581c87",
   "#a16d3a","#b08968","#ddb892","#a07e6a","#5a4634","#2c2620",
@@ -46,7 +46,7 @@ export const PIXAROMA_PALETTE = [
 // The Pixaroma brand orange leads; the rest are Tailwind-600-ish shades
 // (designed for white text) spanning the hue wheel + a few neutrals.
 export const BUTTON_PALETTE = [
-  "#f66744", // Pixaroma orange (brand)
+  "#E8A33C", // XiaoHei 金（沿用原作者橙那一格，换成家族主色）
   "#dc2626", // red
   "#ea580c", // orange
   "#d97706", // amber
@@ -343,7 +343,7 @@ function ensureCSS() {
 //   initialColor: hex string | null (null only valid when showClear)
 //   swatches: array of hex strings (default PIXAROMA_PALETTE)
 //   showClear: bool — first swatch becomes a "transparent" checker tile
-//   resetColor: hex string returned by Reset button (default "#f66744")
+//   resetColor: hex string returned by Reset button (default "#E8A33C")
 //   onChange: (color | null) => void — fires on every interaction
 //
 // returns: { element, getColor, setColor, destroy }
@@ -354,10 +354,10 @@ function ensureCSS() {
 export function createPixaromaColorPicker(opts = {}) {
   ensureCSS();
   const {
-    initialColor = "#f66744",
+    initialColor = "#E8A33C",
     swatches     = PIXAROMA_PALETTE,
     showClear    = false,
-    resetColor   = "#f66744",
+    resetColor   = "#E8A33C",
     onChange     = () => {},
     hideReset    = false,
   } = opts;
@@ -654,7 +654,7 @@ export function createPixaromaColorPicker(opts = {}) {
 //   initialColor: hex | null
 //   swatches:     array (default PIXAROMA_PALETTE)
 //   showClear:    bool
-//   resetColor:   hex (default "#f66744")
+//   resetColor:   hex (default "#E8A33C")
 //   onPick:       (color | null) => void
 export function openPixaromaColorPickerPopup(anchorEl, opts = {}) {
   ensureCSS();
@@ -670,13 +670,13 @@ export function openPixaromaColorPickerPopup(anchorEl, opts = {}) {
     // the Clear tile if showClear, else no swatch selected"). `??`
     // would coerce null → BRAND, breaking the "no pick" state for
     // text/highlight pickers.
-    initialColor: "initialColor" in opts ? opts.initialColor : "#f66744",
+    initialColor: "initialColor" in opts ? opts.initialColor : "#E8A33C",
     swatches:     opts.swatches,
     showClear:    !!opts.showClear,
     // Same `in opts` check as initialColor — preserve explicit null so
     // the Reset button can mean "clear back to no-color" for callers
     // that opt in (e.g. highlight picker → transparent on Reset).
-    resetColor:   "resetColor" in opts ? opts.resetColor : "#f66744",
+    resetColor:   "resetColor" in opts ? opts.resetColor : "#E8A33C",
     onChange:     opts.onPick || (() => {}),
   });
   popup.appendChild(picker.element);
@@ -748,7 +748,7 @@ export function openPixaromaCompactColorPickerPopup(anchorEl, opts = {}) {
   // and dimmed. Used by text + Bg (where "no color" doesn't apply but
   // the tile is kept so the grid layout matches the highlight picker).
   const clearDisabled = !!opts.clearDisabled;
-  const resetColor    = "resetColor"  in opts ? opts.resetColor  : "#f66744";
+  const resetColor    = "resetColor"  in opts ? opts.resetColor  : "#E8A33C";
   const initialColor  = "initialColor" in opts ? opts.initialColor : null;
   const onPick        = opts.onPick || (() => {});
 
@@ -855,7 +855,7 @@ export function openPixaromaCompactColorPickerPopup(anchorEl, opts = {}) {
     openMoreColorsModal({
       // Seed the modal with whatever's already picked (so the user's
       // fine-tuning starts from their current colour, not BRAND).
-      initialColor: initialColor ?? (resetColor !== null ? resetColor : "#f66744"),
+      initialColor: initialColor ?? (resetColor !== null ? resetColor : "#E8A33C"),
       onPick,
     });
   });
@@ -884,7 +884,7 @@ export function openPixaromaCompactColorPickerPopup(anchorEl, opts = {}) {
 // click closes without firing.
 //
 // opts:
-//   initialColor: hex string (default "#f66744")
+//   initialColor: hex string (default "#E8A33C")
 //   swatches:     array of hex (default PIXAROMA_PALETTE)
 //   showClear:    bool — render a transparent tile that picks null
 //   title:        string (default "Pick a color")
@@ -894,7 +894,7 @@ export function openPixaromaColorPickerModal(opts = {}) {
   ensureCSS();
 
   const {
-    initialColor = "#f66744",
+    initialColor = "#E8A33C",
     swatches     = PIXAROMA_PALETTE,
     showClear    = false,
     title        = "选择颜色",
@@ -1004,7 +1004,7 @@ function openMoreColorsModal(opts) {
   title.textContent = "选择颜色";
   box.appendChild(title);
 
-  let pickedColor = opts.initialColor ?? "#f66744";
+  let pickedColor = opts.initialColor ?? "#E8A33C";
   const picker = createPixaromaColorPicker({
     initialColor: pickedColor,
     swatches: [],

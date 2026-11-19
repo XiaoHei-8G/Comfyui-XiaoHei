@@ -76,4 +76,4 @@ class XH_TagPrompt:
 
 
 NODE_CLASS_MAPPINGS = {"XH_TagPrompt": XH_TagPrompt}
-NODE_DISPLAY_NAME_MAPPINGS = {"XH_TagPrompt": "XiaoHei-标签提示词"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XH_TagPrompt": "标签提示词 小黑"}

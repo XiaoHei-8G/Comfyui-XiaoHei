@@ -14,7 +14,8 @@
 //         ③ execution_success 改成「队列排空才停」，批量队列显示整轮总耗时
 const { app } = window.comfyAPI.app;
 const { api } = window.comfyAPI.api;
-import { onLangEvent, ensureLangBridge, makeXHToolbar, releaseButtons , paintBarBtn} from "./xh_ui_kit.js";
+import { onLangEvent, ensureLangBridge, makeXHToolbar, releaseButtons , paintBarBtn, xhIconHTML} from "./xh_ui_kit.js";
+import { xhSpeak, xhWarmup } from "./xh_speech.js";
 
 // ① 语言桥：window.XH_LANG 变 accessor —— 赋值即写 localStorage + 广播 xh:lang-changed
 ensureLangBridge();
@@ -27,7 +28,14 @@ onLangEvent((e) => {
             if (LABELS[lang]) n.title = LABELS[lang].title;
             // 「中/EN」按钮的换字由 kit 的全局集合负责，这里不再自己刷
             if (n._resetBtn && LABELS[lang]) n._resetBtn.textContent = LABELS[lang].reset;
+            if (n._remindBtn && LABELS[lang]) {
+                n._remindBtn.innerHTML = xhIconHTML("bell", { size: 14, color: "current" }) +
+                    "<span>" + LABELS[lang].remind + "</span>";
+                try { RemindPanel.syncBtn(n, timerState(n)); } catch (e3) {}
+            }
         });
+        // 提醒浮层面板开着的话也跟着刷文案
+        try { if (typeof refreshRemindPanel === "function") refreshRemindPanel(); } catch (err2) {}
         app.graph?.setDirtyCanvas?.(true, true);
     } catch (err) {}
 });
@@ -39,8 +47,66 @@ let _timerListenersBound = false;
 
 // 中英文文字
 const LABELS = {
-    zh: { title: "计时器", reset: " 重置" },
-    en: { title: "Timer", reset: " Reset" },
+    zh: { title: "计时器", reset: " 重置", remind: " 提醒", remindTitle: "定时提醒", remindOn: "已开启，每", remindOff: "已关闭", every: "每隔", minute: "分钟", hint: "每满设定分钟播报一次", hintStop: "跑完自动播报总用时（无需开关）", quick: "快捷", preview: "试听" },
+    en: { title: "Timer", reset: " Reset", remind: " Remind", remindTitle: "Time reminder", remindOn: "On, every", remindOff: "Off", every: "Every", minute: "min", hint: "Announces at each interval", hintStop: "Auto-announces total time on finish (no toggle)", quick: "Quick", preview: "Test" },
+};
+
+// ---- 语音播报（计时器完成 / 定时提醒 共用）--------------------------------
+//  数字每次都变，没法预生成音频文件 ⇒ 用浏览器 speechSynthesis 现场念中文。
+//  只在本地 ComfyUI 跑图时触发：RunningHub 云端不经过本机浏览器。
+//  浏览器要求先有用户交互才能播音；“点运行/点铃铛”本身就是交互，天然满足。
+const SPEAK = {
+    _last: 0,
+    unlocked: false,
+    unlock() {
+        if (this.unlocked || !("speechSynthesis" in window)) return;
+        try {
+            // 预热：首次真实点击时同步唤醒浏览器语音引擎（走家族共享队列）。
+            //  跑完播报是几十秒后的异步触发，不在用户手势栈里，Chrome 可能静默拦。
+            xhWarmup();
+            this.unlocked = true;
+        } catch (e) {}
+    },
+    // 中文数字（播报用，≤99 够用）
+    //  ⚠️“两”只用在单独的 2（两分钟）；复合数里必须念“二”（十二/三十二，不是十两/三十两）
+    cnNum(n) {
+        n = Math.max(0, Math.round(n));
+        const d = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+        if (n === 2) return "两";
+        if (n < 10) return d[n];
+        if (n < 20) return "十" + (n % 10 ? d[n % 10] : "");
+        const t = Math.floor(n / 10), o = n % 10;
+        return d[t] + "十" + (o ? d[o] : "");
+    },
+    // 定时提醒：“已运行两分钟” / “已运行十分钟”
+    running(nMin) {
+        this.say("已运行" + this.cnNum(nMin) + "分钟");
+    },
+    // 完成播报：“用时三十二秒零一” / “用时一分零五秒”
+    finish(ms) {
+        const v = Math.max(0, ms | 0);
+        const totalSec = Math.floor(v / 1000);
+        const cs = Math.floor((v % 1000) / 10);
+        const mm = Math.floor(totalSec / 60);
+        const ss = totalSec % 60;
+        let txt = "用时";
+        if (mm > 0) txt += this.cnNum(mm) + "分";
+        if (ss > 0 || mm > 0) txt += this.cnNum(ss) + "秒";
+        else txt += "零秒";
+        if (cs > 0) {
+            // 百分秒逐位念：01 → 零一，12 → 一二（避免听成“十二秒”）
+            const dg = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+            txt += dg[Math.floor(cs / 10)] + dg[cs % 10];
+        }
+        this.say(txt);
+    },
+    say(txt) {
+        if (!txt || !("speechSynthesis" in window)) return;
+        // 播报交给家族共享队列排队：不再自己 cancel，避免掐掉其他模块的播报。
+        //  （原注释里的「桌宠」已于 2026-11-19 从家族分离。）
+        //  防抖交给队列的 FIFO + 完成播报的 finishAnnounced 去重，这里不按时间吞消息。
+        try { xhSpeak(txt, { rate: 1, pitch: 1 }); } catch (e) {}
+    },
 };
 
 // ---- 状态载体（2026-11-02）----------------------------------------------------
@@ -78,6 +144,13 @@ function timerState(node) {
         if (typeof st.running !== "boolean") st.running = false;
         if (typeof st.startMs !== "number" || !isFinite(st.startMs)) st.startMs = 0;
         if (typeof st.elapsedMs !== "number" || !isFinite(st.elapsedMs)) st.elapsedMs = 0;
+        // 定时提醒配置（2026-11-19）：随 node.properties 存档，刷新/切工作流都还在
+        if (typeof st.remindOn !== "boolean") st.remindOn = false;
+        if (typeof st.remindMin !== "number" || !isFinite(st.remindMin) || st.remindMin < 1) st.remindMin = 1;
+        st.remindMin = Math.max(1, Math.min(120, Math.round(st.remindMin)));
+        // 本轮已播报到第几个整分钟（防同一分钟重复播）——不存档语义，切实例后从档恢复也行
+        if (typeof st.remindedN !== "number" || !isFinite(st.remindedN)) st.remindedN = 0;
+        if (typeof st.finishAnnounced !== "boolean") st.finishAnnounced = false;
     }
     node.properties[ST_KEY] = st;   // 回写 ⇒ 与内存里的是同一个对象，保存工作流时一起走
     if (key) {
@@ -163,7 +236,41 @@ function ensureBlinkStyle() {
             + `.xh-timer-rundot { animation: xhTimerRunPulse 1.05s ease-in-out infinite; }`
             + `@media (prefers-reduced-motion: reduce) {`
             + `.${BLINK_CLASS} { animation: none; opacity:1; }`
-            + `.xh-timer-rundot { animation: none; opacity:1; } }`;
+            + `.xh-timer-rundot { animation: none; opacity:1; } }`
+            // 定时提醒浮层面板（家族配色，跟主题走）
+            + `.xh-timer-remind{position:fixed;z-index:99997;width:238px;display:none;`
+            + `background:var(--background,#1b1f22);border:1px solid var(--border,#494a50);`
+            + `color:var(--foreground,#e6e6e6);border-radius:10px;padding:12px;`
+            + `box-shadow:0 8px 28px rgba(0,0,0,.42);font-family:var(--font-sans,sans-serif);font-size:13px;}`
+            + `.xh-timer-remind .xh-tr-hd{display:flex;align-items:center;justify-content:space-between;`
+            + `font-weight:500;font-size:14px;margin-bottom:10px;}`
+            + `.xh-timer-remind .xh-tr-hd button{border:0;background:transparent;color:var(--foreground,#e6e6e6);`
+            + `cursor:pointer;font-size:16px;line-height:1;padding:2px 5px;border-radius:4px;}`
+            + `.xh-timer-remind .xh-tr-hd button:hover{background:var(--secondary,#262729);}`
+            + `.xh-timer-remind .xh-tr-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}`
+            + `.xh-timer-remind .xh-tr-row .lab{color:var(--color-text-secondary,var(--foreground,#e6e6e6));}`
+            + `.xh-timer-remind .xh-tr-step{display:inline-flex;align-items:center;border:1px solid var(--border,#494a50);`
+            + `border-radius:6px;overflow:hidden;}`
+            + `.xh-timer-remind .xh-tr-step button{border:0;background:var(--secondary,#262729);color:var(--foreground,#e6e6e6);`
+            + `cursor:pointer;width:28px;height:28px;font-size:15px;}`
+            + `.xh-timer-remind .xh-tr-step button:hover{background:var(--xh-primary,#2E7D5B);color:var(--xh-on-primary,#fff);}`
+            + `.xh-timer-remind .xh-tr-step .num{min-width:38px;text-align:center;font-variant-numeric:tabular-nums;font-weight:500;}`
+            + `.xh-timer-remind .xh-tr-sw{display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:10px;}`
+            + `.xh-timer-remind .xh-tr-dot{width:34px;height:19px;border-radius:10px;background:var(--secondary,#3a3b40);`
+            + `position:relative;transition:background .18s;flex:none;}`
+            + `.xh-timer-remind .xh-tr-dot::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;`
+            + `border-radius:50%;background:#fff;transition:transform .18s;}`
+            + `.xh-timer-remind .xh-tr-dot.on{background:var(--xh-primary,#2E7D5B);}`
+            + `.xh-timer-remind .xh-tr-dot.on::after{transform:translateX(15px);}`
+            + `.xh-timer-remind .xh-tr-quick{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:9px;}`
+            + `.xh-timer-remind .xh-tr-quick button{border:1px solid var(--border,#494a50);background:transparent;`
+            + `color:var(--foreground,#e6e6e6);border-radius:11px;padding:2px 9px;font-size:12px;cursor:pointer;}`
+            + `.xh-timer-remind .xh-tr-quick button.sel{background:var(--xh-primary,#2E7D5B);`
+            + `border-color:var(--xh-primary,#2E7D5B);color:var(--xh-on-primary,#fff);}`
+            + `.xh-timer-remind .xh-tr-hint{font-size:11px;color:var(--color-text-tertiary,var(--foreground,#aaa));line-height:1.5;`
+            + `border-top:1px solid var(--border,#494a50);padding-top:8px;}`
+            + `.xh-timer-remind .xh-tr-test{margin-left:auto;border:1px solid var(--border,#494a50);background:transparent;`
+            + `color:var(--foreground,#e6e6e6);border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer;}`;
         document.head.appendChild(st);
     } catch (e) {}
 }
@@ -185,12 +292,152 @@ function setRunning(node, on) {
     }
 }
 
+// ---- 定时提醒浮层面板（单例，全局只建一次，挂在 body 上）--------------------
+//  点计时器工具条的铃铛 ⇒ 弹出，定位在铃铛下方；点铃铛/点空白/点别的计时器 ⇒ 收起或切换。
+const RemindPanel = {
+    el: null,
+    owner: null,        // 当前挂在哪个计时器节点上
+    outsideBound: false,
+    build() {
+        if (this.el) return this.el;
+        ensureBlinkStyle();
+        const el = document.createElement("div");
+        el.className = "xh-timer-remind";
+        el.innerHTML =
+            '<div class="xh-tr-hd"><span class="title">定时提醒</span>' +
+            '<button type="button" data-a="close" title="关闭">×</button></div>' +
+            '<div class="xh-tr-sw"><span class="xh-tr-dot" data-a="toggle"></span><span class="sw-txt">已关闭</span></div>' +
+            '<div class="xh-tr-row"><span class="lab">每隔</span>' +
+            '<span class="xh-tr-step"><button type="button" data-a="dec">−</button>' +
+            '<span class="num">1</span><button type="button" data-a="inc">+</button></span>' +
+            '<span class="lab">分钟</span>' +
+            '<button type="button" class="xh-tr-test" data-a="test">试听</button></div>' +
+            '<div class="xh-tr-quick"><span class="lab" style="color:var(--color-text-tertiary,var(--foreground,#aaa));font-size:11px;">快捷</span>' +
+            '<button type="button" data-a="min" data-v="1">1</button>' +
+            '<button type="button" data-a="min" data-v="2">2</button>' +
+            '<button type="button" data-a="min" data-v="5">5</button>' +
+            '<button type="button" data-a="min" data-v="10">10</button>' +
+            '<button type="button" data-a="min" data-v="30">30</button></div>' +
+            '<div class="xh-tr-hint">每满设定分钟播报一次 · 跑完播报总用时（仅本地生效）</div>';
+        el.addEventListener("pointerdown", (e) => e.stopPropagation());
+        el.addEventListener("click", (e) => this.onClick(e));
+        try { document.body.appendChild(el); } catch (e) {}
+        this.el = el;
+        if (!this.outsideBound) {
+            document.addEventListener("pointerdown", (e) => {
+                if (!this.el || this.el.style.display === "none") return;
+                if (this.el.contains(e.target)) return;
+                if (this.owner && this.owner._remindBtn && this.owner._remindBtn.contains(e.target)) return;
+                this.hide();
+            }, true);
+            this.outsideBound = true;
+        }
+        return el;
+    },
+    show(node, anchor) {
+        const el = this.build();
+        this.owner = node;
+        this.render();
+        el.style.display = "block";
+        // 定位在铃铛下方，靠屏幕边缘自动内收
+        const r = anchor.getBoundingClientRect();
+        const w = 238, h = el.offsetHeight || 190;
+        let left = r.right - w;
+        let top = r.bottom + 6;
+        left = Math.max(6, Math.min(left, window.innerWidth - w - 6));
+        if (top + h > window.innerHeight - 6) top = Math.max(6, r.top - h - 6);
+        el.style.left = Math.round(left) + "px";
+        el.style.top = Math.round(top) + "px";
+        try { SPEAK.unlock(); } catch (e) {}
+    },
+    hide() {
+        if (this.el) this.el.style.display = "none";
+        this.owner = null;
+    },
+    toggle(node, anchor) {
+        if (this.el && this.el.style.display !== "none" && this.owner === node) { this.hide(); return; }
+        this.show(node, anchor);
+    },
+    render() {
+        if (!this.el || !this.owner) return;
+        const st = timerState(this.owner);
+        if (!st) return;
+        const lang = this.owner._lang || window.XH_LANG || "zh";
+        const L = LABELS[lang] || LABELS.zh;
+        const zh = lang === "zh";
+        this.el.querySelector(".xh-tr-hd .title").textContent = L.remindTitle;
+        const dot = this.el.querySelector(".xh-tr-dot");
+        dot.classList.toggle("on", st.remindOn);
+        this.el.querySelector(".sw-txt").textContent = st.remindOn
+            ? L.remindOn + " " + st.remindMin + " " + L.minute
+            : L.remindOff;
+        this.el.querySelector(".xh-tr-step .num").textContent = String(st.remindMin);
+        this.el.querySelector(".xh-tr-test").textContent = L.preview;
+        this.el.querySelectorAll('[data-a="min"]').forEach((b) => {
+            b.classList.toggle("sel", Number(b.getAttribute("data-v")) === st.remindMin);
+        });
+        this.el.querySelector(".xh-tr-hint").textContent = L.hint + " · " + L.hintStop + (zh ? "（仅本地生效）" : " (local only)");
+    },
+    onClick(e) {
+        const btn = e.target.closest("button, .xh-tr-dot");
+        if (!btn || !this.owner) return;
+        const a = btn.getAttribute("data-a");
+        const st = timerState(this.owner);
+        if (!st) return;
+        switch (a) {
+            case "close": this.hide(); return;
+            case "toggle":
+                st.remindOn = !st.remindOn;
+                if (st.remindOn) { st.remindedN = 0; SPEAK.unlock(); }
+                this.syncBtn(this.owner, st);
+                break;
+            case "inc": st.remindMin = Math.min(120, st.remindMin + 1); break;
+            case "dec": st.remindMin = Math.max(1, st.remindMin - 1); break;
+            case "min": st.remindMin = Math.max(1, Math.min(120, Number(btn.getAttribute("data-v")) || 1)); break;
+            case "test":
+                SPEAK.unlock();
+                SPEAK.finish(32010); // “用时三十二秒零一”试听
+                return;
+            default: return;
+        }
+        // 间隔变了 ⇒ 本轮提醒计数从头算，避免刚改完立刻用旧刻度播
+        st.remindedN = 0;
+        this.syncBtn(this.owner, st);
+        this.render();
+    },
+    // 把铃铛按钮的开态 / title 同步给指定节点
+    syncBtn(node, st) {
+        try {
+            if (node._remindBtn) node._remindBtn.classList.toggle("on", !!st.remindOn);
+            const lang = node._lang || window.XH_LANG || "zh";
+            const L = LABELS[lang] || LABELS.zh;
+            if (node._remindBtn) node._remindBtn.title = st.remindOn
+                ? (L.remindOn + " " + st.remindMin + " " + L.minute)
+                : L.remindOff;
+        } catch (e) {}
+    },
+};
+// 语言切换时刷新面板文案（供顶部监听器调用）
+function refreshRemindPanel() {
+    try { RemindPanel.render(); } catch (e) {}
+}
+
 app.registerExtension({
     name: "XH.Timer",
     async setup() {
         // 全局监听执行事件（注意：执行生命周期事件是 api 派发的，不是 document）
         if (_timerListenersBound) return;
         _timerListenersBound = true;
+
+        // 浏览器语音解锁：任何一次真实点击都算用户手势，首个手势同步唤醒语音引擎。
+        //  跑完播用时是异步触发（几十秒后），若从未有过手势会被 Chrome 静默拦 ⇒ 这里兜住。
+        try {
+            const _unlockOnce = () => {
+                SPEAK.unlock();
+                document.removeEventListener("pointerdown", _unlockOnce, true);
+            };
+            document.addEventListener("pointerdown", _unlockOnce, true);
+        } catch (e) {}
 
         // _idleTimer：status 兜底停表的「待确认」定时器；新任务一开始就取消它，避免误停新表
         let _idleTimer = null;
@@ -294,7 +541,10 @@ app.registerExtension({
                 //  2026-11-02 修：原来只置 _startTime=null 却没停 interval，
                 //   下一 tick 变成 Date.now() - null ⇒ 表显示出一串天文数字。
                 const st = timerState(this);
-                if (st) { st.running = false; st.startMs = 0; st.elapsedMs = 0; }
+                if (st) {
+                    st.running = false; st.startMs = 0; st.elapsedMs = 0;
+                    st.remindedN = 0; st.finishAnnounced = false;   // 手动重设 ⇒ 播报计数从头
+                }
                 this._running = false;
                 this._startTime = null;
                 if (this._timerId) { clearInterval(this._timerId); this._timerId = null; }
@@ -308,13 +558,33 @@ app.registerExtension({
             resetBtn.onmouseout = () => { resetBtn.style.filter = "none"; paintBarBtn(resetBtn, "neutral"); };
             this._resetBtn = resetBtn;
 
+            // 定时提醒按钮（家族 bell 图标）：点开浮层面板设开关 + 间隔
+            const remindBtn = document.createElement("button");
+            const _rst = timerState(this);
+            remindBtn.innerHTML = xhIconHTML("bell", { size: 14, color: "current" }) +
+                "<span>" + LABELS[this._lang].remind + "</span>";
+            remindBtn.style.cssText = `
+                background:#252525;color:#e8e8e8;border:1px solid rgba(255,255,255,.10);border-radius:4px;
+                padding:4px 8px;font-size:12px;cursor:pointer;transition:all 0.2s;
+                display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;
+            `;
+            remindBtn.title = _rst.remindOn ? "已开启" : "已关闭";
+            remindBtn.onclick = (e) => {
+                e.stopPropagation();
+                try { RemindPanel.toggle(this, remindBtn); } catch (err) {}
+            };
+            remindBtn.onmouseover = () => remindBtn.style.filter = "brightness(1.28)";
+            remindBtn.onmouseout = () => { remindBtn.style.filter = "none"; };
+            this._remindBtn = remindBtn;
+            RemindPanel.syncBtn(this, _rst);
+
             const spacer = document.createElement("div");
             spacer.style.cssText = `flex:1;`;
 
             // kit 的中/EN onclick 负责 toggleLang（写 localStorage + 广播），按钮换字由 kit 全局负责；
             // 本文件顶部的 xh:lang-changed 监听器再负责把 _lang / title / 「重设」文案刷掉 —— 行为等价。
             //  家族统一顺序（2026-10-26）：中/EN →  → 业务键（「重设」+ 弹性空白）。
-            const { bar: titleBar } = makeXHToolbar(this, { mount: false, appendNodes: [resetBtn, spacer] });
+            const { bar: titleBar } = makeXHToolbar(this, { mount: false, appendNodes: [remindBtn, resetBtn, spacer] });
             titleBar.style.cssText += "background:rgba(0,0,0,0.3);border-radius:6px 6px 0 0;";
 
             //  2026-11-12：计时中闪烁指示点（绿点脉冲，提示“正在计时”）。
@@ -403,7 +673,19 @@ app.registerExtension({
                 if (!this._running) return;
                 const st = timerState(this);
                 const base = (st && st.startMs) ? st.startMs : this._startTime;
-                this._render(Date.now() - base);
+                const ms = Date.now() - base;
+                this._render(ms);
+                // 定时提醒：每满 N 分钟播一次“已运行X分钟”。只在本地前端跑图时触发。
+                // st.remindedN = 本轮已播到的整分钟刻度，跨刻度才播，避免 10ms tick 重复念。
+                try {
+                    if (st && st.remindOn && st.remindMin > 0 && ms > 0) {
+                        const reached = Math.floor(ms / (st.remindMin * 60000));
+                        if (reached > st.remindedN) {
+                            st.remindedN = reached;
+                            SPEAK.running(reached * st.remindMin);
+                        }
+                    }
+                } catch (e) {}
             }, 10);
         };
 
@@ -426,9 +708,13 @@ app.registerExtension({
             st.running = true;
             st.startMs = Date.now();
             st.elapsedMs = 0;
+            st.remindedN = 0;                   // 新一轮 ⇒ 定时提醒计数从头
+            st.finishAnnounced = false;         // 新一轮 ⇒ 允许再次播完成用时
             this._running = true;
             this._startTime = st.startMs;
             setBlink(this, false);              // 新的一跑就停闪（上一次跑完的提醒到此为止）
+            SPEAK.unlock();                     // 点运行即用户交互 ⇒ 解锁语音
+            try { RemindPanel.syncBtn(this, st); } catch (e) {}
             this._startInterval();
             this._render(0);
         };
@@ -453,6 +739,16 @@ app.registerExtension({
             // 只在「真的计过一段时间」时才闪：压根没起过表就别闪，
             // 免得刚打开工作流、收到一个 status 兜底事件就开始满屏闪。
             if (hadRun) setBlink(this, true);
+            // 跑完播报总用时（2026-11-19 修）：只要计过 ≥1 秒、本轮没播过就念。
+            //  🔴 不再依赖「定时提醒」开关（remindOn 只管每 N 分钟提醒，跟跑完播用时是两码事）。
+            //    旧版把播报绑在 remindOn 上 ⇒ 用户没开铃铛时跑完一声不吭（实测 33 秒无播报）。
+            //  一次运行只播一次（finishAnnounced 去重，队列排空多次 stop 也不重复）。
+            try {
+                if (st && st.elapsedMs >= 1000 && !st.finishAnnounced) {
+                    st.finishAnnounced = true;
+                    SPEAK.finish(st.elapsedMs);
+                }
+            } catch (e) {}
             this._syncDisplay();
         };
 
@@ -498,6 +794,7 @@ app.registerExtension({
                 this._timerId = null;
             }
             setBlink(this, false);                  // 节点都没了，别让动画留着
+            try { if (RemindPanel.owner === this) RemindPanel.hide(); } catch (e) {}
             try { this._resizeObserver?.disconnect(); } catch (e) {}
             try { releaseButtons(this); } catch (e) {}
             return onRemoved?.apply(this, arguments);

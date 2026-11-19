@@ -490,6 +490,12 @@ export const WN_UI_ZH = {
     "Actual: ${formatActual(actual)}": "实际：${formatActual(actual)}",
     "Normalized: ${formatSigned(normalized)}": "归一化：${formatSigned(normalized)}",
     "Keep: ": "保留：",
+    // Zoom Crop 的 5×5 选区方位词：labelOf() 把 "top mid-right" 写成 "Top Mid-Right"，这里按该形态登记。
+    "Top Left": "上左", "Top Mid-Left": "上中左", "Top": "上", "Top Mid-Right": "上中右", "Top Right": "上右",
+    "Upper Left": "偏上左", "Upper Mid-Left": "偏上中左", "Upper": "偏上", "Upper Mid-Right": "偏上中右", "Upper Right": "偏上右",
+    "Left": "左", "Mid-Left": "中左", "Center": "中", "Mid-Right": "中右", "Right": "右",
+    "Lower Left": "偏下左", "Lower Mid-Left": "偏下中左", "Lower": "偏下", "Lower Mid-Right": "偏下中右", "Lower Right": "偏下右",
+    "Bottom Left": "下左", "Bottom Mid-Left": "下中左", "Bottom": "下", "Bottom Mid-Right": "下中右", "Bottom Right": "下右",
     "Source  ${source.join(\" · \")}": "来源  ${source.join(\" · \")}",
     "Loads  ${output.join(\" · \")}": "载入  ${output.join(\" · \")}",
     "Loads nothing": "不载入任何东西",
@@ -923,6 +929,10 @@ const WN_FRAG_ZH = [
     [/\b(\d+(?:\.\d+)?) MP\b/g, "$1 百万像素"],
     [/\b(\d+(?:\.\d+)?) s\b/g, "$1 秒"],
     [/\blimited to source size\b/g, "受源片尺寸限制"],
+    // Liquify 状态栏：800 × 600 output · same warp on 3 images · 3 strokes
+    [/\b(\d+(?:\.\d+)?) × (\d+(?:\.\d+)?) output\b/g, "$1 × $2 输出"],
+    [/\bsame warp on (\d+) images\b/g, "$1 张图用同一形变"],
+    [/\b(\d+) strokes\b/g, "$1 笔"],
     [/^Source: /, "源片："],
 ];
 const WN_FRAG_EN = [
@@ -932,6 +942,9 @@ const WN_FRAG_EN = [
     [/(\d+(?:\.\d+)?) 百万像素/g, "$1 MP"],
     [/(\d+(?:\.\d+)?) 秒/g, "$1 s"],
     [/受源片尺寸限制/g, "limited to source size"],
+    [/(\d+(?:\.\d+)?) × (\d+(?:\.\d+)?) 输出/g, "$1 × $2 output"],
+    [/(\d+) 张图用同一形变/g, "same warp on $1 images"],
+    [/(\d+) 笔/g, "$1 strokes"],
     [/^源片：/, "Source: "],
 ];
 

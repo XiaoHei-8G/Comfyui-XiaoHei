@@ -11,6 +11,7 @@ import {
   cleanName, uniqueTagName, exportLibraryJSON, parseImport, applyImport,
   TEXT_BUCKET, LIST_BUCKET,
 } from "./library.mjs";
+import { xhIconHTML } from "../xh_ui_kit.js";
 
 const CSS_ID = "xh-tag-editor-css";
 const CSS = `
@@ -281,12 +282,15 @@ export function openTagEditor(opts = {}) {
 
   const ov = el("div", "xh-tage");
   const bar = el("div", "xh-tage-bar");
-  bar.append(el("span", "ttl", "☲ 标签库"));
+  const ttl = el("span", "ttl");
+  ttl.innerHTML = xhIconHTML("library", { size: 14, color: "current" }) + "<span>标签库</span>";
+  ttl.style.cssText = "display:inline-flex;align-items:center;gap:6px";
+  bar.append(ttl);
   const search = el("input"); search.placeholder = "搜名字或内容";
   search.addEventListener("input", () => { _search = search.value; render(); });
   search.addEventListener("keydown", (e) => e.stopPropagation());
   bar.append(search, el("span", "priv", "只存在你本机 · 换插件不丢 · 不进工作流 · 分享要靠导出"));
-  const x = el("span", "xh-tage-x", "✕"); x.title = "关闭";
+  const x = el("span", "xh-tage-x"); x.dataset.xhIconDone = "1"; x.innerHTML = xhIconHTML("x", { size: 14, color: "current" }); x.title = "关闭";
   x.addEventListener("click", closeTagEditor);
   bar.appendChild(x);
   const main = el("div", "xh-tage-main");

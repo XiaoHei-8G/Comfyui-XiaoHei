@@ -43,8 +43,8 @@ function ensureCSS() {
 .xh-ask-btn{padding:0 14px;height:30px;border-radius:6px;cursor:pointer;font-size:13px;
   border:1px solid var(--xh-border,rgba(255,255,255,.14));background:transparent;color:var(--xh-text,#e8e8e8);}
 .xh-ask-btn:hover{background:rgba(255,255,255,.07);}
-/* ⏱ 2026-11-08：常态 = 午夜蓝低彩，hover 才亮琥珀金（瞬时信号） */
-.xh-ask-btn.primary{background:var(--xh-rest,#01386A);color:var(--xh-on-rest,#fff);
+/* ⏱ 2026-11-17：常态 = 主题标题色（classic=暖黑），hover 才亮琥珀金（瞬时信号） */
+.xh-ask-btn.primary{background:var(--xh-rest,#1A1613);color:var(--xh-on-rest,#fff);
   border-color:var(--xh-rest-bd,rgba(255,255,255,.28));font-weight:600;}
 .xh-ask-btn.primary:hover{background:var(--xh-primary,#E8A33C);color:var(--xh-on-primary,#1c1c1c);
   border-color:var(--xh-primary,#E8A33C);filter:none}

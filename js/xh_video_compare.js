@@ -39,9 +39,15 @@ const XH_I18N = {
         },
         ui: {
             mode: "模式",
-            modeGrid: "网格",
-            modeSingle: "单看",
-            modePair: "两两",
+            //  原版 EasyMedia 四种模式（1:1 语义）：擦除 / 并排 / 只看源 / 看成片
+            modeCompare: "擦除对比",
+            modeCompareTip: "拖动白线擦除对比源视频与成品",
+            modeSide: "并排",
+            modeSideTip: "多路并排同步播放",
+            modeSource: "只看源",
+            modeSourceTip: "只看第一路源视频",
+            modeOutput: "看成片",
+            modeOutputTip: "只看第二路成品视频",
             pick: "选择文件",
             swap: "⇄ 互换",
             swapNeed2: "至少 2 路",
@@ -88,9 +94,14 @@ const XH_I18N = {
         },
         ui: {
             mode: "Mode",
-            modeGrid: "Grid",
-            modeSingle: "Single",
-            modePair: "Pair",
+            modeCompare: "Wipe",
+            modeCompareTip: "Drag the divider to wipe between source and output",
+            modeSide: "Side by side",
+            modeSideTip: "All videos side by side in sync",
+            modeSource: "Source",
+            modeSourceTip: "Show only the source video",
+            modeOutput: "Output",
+            modeOutputTip: "Show only the output video",
             pick: "Pick Files",
             swap: "⇄ Swap",
             swapNeed2: "Need 2+",
@@ -137,15 +148,29 @@ function t(node, key) {
 // ---------------------------------------------------------------------------
 // 状态
 // ---------------------------------------------------------------------------
+//  模式 1:1 对齐原版 EasyMedia CompareMode：
+//    compare      擦除对比（两路重叠 + clip-path 白线擦除）← 原版核心，旧 pair 从没实现
+//    side-by-side 并排（多路同播，等同旧 grid）
+//    source       只看源（第一路铺满）← 旧 single
+//    output       看成片（第二路铺满）
+//  老存档 grid/single/pair 在 normalizeMode 里映射过来，老工作流照常读。
+const MODES = ["compare", "side-by-side", "source", "output"];
+function normalizeMode(m) {
+    if (m === "grid") return "side-by-side";
+    if (m === "single") return "source";
+    if (m === "pair") return "compare";
+    return MODES.includes(m) ? m : "compare";
+}
+
 function freshState() {
     return {
-        mode: "grid",          // grid | single | pair
+        mode: "compare",       // compare | side-by-side | source | output（原版四态）
         cells: [],             // [{ref, meta, videoEl, tagEl, loaded:bool}] —— 来自 onExecuted payload
         order: [],             // 显示顺序（cells 下标数组，⇄ 互换用）
-        singleIdx: 0,          // 单看模式看哪格
-        pairA: 0,              // 两两模式：左格
-        pairB: 1,              // 两两模式：右格
-        pairPos: 0.5,          // 分割线位置 0~1
+        sourceIdx: 0,          // 源是哪格（默认第一路）
+        outputIdx: 1,          // 成品是哪格（默认第二路；master 时钟跟它走，原版同款）
+        split: 50,             // 擦除分割线位置 0~100（原版 split state）
+        pointerInside: false,  // 鼠标是否在擦除舞台内（原版 isPointerInside → 拖拽时关过渡动画）
         saved: false,          // 后端是否已存档（信息条提示）
         hint: "",
         liveMode: false,       // true = 正在显示「连接即预览」（还没跑工作流）
@@ -230,13 +255,22 @@ function makeCell(node, idx) {
 }
 
 // ---------------------------------------------------------------------------
-// 同步时钟（主从：master = 显示顺序第 0 格）
+// 同步时钟（1:1 原版：master = output 那一路，没有则退回 source）
+//   原版 handleTimeUpdate: const master = outputRef.current ?? sourceRef.current
+//   我们这里用 st.outputIdx 指向的第二路当 master，跟原版语义一致。
 // ---------------------------------------------------------------------------
+function masterCell(st) {
+    if (!st) return null;
+    const out = st.cells[st.outputIdx];
+    return out || st.cells[st.sourceIdx] || st.cells[0] || null;
+}
+
 function syncAll(node, masterTime) {
     const st = node._xhCMP;
     if (!st) return;
+    const m = masterCell(st);
     for (const c of st.cells) {
-        if (c === st.cells[st.order[0]]) continue;
+        if (c === m) continue;
         if (c.videoEl && Math.abs((c.videoEl.currentTime || 0) - masterTime) > 0.08) {
             try { c.videoEl.currentTime = masterTime; } catch (e) {}
         }
@@ -267,16 +301,16 @@ function bindSyncEvents(node) {
         });
         ve.addEventListener("seeking", () => syncAll(node, ve.currentTime));
         ve.addEventListener("timeupdate", () => {
-            if (st.order[0] === i) syncAll(node, ve.currentTime);
+            if (c === masterCell(st)) syncAll(node, ve.currentTime);
         });
         // 播放区不吃画布手势
         ["pointerdown", "mousedown", "dblclick", "wheel"].forEach((ev) =>
             c.el.addEventListener(ev, (e) => e.stopPropagation()));
-        // 单击格子 → 单看模式看它
+        // 单击格子 → 看它这一路（第一路=只看源，其余=看成片），双击回并排
         c.el.addEventListener("click", () => {
-            if (st.mode === "grid" && st.cells.length > 1) {
-                st.singleIdx = i;
-                setMode(node, "single");
+            if (st.mode === "side-by-side" && st.cells.length > 1) {
+                if (i === st.sourceIdx) { st.outputIdx = i; setMode(node, "source"); }
+                else { st.outputIdx = i; setMode(node, "output"); }
             }
         });
     });
@@ -287,80 +321,191 @@ function maybeStart(node) {
     if (!st || !st.cells.length) return;
     // 全部加载完才起播（最慢的一路不拖后腿）
     if (st.cells.every((c) => c.loaded)) {
-        const m = st.cells[st.order[0]];
-        try { m.videoEl.play?.(); } catch (e) {}
+        const m = masterCell(st);
+        try { m?.videoEl.play?.(); } catch (e) {}
     }
 }
 
 // ---------------------------------------------------------------------------
-// 模式切换
+// 模式切换（原版四态 1:1）
 // ---------------------------------------------------------------------------
 function setMode(node, mode) {
     const st = node._xhCMP;
     if (!st) return;
-    st.mode = mode;
+    st.mode = normalizeMode(mode);
+    // 擦除 / 单看要跟着「显示顺序」走 —— 互换后 ⇄ 立刻反映到 A/B
     if (st.cells.length) {
-        // 两两模式要跟着「显示顺序」走 —— 互换后 ⇄ 立刻反映到 A/B（原来写死 0/1，
-        //    互换完切到两两还是老顺序，用户会以为互换坏了）
-        st.pairA = (st.order && st.order[0] != null) ? st.order[0] : 0;
-        st.pairB = (st.order && st.order[1] != null) ? st.order[1] : Math.min(1, st.cells.length - 1);
+        st.sourceIdx = (st.order && st.order[0] != null) ? st.order[0] : 0;
+        st.outputIdx = (st.order && st.order[1] != null) ? st.order[1] : Math.min(1, st.cells.length - 1);
     }
-    writeSettings(node, { mode });
+    writeSettings(node, { mode: st.mode });
     renderCells(node);
     paintModeBtns(node);
     relayout(node);
+}
+
+// 把擦除分割线刷到 DOM（原版 displaySplit + clipPath + 白线，逐字对齐）
+//   displaySplit：source 模式=100（成品被擦没）、output=0（成品铺满）、
+//                 擦除=用户拖的 split、并排=50（两路各半，走 CSS 不用 clip）
+function paintSplit(node) {
+    const st = node._xhCMP;
+    if (!st || !st.stageEl) return;
+    const canCompare = st.cells.length >= 2;
+    const m = st.mode;
+    const displaySplit = m === "source" ? 100 : m === "output" ? 0
+        : m === "side-by-side" ? 50 : st.split;
+    // 成品路（output）用 clip-path 擦除：inset(0 0 0 X%) 只露右半边
+    const outCell = st.cells[st.outputIdx];
+    if (outCell && outCell.videoEl) {
+        if (m === "compare" || m === "source" || m === "output") {
+            outCell.videoEl.style.clipPath = `inset(0 0 0 ${displaySplit}%)`;
+            outCell.videoEl.style.transition = st.pointerInside ? "none" : "clip-path 180ms ease";
+        } else {
+            outCell.videoEl.style.clipPath = "";
+            outCell.videoEl.style.transition = "";
+        }
+    }
+    // 并排态靠 cell 的 grid 分栏，video 100% 铺满自己的 cell，不用改 video 尺寸
+    // 白线：只在擦除态显示（原版 canCompare && (compare||side-by-side)，
+    //   我们并排态用 CSS 分栏，白线只擦除态画，视觉更干净）
+    if (st.dividerEl) {
+        const show = canCompare && m === "compare";
+        st.dividerEl.style.display = show ? "block" : "none";
+        st.dividerEl.style.left = `${displaySplit}%`;
+        st.dividerEl.style.transition = st.pointerInside ? "none" : "left 180ms ease";
+    }
+}
+
+// 舞台拖拽换算（原版 updateSplitFromPointer 1:1）：
+//   localX = (clientX - rect.left) / scale；percent = localX / width * 100
+function updateSplitFromPointer(node, clientX) {
+    const st = node._xhCMP;
+    if (!st || st.mode !== "compare" || st.cells.length < 2 || !st.stageEl) return;
+    const rect = st.stageEl.getBoundingClientRect();
+    if (!rect) return;
+    const scale = (node.graph && node.graph.canvas && node.graph.canvas.scale) || 1;
+    const s = scale > 0 ? scale : 1;
+    const localX = (clientX - rect.left) / s;
+    const width = rect.width / s;
+    const percent = width > 0 ? (localX / width) * 100 : 50;
+    st.split = Math.max(0, Math.min(100, percent));
+    paintSplit(node);
 }
 
 function renderCells(node) {
     const st = node._xhCMP;
     if (!st) return;
     const n = st.cells.length;
-    const cols = gridCols(n);
 
-    // 单看模式：只显示 singleIdx 那格
-    // 两两模式：A/B 两格叠成滑块对比（DOM 简化：上下排列 + 各自 controls，进度同步）
-    //  2026-10-26 修「⇄ 互换」失效（用户报「残次品」的头号症状）：
-    //    这里原来是「每次渲染都把 order 重置成 [0,1,2…]」——
-    //    ⇒ 互换钮 order.reverse() 之后一调 renderCells 就被抹回自然序，点了等于没点。
-    //    正解：order 只在「没初始化 / 长度变了 / 含越界下标」时才重建，其余一律原样保留。
-    //    换源时由 applyPayload 主动按新 payload 重建一次（回到自然序，符合预期）。
+    // order 只在「没初始化 / 长度变了 / 含越界下标」时重建，⇄ 互换不被抹掉
     if (!Array.isArray(st.order) || st.order.length !== n
         || st.order.some((i) => !Number.isInteger(i) || i < 0 || i >= n)) {
         st.order = [];
         for (let i = 0; i < n; i++) st.order.push(i);
     }
-
     if (!st.gridEl) return;
+
+    // 擦除/单看态：两个 video 完全重叠在一个舞台里（原版 absolute inset-0）
+    const wipe = st.mode === "compare" || st.mode === "source" || st.mode === "output";
     st.gridEl.innerHTML = "";
+    st.gridEl.style.position = wipe ? "relative" : "";
+    st.gridEl.style.gridTemplateColumns = wipe ? "" : `repeat(${gridCols(n)}, 1fr)`;
+    st.gridEl.style.display = wipe ? "block" : "grid";
 
-    const showIdx = st.mode === "single" ? [st.singleIdx]
-        : st.mode === "pair" ? [st.pairA, st.pairB]
-            : st.order;
-
-    if (st.mode === "pair") {
-        st.gridEl.style.gridTemplateColumns = "1fr 1fr";
-    } else {
-        st.gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    let showIdx;
+    if (st.mode === "source") showIdx = [st.sourceIdx];
+    else if (st.mode === "output") showIdx = [st.outputIdx];
+    else if (st.mode === "compare") {
+        // 擦除：两路重叠；不足两路则退化成只显示有的那一路
+        showIdx = n >= 2 ? [st.sourceIdx, st.outputIdx] : [0];
     }
+    else showIdx = st.order;                                  // side-by-side：全部并排
 
     for (const i of showIdx) {
         const c = st.cells[i];
         if (!c) continue;
+        if (wipe) {
+            // 原版：absolute inset-0 h-full w-full object-contain
+            c.el.style.position = "absolute";
+            c.el.style.inset = "0";
+            c.el.style.width = "100%";
+            c.el.style.height = "100%";
+        } else {
+            c.el.style.position = "";
+            c.el.style.inset = "";
+            c.el.style.width = "";
+            c.el.style.height = "";
+        }
         st.gridEl.appendChild(c.el);
         c.tagEl.textContent = cellTag(node, i);
-        // 主格显示原生 controls，从格隐藏（同步播）
-        const isMaster = st.mode === "pair" ? (i === st.pairA) : (i === st.order[0]);
-        c.videoEl.controls = isMaster;
-        c.el.style.cursor = st.mode === "grid" && n > 1 ? "zoom-in" : "default";
+        // 主格（master=output）显示原生 controls，其余隐藏
+        c.videoEl.controls = (c === masterCell(st)) && !wipe;
+        c.el.style.cursor = st.mode === "side-by-side" && n > 1 ? "zoom-in" : "default";
+        c.videoEl.style.left = "";
+        c.videoEl.style.width = "";
     }
-    if (st.mode === "single" && n > 1) {
-        // 给个退出提示：双击回网格
-        const m = st.cells[st.singleIdx];
+
+    // 白线 + 手柄（擦除态才有）：作为舞台最后一个子元素叠在两路之上
+    if (wipe && st.dividerEl) st.gridEl.appendChild(st.dividerEl);
+    if (st.mode === "source" && n > 1) {
+        const m = st.cells[st.sourceIdx];
         if (m) {
-            m.el.addEventListener("dblclick", () => setMode(node, "grid"), { once: true });
+            m.el.addEventListener("dblclick", () => setMode(node, "side-by-side"), { once: true });
             m.el.style.cursor = "zoom-out";
         }
     }
+    paintSplit(node);
+}
+
+// 舞台：白线 + 圆形手柄 + 拖拽监听（原版 CompareVideoWidget stage 1:1）
+function buildStage(node, grid) {
+    const st = node._xhCMP;
+    if (!st) return;
+    st.stageEl = grid;
+
+    const divider = document.createElement("div");
+    divider.style.cssText =
+        "position:absolute;top:0;bottom:0;width:1px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.6);"
+        + "z-index:4;pointer-events:none;display:none;";
+    const handle = document.createElement("div");
+    handle.style.cssText =
+        "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;"
+        + "border-radius:50%;background:#fff;border:2px solid var(--xh-primary,#E8A33C);box-sizing:border-box;";
+    divider.appendChild(handle);
+    st.dividerEl = divider;
+
+    // pointer 事件挂舞台本身（原版 onPointerMove → updateSplitFromPointer）
+    grid.addEventListener("pointerdown", (e) => {
+        const s = node._xhCMP;
+        if (!s || s.mode !== "compare") return;
+        e.stopPropagation();
+        s.pointerInside = true;
+        s.dragging = true;
+        try { grid.setPointerCapture?.(e.pointerId); } catch (err) {}
+        updateSplitFromPointer(node, e.clientX);
+    });
+    grid.addEventListener("pointermove", (e) => {
+        const s = node._xhCMP;
+        if (!s || s.mode !== "compare") return;
+        s.pointerInside = true;
+        if (s.dragging) updateSplitFromPointer(node, e.clientX);
+    });
+    const endDrag = (e) => {
+        const s = node._xhCMP;
+        if (!s) return;
+        s.dragging = false;
+        try { grid.releasePointerCapture?.(e.pointerId); } catch (err) {}
+    };
+    grid.addEventListener("pointerup", endDrag);
+    grid.addEventListener("pointercancel", endDrag);
+    grid.addEventListener("pointerenter", () => { if (node._xhCMP) node._xhCMP.pointerInside = true; });
+    grid.addEventListener("pointerleave", () => {
+        const s = node._xhCMP;
+        if (!s) return;
+        s.pointerInside = false;
+        // 原版：离开擦除舞台 split 回中（50）
+        if (s.mode === "compare") { s.split = 50; paintSplit(node); }
+    });
 }
 
 function cellTag(node, i) {
@@ -549,7 +694,9 @@ function closePicker(node) {
 function paintModeBtns(node) {
     const st = node._xhCMP;
     if (!st || !st.modeBtns) return;
-    const map = { grid: "modeGrid", single: "modeSingle", pair: "modePair" };
+    const map = {
+        compare: "modeCompare", "side-by-side": "modeSide", source: "modeSource", output: "modeOutput",
+    };
     st.modeBtns.forEach(({ btn, mode }) => {
         const active = st.mode === mode;
         //  配色一律走 kit 四档（active / neutral）， 不自己写 #3a3a3a / #252525
@@ -655,10 +802,12 @@ function makeToolbarButtons(node) {
         return b;
     };
 
+    //  原版四模式点选：擦除 / 并排 / 只看源 / 看成片
     st.modeBtns = [
-        { btn: mkBtn("modeGrid", "mode", () => setMode(node, "grid")), mode: "grid" },
-        { btn: mkBtn("modeSingle", "mode", () => setMode(node, "single")), mode: "single" },
-        { btn: mkBtn("modePair", "mode", () => setMode(node, "pair")), mode: "pair" },
+        { btn: mkBtn("modeCompare", "modeCompareTip", () => setMode(node, "compare")), mode: "compare" },
+        { btn: mkBtn("modeSide", "modeSideTip", () => setMode(node, "side-by-side")), mode: "side-by-side" },
+        { btn: mkBtn("modeSource", "modeSourceTip", () => setMode(node, "source")), mode: "source" },
+        { btn: mkBtn("modeOutput", "modeOutputTip", () => setMode(node, "output")), mode: "output" },
     ];
     out.push(...st.modeBtns.map((x) => x.btn));
 
@@ -673,9 +822,9 @@ function makeToolbarButtons(node) {
             return;
         }
         st2.order.reverse();
-        // 两两模式跟着新顺序走
-        st2.pairA = st2.order[0];
-        st2.pairB = st2.order[1] ?? st2.order[0];
+        // 擦除/单看的 A/B 跟着新顺序走
+        st2.sourceIdx = st2.order[0];
+        st2.outputIdx = st2.order[1] ?? st2.order[0];
         renderCells(node);
         relayout(node);
         pulseButton(b, { ok: true, text: t(node, "swapDone") });
@@ -711,9 +860,12 @@ function cellH(node) {
         const sz = node.size;
         if (sz && typeof sz[0] === "number" && sz[0] > 0) w = sz[0];
     } catch (e) {}
-    const cols = st.mode === "pair" ? 2 : gridCols(n);
-    const rows = Math.max(1, Math.ceil((st.mode === "single" ? 1 : n) / cols));
-    const per = Math.max(110, Math.min(300, Math.floor((w - 16) / cols / 1.6)));
+    //  compare/source/output：两路重叠成一行；side-by-side：全部并排
+    const cols = gridCols(n);
+    const wipe = st.mode === "compare" || st.mode === "source" || st.mode === "output";
+    const shown = wipe ? 1 : n;
+    const rows = Math.max(1, Math.ceil(shown / cols));
+    const per = Math.max(150, Math.min(320, Math.floor((w - 16) / (wipe ? 1 : cols) / 1.5)));
     return per * rows + (rows - 1) * 6;
 }
 
@@ -751,6 +903,8 @@ function applyPayload(node, data) {
     // 新 payload ⇒ 回到自然序（renderCells 不再重置 order，这里必须自己建一次，
     // 否则 st.order 永远是空数组：同步时钟 / 自动起播 / 互换 全部抓瞎）
     st.order = vids.map((_, i) => i);
+    st.sourceIdx = 0;
+    st.outputIdx = Math.min(1, Math.max(0, vids.length - 1));
     bindSyncEvents(node);
     renderCells(node);
     refreshInfo(node);
@@ -872,9 +1026,8 @@ function applyLivePreview(node) {
         return c;
     });
     st.order = refs.map((_, i) => i);
-    st.singleIdx = 0;
-    st.pairA = 0;
-    st.pairB = Math.min(1, refs.length - 1);
+    st.sourceIdx = 0;
+    st.outputIdx = Math.min(1, refs.length - 1);
     bindSyncEvents(node);
     renderCells(node);
     refreshInfo(node);
@@ -996,6 +1149,11 @@ app.registerExtension({
                 const grid = document.createElement("div");
                 grid.style.cssText =
                     "display:grid;grid-template-columns:repeat(2,1fr);gap:6px;width:100%;box-sizing:border-box;";
+                //  擦除舞台：白线 + 手柄 + 拖拽监听（原版 stage）
+                buildStage(node, grid);
+                //  初始模式从存档读（老 grid/single/pair 自动归一化到四态）
+                const savedMode = readSettings(node).mode;
+                if (savedMode && node._xhCMP) node._xhCMP.mode = normalizeMode(savedMode);
                 const info = document.createElement("div");
                 info.style.cssText =
                     "white-space:pre-line;font-size:11px;line-height:1.5;color:#9aa5b1;"
@@ -1086,9 +1244,11 @@ app.registerExtension({
                 const st = this._xhCMP;
                 if (!st) return r;
                 const s = readSettings(this);
-                if (s.mode) st.mode = s.mode;
+                //  老存档 grid/single/pair 归一化到原版四态
+                if (s.mode) st.mode = normalizeMode(s.mode);
                 applyLang(this, currentLang());
                 paintModeBtns(this);
+                if (st.cells.length && st.gridEl) renderCells(this);
                 //  读档必须还原齿轮折叠态：_gearOpen 存在设置里，
                 //    不还原的话每次打开工作流都弹回「收起」（2026-10-26 修）。
                 const open = readSettings(this)._gearOpen === true;

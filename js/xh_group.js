@@ -17,7 +17,7 @@ function injectGroupStyle() {
         + ".xh-grp-gear svg{width:15px;height:15px;display:block;}"
         + ".xh-grp-gear:hover{opacity:1;color:var(--xh-acc,#E8A33C);filter:brightness(1.1);}"
         + ".xh-grp-set{position:fixed;z-index:10026;width:320px;max-width:94vw;background:#2b2b2b;"
-        + "border:1px solid #E8A33C;border-radius:8px;box-shadow:0 10px 32px rgba(0,0,0,.6);"
+        + "border:1px solid var(--xh-primary,#E8A33C);border-radius:8px;box-shadow:0 10px 32px rgba(0,0,0,.6);"
         + "color:#ddd;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;}"
         + ".xh-grp-set-top{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #1c1c1c;cursor:grab;}"
         + ".xh-grp-set-top svg{width:15px;height:15px;color:#bbb;flex:none;}"
@@ -33,9 +33,9 @@ function injectGroupStyle() {
         + ".xh-grp-set-row .lab b{display:block;font:600 12px 'Segoe UI';color:#e2e2e2;}"
         + ".xh-grp-set-row .lab small{display:block;color:#888;font-size:10.5px;line-height:1.4;margin-top:1px;}"
         + ".xh-grp-set-row select,.xh-grp-set-row input[type=text]{background:#161616;border:1px solid #3a3a3a;border-radius:5px;color:#fff;font:11px monospace;padding:4px 7px;max-width:150px;}"
-        + ".xh-grp-set-row select:focus,.xh-grp-set-row input:focus{outline:none;border-color:#E8A33C;}"
+        + ".xh-grp-set-row select:focus,.xh-grp-set-row input:focus{outline:none;border-color:var(--xh-primary,#E8A33C);}"
         + ".xh-grp-set-done{margin:4px 13px 13px;}"
-        + ".xh-grp-set-done button{width:100%;height:30px;border:0;border-radius:6px;background:#E8A33C;color:#1c1c1c;font:600 12px 'Segoe UI';cursor:pointer;}"
+        + ".xh-grp-set-done button{width:100%;height:30px;border:0;border-radius:6px;background:var(--xh-primary,#E8A33C);color:#1c1c1c;font:600 12px 'Segoe UI';cursor:pointer;}"
         + ".xh-grp-set-done button:hover{filter:brightness(1.08);}"
         //  2026-11-15 用户「整个大小变小一些」：高 26→22 / 左右 12→9 / 字 13→11.5 / 圆角 6→5；
         //    顺手把写死的 system-ui 换成官方 --font-sans（家族字体铁律）。齿轮 20×20 保持不动。
@@ -1038,11 +1038,12 @@ app.registerExtension({
 
                 // 开关：官方 ComfyUI 原生滑动块（track + 滑动白点），家族眼睛图标整段取消。
                 //  用户 2026-11-15 点名：「眼睛图案取消，换成 ComfyUI 官方那个普通滑块开关」。
-                //  轨道关=中性灰、开=ComfyUI 主题主色(var(--primary)，取不到回退蓝)；白点左/右滑动表开关。
+                //  轨道关=中性灰、开=家族主题主色(var(--xh-primary)，随预设切换)；白点左/右滑动表开关。
+                //  2026-11-17：原来是官方 var(--primary,#4a90e2) 不跟家族主题，已改为主题色。
                 const toggle = document.createElement("div");
                 toggle.style.cssText = `position:relative;flex:none;width:54px;height:26px;border-radius:13px;`
                     + `cursor:pointer;transition:background ${T.DUR}ms ease;`
-                    + `background:${isOn ? "var(--primary, #4a90e2)" : "rgba(255,255,255,0.14)"};`;
+                    + `background:${isOn ? "var(--xh-primary,#E8A33C)" : "rgba(255,255,255,0.14)"};`;
                 toggle.title = isOn ? L.on : L.off;
                 toggle.onclick = (e) => {
                     e.stopPropagation();

@@ -79,7 +79,7 @@ const C = {
   recess: "rgba(0,0,0,0.08)",
 };
 
-// The accent as TEXT: #E8A33C on white is only 2.9:1, so accent-coloured words
+// The accent as TEXT: var(--xh-primary,#E8A33C) on white is only 2.9:1, so accent-coloured words
 // are darkened here. Fills and borders keep the real accent.
 const ACC = "var(--pix-acc,#E8A33C)";
 const PACC = "var(--acc, var(--pix-acc,#E8A33C))";   // Prompt sets --acc on its own root
@@ -172,7 +172,7 @@ ${LIGHT} div.pix-pt-box { background:${C.field}; border-color:${C.fieldBorder}; 
 ${LIGHT} div.pix-pt-hdr { background:rgba(0,0,0,0.03); border-bottom-color:rgba(0,0,0,0.12); }
 ${LIGHT} span.pix-pt-hlbl { color:${C.dim}; }
 /* the "edited" marker is written with an INLINE orange, so only !important reaches it */
-${LIGHT} span.pix-pt-hlbl span { color:color-mix(in srgb, #E8A33C 70%, #000) !important; }
+${LIGHT} span.pix-pt-hlbl span { color:color-mix(in srgb, var(--xh-primary,#E8A33C) 70%, #000) !important; }
 ${LIGHT} div.pix-pt-toggle { background:${C.recess}; }
 ${LIGHT} div.pix-pt-seg { color:${C.dim}; }
 ${LIGHT} div.pix-pt-seg:not(.active):hover { color:${C.text}; }

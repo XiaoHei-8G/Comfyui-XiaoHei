@@ -537,7 +537,7 @@
 #    分发 / 压缩命名规范：Comfyui-XiaoHei_v{主}.{次}.{修}_{YYYYMMDD}.zip
 #    改完节点包后升级对应位，再重新压缩，文件名版本号才对得上。
 # ---------------------------------------------------------------------------
-VERSION = "1.0.3"  # 长循环兼容补丁：缓存祖先遍历改显式栈，100 轮循环不再撞 Python 递归上限
+VERSION = "1.0.4"  # 桌宠分离出包；前端 js 拆模块（.js→.mjs）；新增 note/sketch/audio_studio/inpaint 等模块
 
 # ---------------------------------------------------------------------------
 #  子模块加载：逐个 try，缺谁只少谁（2026-10-05 改造，为「分发给别人」而做）
@@ -817,6 +817,75 @@ except Exception as _e:
     _fail("paint", "画板（1:1 复刻 Paint Pixaroma）", [("torch", "torch")], _e)
     _M_PAINT = _D_PAINT = {}
 
+# 2026-11-18：1:1 深度复刻 ComfyUI-Pixaroma 的 InpaintCrop + InpaintStitch（MIT 署名保留）。
+#   两节点共享私有类型 XH_CROP_INFO，前端遮罩编辑器 5 模块在 js/xh_inpaint/，
+#   后端落盘路由 /xh/inpaint/api/{upload_src,save_mask} → input/xh_inpaint/。
+#   算法（裁剪几何 / 遮罩预处理 / 接缝融合 / 颜色匹配）原样照搬，只改家族命名与中文说明。
+try:
+    from .nodes.inpaint import (
+        NODE_CLASS_MAPPINGS as _M_INPAINT,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_INPAINT,
+    )
+except Exception as _e:
+    _fail("inpaint", "局部重绘裁剪 + 贴回（1:1 深度复刻 Pixaroma）", [("torch", "torch")], _e)
+    _M_INPAINT = _D_INPAINT = {}
+
+# 2026-11-18：1:1 深度复刻 Number Pick Pixaroma（MIT 署名保留）。
+#   XHNumberPick 输出 ANY，前端 js/xh_numberpick/ 按接线收窄 INT/FLOAT。
+try:
+    from .nodes.numberpick import (
+        NODE_CLASS_MAPPINGS as _M_NPICK,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_NPICK,
+    )
+except Exception as _e:
+    _fail("numberpick", "数字选择（1:1 深度复刻 Pixaroma）", [], _e)
+    _M_NPICK = _D_NPICK = {}
+
+# 2026-11-18：1:1 深度复刻 Load Image Mini + Load Image（MIT 署名保留）。
+#   XHLoadImageMini 是工作流 3/4/5/6/7 用的轻量加载器；它依赖整条共享链，
+#   已连同 XHLoadImage 一起搬进 nodes/loadimage/，前端在 js/xh_load_image*/。
+try:
+    from .nodes.loadimage import (
+        NODE_CLASS_MAPPINGS as _M_LIMG,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_LIMG,
+    )
+except Exception as _e:
+    _fail("loadimage", "轻量加载图片 + 加载图片（1:1 深度复刻 Pixaroma）", [("torch", "torch")], _e)
+    _M_LIMG = _D_LIMG = {}
+
+# 2026-11-18：1:1 深度复刻 Info Pixaroma（MIT 署名保留）。
+#   XHInfo 是纯前端说明按钮（note 富文本套件在 js/xh_note/），不参与出图。
+try:
+    from .nodes.xhinfo.node_info import (
+        NODE_CLASS_MAPPINGS as _M_INFO,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_INFO,
+    )
+except Exception as _e:
+    _fail("xhinfo", "说明按钮（1:1 深度复刻 Pixaroma）", [], _e)
+    _M_INFO = _D_INFO = {}
+
+# 2026-11-18：1:1 深度复刻 Save Image Pixaroma（MIT 署名保留）。
+#   XHSaveImage 保存到任意文件夹 + 文件名 token + 「另存现在」，7 个工作流都用。
+try:
+    from .nodes.xhsaveimage import (
+        NODE_CLASS_MAPPINGS as _M_SAVE,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_SAVE,
+    )
+except Exception as _e:
+    _fail("xhsaveimage", "保存图片（1:1 深度复刻 Pixaroma）", [("torch", "torch")], _e)
+    _M_SAVE = _D_SAVE = {}
+
+# 2026-11-18：1:1 深度复刻 Sketch Pixaroma（MIT 署名保留）。
+#   XHSketch 在图上画框/写字出 image+prompt+mask，工作流 6 用；输出与小黑画板不同，必须独立节点。
+try:
+    from .nodes.xhsketch import (
+        NODE_CLASS_MAPPINGS as _M_SKETCH,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_SKETCH,
+    )
+except Exception as _e:
+    _fail("xhsketch", "标注（1:1 深度复刻 Pixaroma）", [("torch", "torch")], _e)
+    _M_SKETCH = _D_SKETCH = {}
+
 # 2026-11-08：1:1 复刻 ComfyUI-WepeNerd（MIT）。整包物理拷贝进 wepenerd/，
 #   逻辑/界面/英文原版文案一字未改，只换了 class_type 前缀 XH_、路由前缀 /xh/wn/、
 #   前端子目录 web/xh_wepenerd/。class_type 全部带 XH_ 前缀 ⇒ 与原版同装不抢注册。
@@ -887,6 +956,21 @@ except Exception as _e:
     _fail("prompt_pack", "XiaoHei-提示词批量（复刻 Prompt Pack）", [], _e)
     _M_PP = _D_PP = {}
 
+# 2026-11-16：1:1 复刻 ComfyUI-Pixaroma 的 AudioReact Pixaroma（MIT）——
+#   单张图片跟随音频律动生成视频。纯 torch FFT 引擎（15 动态模式 / 8 叠加），
+#   零新增依赖；WebGL2 全屏编辑器。状态存 node.properties.audioStudioState，
+#   前端在 graphToPrompt 注入隐藏输入 XHAudioStudioJson。
+#   class_type = XH_AudioStudio，显示名 XiaoHei-图片蹦迪。
+#   输入根独立到 input/xiaohei/audio_studio/，与原包 input/pixaroma 不冲突。
+try:
+    from .nodes.audio_studio import (
+        NODE_CLASS_MAPPINGS as _M_AS,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_AS,
+    )
+except Exception as _e:
+    _fail("audio_studio", "XiaoHei-图片蹦迪（复刻 AudioReact）", [], _e)
+    _M_AS = _D_AS = {}
+
 # 2026-11-08：复刻 ComfyUI-OpenH3-VideoTools（Tensor Alchemist, GPL-3.0）的 5 个节点，
 #   并把 ComfyUI-OpenH3-Regenerate2K（Songssx, MIT）的 3 个节点一并**自持**进来。
 #   为什么自持：原版「精修总控」内部硬查这 3 个节点的 ID，查不到直接 RuntimeError
@@ -953,11 +1037,18 @@ _PARTS = tuple(
         ("caminfo", _M_CAMINFO, _D_CAMINFO),
         ("msr_relay", _M_MSR, _D_MSR),
         ("paint", _M_PAINT, _D_PAINT),
+        ("inpaint", _M_INPAINT, _D_INPAINT),
+        ("numberpick", _M_NPICK, _D_NPICK),
+        ("loadimage", _M_LIMG, _D_LIMG),
+        ("xhinfo", _M_INFO, _D_INFO),
+        ("xhsaveimage", _M_SAVE, _D_SAVE),
+        ("xhsketch", _M_SKETCH, _D_SKETCH),
         ("wepenerd", _M_WN, _D_WN),
         ("label_pix", _M_LP, _D_LP),
         ("tag_prompt", _M_TAG, _D_TAG),
         ("prompt_stack", _M_PS, _D_PS),
         ("prompt_pack", _M_PP, _D_PP),
+        ("audio_studio", _M_AS, _D_AS),
         ("openh3", _M_OH3, _D_OH3),
         ("qwen21_edit", _M_QE, _D_QE),
         ("charsheet", _M_CS, _D_CS),
@@ -994,6 +1085,25 @@ NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
 _owner = {}          # class_type -> 来源子模块（重名时用来报清楚是谁撞了谁）
 
+
+def _normalize_display_name(name):
+    """统一为「功能名 XiaoHei」：功能名在前，尾巴用完整拼音 XiaoHei。
+
+    2026-11-19 定稿：学 Pixaroma「功能名 Pixaroma」结构。尾巴固定写
+    XiaoHei（不缩写 XH、不跟随中英翻译切换），功能名仍走各自语言。
+    幂等：先剥历史前缀/尾巴，再统一补一个 XiaoHei，避免叠加。
+    """
+    for _prefix in ("XiaoHei-", "小黑·"):
+        if name.startswith(_prefix):
+            name = name[len(_prefix):].strip()
+            break
+    for _suffix in (" 小黑", " XiaoHei", " Xiaohei"):
+        if name.endswith(_suffix):
+            name = name[:-len(_suffix)]
+            break
+    return f"{name} XiaoHei"
+
+
 for _mod, _cm, _dm in _PARTS:
     for _key, _cls in _cm.items():
         if _key in NODE_CLASS_MAPPINGS:
@@ -1005,7 +1115,8 @@ for _mod, _cm, _dm in _PARTS:
             )
         NODE_CLASS_MAPPINGS[_key] = _cls
         _owner[_key] = _mod
-    NODE_DISPLAY_NAME_MAPPINGS.update(_dm)
+    for _key, _name in _dm.items():
+        NODE_DISPLAY_NAME_MAPPINGS[_key] = _normalize_display_name(_name)
 
 #  全包唯一的 WEB_DIRECTORY —— 28 个前端 js（中/EN 切换 + 参数标签本地化 +
 #    controls 三件套的界面 + 声音播放的前端）全部放在这里。
@@ -1048,6 +1159,94 @@ def _register_about_route():
 
 _register_about_route()
 
+# ---------------------------------------------------------------------------
+#  前端静态文件「关强缓存」（2026-11-19）
+#    病根：ComfyUI 给每个自定义节点挂的是 web.static('/extensions/<包名>', dir)，
+#         浏览器会按 24 小时强缓存这些 js/mjs（xh_asset_version.js 顶部记过实测）。
+#         ⇒ 改了前端、重启了后端，浏览器仍然拿旧文件跑；用户看到的还是上一版界面。
+#    做法：在 aiohttp app 上加一个中间件，只对本包 /extensions/Comfyui-XiaoHei/
+#         下的响应补 no-store。不改 ComfyUI 任何文件，不动别人的扩展。
+#    注意：已经进浏览器缓存的那一份不会自己失效 —— 生效后仍需一次 Ctrl+Shift+R。
+# ---------------------------------------------------------------------------
+def _register_no_cache_middleware():
+    """本包前端文件一律不缓存；失败只打日志，不影响节点加载。
+
+    ⚠️ 这个函数改过三次，每次都是「改前端不生效」的真凶，改前必读：
+
+    ① 第一版 `app.middlewares = tuple(app.middlewares) + (mw,)`
+       ⇒ aiohttp 3.14 起 `Application.middlewares` 是**只读 property**，
+         赋值抛 `no setter`，被 except 吃掉，缓存头一个没加上。
+
+    ② 第二版用 `app.on_response_prepare.append(...)`
+       ⇒ 这个 Signal 在 `Application.pre_freeze()` 里就被 `freeze()` 了
+         （ComfyUI 建 PromptServer 时 add_routes 就会 pre_freeze），
+         追加抛 `Cannot modify frozen list.`，又被 except 吃掉。
+
+    ③ 现在这版：直接替换 `app._middlewares_handlers`（普通实例属性，
+       在 pre_freeze 里构造成 tuple）。三个前提都成立且都已核实：
+         · 节点加载发生在服务器起监听之前（main.py: init_extra_nodes → 再 start_server），
+           所以在加载期改，`_cached_build_middleware`（lru_cache）还没被填充；
+         · `_handle` 里逐层 `partial(m, handler=handler)` 包裹，**后遍历的在外层**，
+           所以把我们的中间件 append 到末尾 = 最外层，能罩住所有响应；
+         · 我们只加 `(mw, True)`（new_style），不碰 `_has_legacy_middlewares`。
+
+    验收（重启后必须做的唯一硬标准）：
+        curl -s -D - -o /dev/null http://127.0.0.1:8188/extensions/Comfyui-XiaoHei/xh_inpaint/core.mjs
+        响应里必须有 Cache-Control: no-store。没有 = 又没挂上，去日志搜 [XiaoHei] 那行。
+    """
+    try:
+        from aiohttp import web
+        from server import PromptServer
+
+        inst = PromptServer.instance
+        if inst is None or getattr(inst, "_xh_nocache_done", False):
+            return
+        app = getattr(inst, "app", None)
+        if app is None:
+            return
+
+        PREFIX = "/extensions/Comfyui-XiaoHei/"
+
+        @web.middleware
+        async def _xh_no_cache(request, handler):
+            resp = await handler(request)
+            try:
+                if request.path.startswith(PREFIX):
+                    h = resp.headers
+                    h["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+                    h["Pragma"] = "no-cache"
+                    h["Expires"] = "0"
+                    # 去掉校验器，免得浏览器拿 etag/last-modified 换 304 继续吃缓存。
+                    for k in ("ETag", "Last-Modified"):
+                        if k in h:
+                            del h[k]
+            except Exception:
+                pass
+            return resp
+
+        _xh_no_cache.__xh_no_cache__ = True
+
+        handlers = getattr(app, "_middlewares_handlers", None)
+        if bool(getattr(app, "pre_frozen", None)) and handlers is not None:
+            # 已 pre_freeze：直接接在末尾（= 最外层）。
+            app._middlewares_handlers = tuple(handlers) + ((_xh_no_cache, True),)
+            # 万一整个 app 本来一个中间件都没有，_handle 会跳过中间件链。
+            if not getattr(app, "_run_middlewares", False):
+                app._run_middlewares = True
+            how = "middlewares_handlers"
+        else:
+            # 还没 pre_freeze：塞进原始列表，pre_freeze 时会一起构建。
+            app._middlewares.append(_xh_no_cache)
+            how = "middlewares"
+
+        inst._xh_nocache_done = True
+        print(f"[XiaoHei]  前端静态文件已关闭浏览器缓存（via {how}；改完刷新即生效）")
+    except Exception as _e:                   # noqa: BLE001
+        print(f"[XiaoHei]  !! 关闭前端缓存失败，改前端后仍需 Ctrl+F5：{_e}")
+
+
+_register_no_cache_middleware()
+
 
 # ---------------------------------------------------------------------------
 #  工作流浏览器数据源（2026-10-27 新增）
@@ -1060,6 +1259,8 @@ def _register_workflows_route():
     try:
         import os
         import json
+        import time
+        import asyncio
         from aiohttp import web
         from server import PromptServer
 
@@ -1070,6 +1271,116 @@ def _register_workflows_route():
         # ComfyUI 根 = 本文件上溯 3 层（custom_nodes/Comfyui-XiaoHei/__init__.py）
         _COMFY_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         _WF_ROOT = os.path.join(_COMFY_ROOT, "user", "default", "workflows")
+
+        # --- 2026-11-18：资源管理器窗口跳到 ComfyUI 前面 ---
+        # 用户实机截图：「点击打开文件夹时候，弹出的文件夹在 comfyui 后面，能不能让他出现在前面」。
+        # 根因：从 ComfyUI 后端进程启动 explorer，Windows 把新窗口排在当前前台窗口
+        #       （= ComfyUI 浏览器）后面；os.startfile 只管打开、不管 Z 序。
+        # 修法：打开前抓顶层窗口快照 → 打开后轮询找新窗口（已打开过则按文件夹名匹配）→
+        #       SW_RESTORE + AttachThreadInput（绕开 Windows 前台锁）+ SetForegroundWindow。
+        # 铁律：全程在 executor 线程里跑，绝不阻塞 aiohttp 事件循环。
+        def _xf_top_windows():
+            import ctypes
+            from ctypes import wintypes
+            u = ctypes.windll.user32
+            Proc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+            u.EnumWindows.argtypes = [Proc, wintypes.LPARAM]
+            u.EnumWindows.restype = wintypes.BOOL
+            u.IsWindowVisible.argtypes = [wintypes.HWND]
+            u.IsWindowVisible.restype = wintypes.BOOL
+            u.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+            u.GetWindowTextLengthW.restype = ctypes.c_int
+            u.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+            u.GetWindowTextW.restype = ctypes.c_int
+            out = {}
+            def cb(hwnd, _lparam):
+                if u.IsWindowVisible(hwnd):
+                    n = u.GetWindowTextLengthW(hwnd)
+                    if n:
+                        buf = ctypes.create_unicode_buffer(n + 1)
+                        u.GetWindowTextW(hwnd, buf, n + 1)
+                        out[hwnd] = buf.value
+                return True
+            u.EnumWindows(Proc(cb), 0)
+            return out
+
+        def _xf_is_explorer(hwnd):
+            """只认真正的资源管理器窗口（class = CabinetWClass）。
+            ⛔ 别用标题 contains：Edge 开着「Workflows」网页会被误匹配（2026-11-18 实测踩到）。"""
+            import ctypes
+            from ctypes import wintypes
+            u = ctypes.windll.user32
+            u.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+            u.GetClassNameW.restype = ctypes.c_int
+            buf = ctypes.create_unicode_buffer(256)
+            u.GetClassNameW(hwnd, buf, 256)
+            return buf.value == "CabinetWClass"
+
+        def _xf_bring_front(hwnd):
+            import ctypes
+            from ctypes import wintypes
+            u = ctypes.windll.user32
+            u.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+            u.SetForegroundWindow.argtypes = [wintypes.HWND]
+            u.SetForegroundWindow.restype = wintypes.BOOL
+            u.BringWindowToTop.argtypes = [wintypes.HWND]
+            u.GetForegroundWindow.restype = wintypes.HWND
+            u.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+            u.GetWindowThreadProcessId.restype = wintypes.DWORD
+            k32 = ctypes.windll.kernel32          # GetCurrentThreadId 在 kernel32，不在 user32！
+            k32.GetCurrentThreadId.restype = wintypes.DWORD
+            u.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+            u.AttachThreadInput.restype = wintypes.BOOL
+            u.keybd_event.argtypes = [ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_uint, ctypes.c_void_p]
+            u.ShowWindow(hwnd, 9)  # SW_RESTORE（最小化状态也能拉起来）
+            fg = u.GetForegroundWindow()
+            tid_fg = u.GetWindowThreadProcessId(fg, None)
+            tid_me = k32.GetCurrentThreadId()
+            attached = bool(tid_fg and tid_fg != tid_me and u.AttachThreadInput(tid_me, tid_fg, True))
+            try:
+                u.BringWindowToTop(hwnd)
+                if u.SetForegroundWindow(hwnd):
+                    return
+                # 前台锁没解开：模拟一次 Alt 键松开，再试一次。
+                u.keybd_event(0x12, 0, 0, 0)       # VK_MENU down
+                u.keybd_event(0x12, 0, 2, 0)       # KEYEVENTF_KEYUP
+                u.SetForegroundWindow(hwnd)
+            finally:
+                if attached:
+                    u.AttachThreadInput(tid_me, tid_fg, False)
+
+        def _xf_open_and_focus(folder, select=None):
+            """打开文件夹（select 非空则选中文件），并把资源管理器窗口拉到最前。"""
+            import subprocess
+            if os.name != "nt":
+                opener = "open" if _sys.platform == "darwin" else "xdg-open"
+                subprocess.Popen([opener, folder])
+                return
+            before = _xf_top_windows()
+            if select:
+                subprocess.Popen(["explorer", "/select,", os.path.normpath(select)])
+            else:
+                os.startfile(folder)                # noqa: S606
+            target = os.path.basename(os.path.normpath(folder)).lower()
+            try:
+                hwnd = None
+                for _ in range(16):                 # 最多等 4 秒
+                    time.sleep(0.25)
+                    after = _xf_top_windows()
+                    fresh = [h for h in after if h not in before and after[h] and _xf_is_explorer(h)]
+                    if fresh:
+                        hwnd = fresh[-1]
+                        break
+                    # 已打开过同一目录时不会有新窗口；标题精确匹配（"workflows" / "workflows - 文件资源管理器"）
+                    same = [h for h in after if after[h] and _xf_is_explorer(h)
+                            and (after[h].lower() == target or after[h].lower().startswith(target + " - "))]
+                    if same:
+                        hwnd = same[-1]
+                        break
+                if hwnd:
+                    _xf_bring_front(hwnd)
+            except Exception as _e:                  # noqa: BLE001
+                print(f"[XiaoHei] 资源管理器置前失败（不影响打开）: {_e}")
 
         # --- 2026-10-27 二期：模型标签 + 节点缩略图（仿 Pixaroma 卡片封面图）---
         #  2026-10-27 三期：照 Pixaroma nodes/_workflow_index_helpers.py L40 复刻。
@@ -1322,24 +1633,25 @@ def _register_workflows_route():
 
         @routes.get("/xh/workflows/openfolder")
         async def _xh_workflows_openfolder(request):              # noqa: ARG001
-            """在系统文件管理器里打开 workflows 根目录（仿 Pixaroma Open folder）。"""
+            """在系统文件管理器里打开 workflows 根目录（仿 Pixaroma Open folder）。
+
+            2026-11-18：改成「打开 + 置前」——原来 os.startfile 弹的窗口落在 ComfyUI 后面。
+            """
             try:
-                if os.name == "nt":
-                    os.startfile(_WF_ROOT)                        # noqa: S606
-                else:
-                    import subprocess
-                    import sys as _sys
-                    opener = "open" if _sys.platform == "darwin" else "xdg-open"
-                    subprocess.Popen([opener, _WF_ROOT])
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, _xf_open_and_focus, _WF_ROOT, None)
                 return web.json_response({"ok": True})
             except Exception as _e:                               # noqa: BLE001
                 return web.json_response({"error": str(_e)}, status=500)
 
         @routes.post("/xh/workflows/reveal")
         async def _xh_workflows_reveal(request):
-            """在系统文件管理器里定位并选中某个工作流文件（仿 Pixaroma Reveal）。"""
+            """在系统文件管理器里定位并选中某个工作流文件（仿 Pixaroma Reveal）。
+
+            2026-11-18：同样走「打开 + 置前」，和顶栏「打开文件夹」一致。
+            """
             try:
-                import subprocess
+                import subprocess  # noqa: F401  — 保留给非 Windows 分支 / 旧调用方
                 body = await request.json()
                 rel = str((body or {}).get("rel", "") or "")
                 if (not rel) or (".." in rel) or rel.startswith("/") or ("\\" in rel):
@@ -1347,13 +1659,9 @@ def _register_workflows_route():
                 full = os.path.join(_WF_ROOT, rel.replace("/", os.sep))
                 if not os.path.isfile(full):
                     return web.json_response({"error": "not found"}, status=404)
-                if os.name == "nt":
-                    # /select,  会打开资源管理器并高亮选中这个文件
-                    subprocess.Popen(["explorer", "/select,", os.path.normpath(full)])
-                else:
-                    import sys as _sys
-                    opener = "open" if _sys.platform == "darwin" else "xdg-open"
-                    subprocess.Popen([opener, os.path.dirname(full)])
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, _xf_open_and_focus,
+                                           os.path.dirname(full), os.path.normpath(full))
                 return web.json_response({"ok": True})
             except Exception as _e:                               # noqa: BLE001
                 return web.json_response({"error": str(_e)}, status=500)
@@ -1381,6 +1689,74 @@ def _register_workflows_route():
             except Exception as _e:                               # noqa: BLE001
                 return web.json_response({"error": str(_e)}, status=500)
             return web.json_response({"ok": True})
+
+        @routes.post("/xh/workflows/rename_dir")
+        async def _xh_workflows_rename_dir(request):
+            """原地重命名 workflows 内的目录，保留全部文件和子目录。"""
+            try:
+                body = await request.json()
+            except Exception:                                     # noqa: BLE001
+                return web.json_response({"error": "bad body"}, status=400)
+            if not isinstance(body, dict):
+                return web.json_response({"error": "bad body"}, status=400)
+            rel = str(body.get("rel", "") or "")
+            name = str(body.get("name", "") or "")
+            parts = rel.split("/")
+            if (
+                (not rel) or rel.startswith("/") or ("\\" in rel)
+                or os.path.isabs(rel) or os.path.splitdrive(rel)[0]
+                or any(p in ("", ".", "..") for p in parts)
+                or any(ord(c) < 32 for c in rel)
+            ):
+                return web.json_response({"error": "目录路径无效"}, status=400)
+            reserved = {"CON", "PRN", "AUX", "NUL", "CLOCK$"}
+            reserved.update(f"COM{i}" for i in range(1, 10))
+            reserved.update(f"LPT{i}" for i in range(1, 10))
+            if (
+                (not name) or name != name.strip() or name.endswith(".")
+                or ("/" in name) or ("\\" in name)
+                or any(c in name for c in '<>:"|?*')
+                or any(ord(c) < 32 for c in name)
+                or name.split(".")[0].upper() in reserved
+            ):
+                return web.json_response({"error": "文件夹名无效或含非法字符"}, status=400)
+
+            root = os.path.realpath(_WF_ROOT)
+            src = os.path.realpath(os.path.join(root, rel.replace("/", os.sep)))
+            try:
+                inside = os.path.normcase(os.path.commonpath([root, src])) == os.path.normcase(root)
+            except ValueError:
+                inside = False
+            if not inside or os.path.normcase(src) == os.path.normcase(root):
+                return web.json_response({"error": "不能重命名 workflows 根目录或外部目录"}, status=400)
+            if not os.path.exists(src):
+                return web.json_response({"error": "源文件夹不存在"}, status=404)
+            if not os.path.isdir(src):
+                return web.json_response({"error": "源路径不是文件夹"}, status=400)
+
+            # 保留用户输入的末段大小写；realpath 会把 Windows 已有目录还原成旧大小写。
+            dst = os.path.normpath(os.path.join(os.path.dirname(src), name))
+            try:
+                target_inside = os.path.normcase(os.path.commonpath([root, dst])) == os.path.normcase(root)
+            except ValueError:
+                target_inside = False
+            if not target_inside:
+                return web.json_response({"error": "目标路径超出 workflows 目录"}, status=400)
+            if src == dst:
+                return web.json_response({"ok": True, "rel": rel})
+            same_path = os.path.normcase(src) == os.path.normcase(dst)
+            if not same_path and os.path.lexists(dst):
+                return web.json_response({"error": "目标已有同名文件或文件夹，未覆盖"}, status=409)
+            try:
+                os.rename(src, dst)                               # 同盘原地改名，子树完整保留
+            except FileExistsError:
+                return web.json_response({"error": "目标已有同名文件或文件夹，未覆盖"}, status=409)
+            except PermissionError as _e:
+                return web.json_response({"error": f"文件夹被占用或没有权限：{_e}"}, status=409)
+            except OSError as _e:
+                return web.json_response({"error": str(_e)}, status=500)
+            new_rel = os.path.relpath(dst, root).replace(os.sep, "/")
+            return web.json_response({"ok": True, "rel": new_rel})
 
         @routes.post("/xh/workflows/move")
         async def _xh_workflows_move(request):                    # noqa: ARG001
@@ -1415,12 +1791,310 @@ def _register_workflows_route():
             new_rel = os.path.relpath(dst, _WF_ROOT).replace(os.sep, "/")
             return web.json_response({"ok": True, "rel": new_rel})
 
+        @routes.post("/xh/workflows/delete_dir")
+        async def _xh_workflows_delete_dir(request):
+            """删除 workflows 内的一个文件夹（连同子目录和里面的工作流）。
+
+            防护与 rename_dir 对齐：只允许相对路径、禁止 .. / 反斜杠 / 盘符，
+            realpath 后必须仍在 workflows 根目录内，且不允许删根目录本身。
+            """
+            try:
+                body = await request.json()
+            except Exception:                                     # noqa: BLE001
+                return web.json_response({"error": "bad body"}, status=400)
+            if not isinstance(body, dict):
+                return web.json_response({"error": "bad body"}, status=400)
+            rel = str(body.get("rel", "") or "")
+            parts = rel.split("/")
+            if (
+                (not rel) or rel.startswith("/") or ("\\" in rel)
+                or os.path.isabs(rel) or os.path.splitdrive(rel)[0]
+                or any(p in ("", ".", "..") for p in parts)
+                or any(ord(c) < 32 for c in rel)
+            ):
+                return web.json_response({"error": "目录路径无效"}, status=400)
+
+            root = os.path.realpath(_WF_ROOT)
+            target = os.path.realpath(os.path.join(root, rel.replace("/", os.sep)))
+            try:
+                inside = os.path.normcase(os.path.commonpath([root, target])) == os.path.normcase(root)
+            except ValueError:
+                inside = False
+            if (not inside) or os.path.normcase(target) == os.path.normcase(root):
+                return web.json_response({"error": "不能删除 workflows 根目录或外部目录"}, status=400)
+            if not os.path.exists(target):
+                return web.json_response({"error": "文件夹不存在"}, status=404)
+            if not os.path.isdir(target):
+                return web.json_response({"error": "目标不是文件夹"}, status=400)
+
+            import shutil
+            import stat as _stat
+
+            removed = 0
+            for _dirpath, _dirnames, filenames in os.walk(target):
+                removed += sum(1 for fn in filenames if fn.lower().endswith(".json"))
+
+            def _force(func, path, _exc):                         # Windows 只读文件兜底
+                try:
+                    os.chmod(path, _stat.S_IWRITE)
+                    func(path)
+                except Exception:                                 # noqa: BLE001
+                    pass
+
+            try:
+                shutil.rmtree(target, onerror=_force)
+            except PermissionError as _e:
+                return web.json_response({"error": f"文件夹被占用或没有权限：{_e}"}, status=409)
+            except OSError as _e:
+                return web.json_response({"error": str(_e)}, status=500)
+
+            # 清掉被删目录下的元信息缓存，避免以后同名新建时读到旧数据
+            try:
+                pref = os.path.normcase(target) + os.sep
+                for _k in [k for k in list(_META_CACHE.keys()) if os.path.normcase(k).startswith(pref)]:
+                    _META_CACHE.pop(_k, None)
+            except Exception:                                     # noqa: BLE001
+                pass
+            # 同步清掉这些工作流的自定义示例图（索引 + 不再被任何工作流引用的文件）
+            try:
+                _d = _img_load()
+                _gone_names = []
+                for _k in [k for k in list(_d.keys()) if k == rel or k.startswith(rel + "/")]:
+                    _v = _d.pop(_k, None)
+                    if isinstance(_v, list):
+                        _gone_names.extend(_v)
+                if _gone_names:
+                    _img_save(_d)
+                    _keep = {n for _v in _d.values() if isinstance(_v, list) for n in _v}
+                    for _n in _gone_names:
+                        if _n in _keep or not _IMG_NAME_RE.match(_n):
+                            continue
+                        try:
+                            os.remove(os.path.join(_IMG_DIR, _n))
+                        except OSError:
+                            pass
+            except Exception:                                     # noqa: BLE001
+                pass
+            return web.json_response({"ok": True, "rel": rel, "workflows": removed})
+
+        # ── 自定义示例图（每个工作流一组，可多张）──────────────────────────
+        #  存 user/default/xh_workflow_images/：图片文件 + index.json（rel → [文件名]）。
+        #  第一张即卡片/详情页封面；只有没有自定义图时才退回 Pixaroma 的成品图。
+        _IMG_DIR = os.path.join(_COMFY_ROOT, "user", "default", "xh_workflow_images")
+        _IMG_INDEX = os.path.join(_IMG_DIR, "index.json")
+        _IMG_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+        _IMG_MAX = 20 * 1024 * 1024
+        import re as _re
+        import uuid as _uuid
+        _IMG_NAME_RE = _re.compile(r"^[0-9a-f]{12}\.(png|jpg|jpeg|webp|gif)$")
+
+        def _img_rel_ok(rel):
+            if not isinstance(rel, str) or not rel:
+                return False
+            parts = rel.split("/")
+            return not (
+                rel.startswith("/") or ("\\" in rel) or os.path.isabs(rel)
+                or os.path.splitdrive(rel)[0] or any(p in ("", ".", "..") for p in parts)
+                or any(ord(c) < 32 for c in rel)
+            )
+
+        def _img_load():
+            try:
+                with open(_IMG_INDEX, "r", encoding="utf-8") as _fh:
+                    _d = json.load(_fh)
+                return _d if isinstance(_d, dict) else {}
+            except Exception:                                    # noqa: BLE001
+                return {}
+
+        def _img_save(d):
+            os.makedirs(_IMG_DIR, exist_ok=True)
+            _tmp = _IMG_INDEX + ".tmp"
+            with open(_tmp, "w", encoding="utf-8") as _fh:
+                json.dump(d, _fh, ensure_ascii=False, indent=1)
+            os.replace(_tmp, _IMG_INDEX)
+
+        @routes.get("/xh/workflows/images")
+        async def _xh_wf_images(request):
+            """返回 {rel: [{name, v}]}；v 用文件 mtime 做缓存破坏。"""
+            _d = _img_load()
+            items = {}
+            for _rel, _names in _d.items():
+                if not isinstance(_names, list):
+                    continue
+                _out = []
+                for _n in _names:
+                    if not isinstance(_n, str) or not _IMG_NAME_RE.match(_n):
+                        continue
+                    _p = os.path.join(_IMG_DIR, _n)
+                    try:
+                        _out.append({"name": _n, "v": int(os.path.getmtime(_p))})
+                    except OSError:
+                        continue
+                if _out:
+                    items[_rel] = _out
+            return web.json_response({"ok": True, "items": items})
+
+        @routes.get("/xh/workflows/image")
+        async def _xh_wf_image(request):
+            """按 rel + name 取单张自定义示例图。"""
+            _rel = request.query.get("rel", "")
+            _name = request.query.get("name", "")
+            if not _img_rel_ok(_rel) or not _IMG_NAME_RE.match(_name):
+                raise web.HTTPBadRequest(text="bad image path")
+            _p = os.path.join(_IMG_DIR, _name)
+            if not os.path.isfile(_p):
+                raise web.HTTPNotFound()
+            return web.FileResponse(_p)
+
+        @routes.post("/xh/workflows/images/upload")
+        async def _xh_wf_images_upload(request):
+            """multipart 上传一张图（前端多选时逐张调用）。"""
+            try:
+                _post = await request.post()
+            except Exception:                                    # noqa: BLE001
+                return web.json_response({"error": "不是有效的上传请求"}, status=400)
+            _rel = str(_post.get("rel", "") or "")
+            _field = _post.get("file")
+            if not _img_rel_ok(_rel):
+                return web.json_response({"error": "工作流路径无效"}, status=400)
+            if _field is None or not getattr(_field, "file", None):
+                return web.json_response({"error": "没有收到图片"}, status=400)
+            _ext = os.path.splitext(str(getattr(_field, "filename", "") or ""))[1].lower()
+            if _ext not in _IMG_EXTS:
+                return web.json_response({"error": "只支持 png / jpg / webp / gif"}, status=400)
+            _data = _field.file.read(_IMG_MAX + 1)
+            if len(_data) > _IMG_MAX:
+                return web.json_response({"error": "图片不能超过 20MB"}, status=413)
+            if not _data:
+                return web.json_response({"error": "图片是空的"}, status=400)
+            os.makedirs(_IMG_DIR, exist_ok=True)
+            _name = _uuid.uuid4().hex[:12] + _ext
+            _p = os.path.join(_IMG_DIR, _name)
+            with open(_p, "wb") as _fh:
+                _fh.write(_data)
+            _d = _img_load()
+            _arr = _d.get(_rel) if isinstance(_d.get(_rel), list) else []
+            _arr.append(_name)
+            _d[_rel] = _arr
+            _img_save(_d)
+            return web.json_response({"ok": True, "name": _name, "v": int(os.path.getmtime(_p))})
+
+        @routes.post("/xh/workflows/images/delete")
+        async def _xh_wf_images_delete(request):
+            try:
+                _body = await request.json()
+            except Exception:                                    # noqa: BLE001
+                return web.json_response({"error": "bad body"}, status=400)
+            if not isinstance(_body, dict):
+                return web.json_response({"error": "bad body"}, status=400)
+            _rel = str((_body or {}).get("rel", "") or "")
+            _name = str((_body or {}).get("name", "") or "")
+            if not _img_rel_ok(_rel) or not _IMG_NAME_RE.match(_name):
+                return web.json_response({"error": "参数无效"}, status=400)
+            _d = _img_load()
+            _arr = _d.get(_rel) if isinstance(_d.get(_rel), list) else []
+            if _name in _arr:
+                _arr.remove(_name)
+            if _arr:
+                _d[_rel] = _arr
+            else:
+                _d.pop(_rel, None)
+            _img_save(_d)
+            try:
+                os.remove(os.path.join(_IMG_DIR, _name))
+            except OSError:
+                pass
+            return web.json_response({"ok": True})
+
+        @routes.post("/xh/workflows/images/cover")
+        async def _xh_wf_images_cover(request):
+            """把某张图移到第一位 → 它就是卡片封面。"""
+            try:
+                _body = await request.json()
+            except Exception:                                    # noqa: BLE001
+                return web.json_response({"error": "bad body"}, status=400)
+            if not isinstance(_body, dict):
+                return web.json_response({"error": "bad body"}, status=400)
+            _rel = str((_body or {}).get("rel", "") or "")
+            _name = str((_body or {}).get("name", "") or "")
+            if not _img_rel_ok(_rel) or not _IMG_NAME_RE.match(_name):
+                return web.json_response({"error": "参数无效"}, status=400)
+            _d = _img_load()
+            _arr = _d.get(_rel) if isinstance(_d.get(_rel), list) else []
+            if _name not in _arr:
+                return web.json_response({"error": "这张图不在这条工作流里"}, status=404)
+            _arr.remove(_name)
+            _arr.insert(0, _name)
+            _d[_rel] = _arr
+            _img_save(_d)
+            return web.json_response({"ok": True})
+
+        @routes.post("/xh/workflows/images/migrate")
+        async def _xh_wf_images_migrate(request):
+            """工作流改名 / 移动时，把图片索引迁到新 rel。"""
+            try:
+                _body = await request.json()
+            except Exception:                                    # noqa: BLE001
+                return web.json_response({"error": "bad body"}, status=400)
+            if not isinstance(_body, dict):
+                return web.json_response({"error": "bad body"}, status=400)
+            _from = str((_body or {}).get("from", "") or "")
+            _to = str((_body or {}).get("to", "") or "")
+            if not _img_rel_ok(_from) or not _img_rel_ok(_to):
+                return web.json_response({"error": "参数无效"}, status=400)
+            _d = _img_load()
+            _arr = _d.pop(_from, None)
+            if isinstance(_arr, list) and _arr:
+                _old = _d.get(_to) if isinstance(_d.get(_to), list) else []
+                _d[_to] = _arr + [n for n in _old if n not in _arr]
+                _img_save(_d)
+            return web.json_response({"ok": True})
+
+        @routes.post("/xh/workflows/images/clear")
+        async def _xh_wf_images_clear(request):
+            """工作流被删除时清掉它的示例图；只删不再被任何 rel 引用的文件。"""
+            try:
+                _body = await request.json()
+            except Exception:                                    # noqa: BLE001
+                return web.json_response({"error": "bad body"}, status=400)
+            if not isinstance(_body, dict):
+                return web.json_response({"error": "bad body"}, status=400)
+            _rel = str((_body or {}).get("rel", "") or "")
+            if not _img_rel_ok(_rel):
+                return web.json_response({"error": "参数无效"}, status=400)
+            _d = _img_load()
+            _gone = _d.pop(_rel, None)
+            if isinstance(_gone, list) and _gone:
+                _img_save(_d)
+                _keep = {n for _v in _d.values() if isinstance(_v, list) for n in _v}
+                for _n in _gone:
+                    if _n in _keep or not _IMG_NAME_RE.match(_n):
+                        continue
+                    try:
+                        os.remove(os.path.join(_IMG_DIR, _n))
+                    except OSError:
+                        pass
+            return web.json_response({"ok": True})
+
         PromptServer.instance._xh_workflows_route_done = True
     except Exception as _e:                                      # noqa: BLE001
         print(f"[XiaoHei]  /xh/workflows 路由注册失败：{_e}")
 
 
 _register_workflows_route()
+
+# ---------------------------------------------------------------------------
+#  模型管理器门面（2026-11-19）：豆包原作 XiaoHei-ModelBoard 整包并进来。
+#    · 只注册 HTTP 路由（/xh_mb/*），**不注册节点** ⇒ 画布上不再显示那个哑节点，
+#      入口全走右上角顶栏第 5 颗按钮 + 官方设置开关（见 js/xh_modelboard.js）。
+#    · 后端 api.register() 自带 _registered 幂等标记，重复调用安全。
+#    · 前端 panel.js / panel.css 在 js/xh_modelboard/（css 靠 import.meta.url 同目录加载）。
+# ---------------------------------------------------------------------------
+try:
+    from .nodes.modelboard import api as _xh_modelboard_api  # noqa: F401
+    _xh_modelboard_api.register()
+except Exception as _e:                                      # noqa: BLE001
+    print(f"[XiaoHei]  /xh_mb 模型管理器路由注册失败：{_e}")
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
 

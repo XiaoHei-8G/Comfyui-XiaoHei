@@ -1,8 +1,8 @@
-﻿// ╔═══════════════════════════════════════════════════════════════╗
-// ║  XiaoHei 工作流浏览器 · 二期（对 Pixaroma Workflows 的完整复刻）      ║
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  XiaoHei 工作流浏览器 · 二期（对 早期版本 Workflows 的完整复刻）      ║
 // ╚═══════════════════════════════════════════════════════════════╝
 //
-// 2026-10-27：一期太简陋（用户原话"复刻得太简陋"）。本版按 Pixaroma 源码
+// 2026-10-27：一期太简陋（用户原话"复刻得太简陋"）。本版按 早期版本 源码
 // （css.mjs / grid.mjs / drag.mjs / window.mjs）逐条复刻：
 //    独立浮窗：标题栏按住可拖拽、右下角把手缩放，位置/大小记忆（localStorage）
 //    CSS 变量 --xhwb-k 控密度：工具栏三个衬线 A 字（小/中/大），全部尺寸走 z()
@@ -18,14 +18,14 @@
 //       /xh/workflows/openfolder（资源管理器打开根目录）。
 
 const { app } = window.comfyAPI.app;
-import { xhIconHTML, makeToolbarButton, setToolbarButtonOpen } from "./xh_ui_kit.js";
+import { xhIconHTML, makeToolbarButton, setToolbarButtonOpen, XH_TB_ICON_SIZE } from "./xh_ui_kit.js";
 //  2026-10-28：自建模态框替代 window.prompt / window.confirm
 //    （ComfyUI 桌面版是 Electron，禁用了原生弹窗 ⇒ 点按钮毫无反应）。
 import { XHAsk } from "./xh_ask.js";
 const NS = "XH.WorkflowBrowser";
 const CMD_ID = "XH.OpenWorkflowBrowser";
 const CSS_ID = "xh-workflows-css";
-//  2026-10-27 15:55 XiaoHei 家族自己的配色（不再用 Pixaroma 的橘黄）。
+//  2026-10-27 15:55 XiaoHei 家族自己的配色（不再用 早期版本 的橘黄）。
 //   ACC  = 电光青蓝 #8a8a8a —— 你节点导航面板里本来就有的 ACCENT，家族资产，延续它
 //   GOLD = 琥珀金 #fbbf24 —— 专门给"收藏星"，金色=收藏，语义清晰
 //   底色统一到 #252525 深蓝灰（跟设置面板 / 节点导航一致，三个面板不再割裂）
@@ -48,7 +48,7 @@ const ACC = "#8a8a8a";    // 官方 accent-plum（李子紫）：用作强调/�
 const GOLD = "#fbbf24";   // 收藏星专用：琥珀金（保留）
 
 // ---- 顶栏按钮样式（三个面板共用）----
-//  2026-10-28 15:55：照 Pixaroma css.mjs L64-71 的做法 ——
+//  2026-10-28 15:55：照 早期版本 css.mjs L64-71 的做法 ——
 //   用官方 .comfyui-button class + !important 覆盖底色，
 //   所以边框/圆角/字体跟官方按钮**完全一致**，平时是官方灰（融进官方风格），
 //   只有面板打开时才亮出 XiaoHei 家族色。之前是 inline style 写死主色，一直亮着，
@@ -84,7 +84,21 @@ const store = {
   },
 };
 
-/** 一个可缩放长度（学 Pixaroma 的 z()），乘 --xhwb-k。 */
+// 2026-11-19 一次性布局迁移：旧默认窗口 1040×720、左栏 204、右栏 208 太窄，
+// 用户本地存着的旧值会盖掉新默认（1240×780 / 296 / 336）⇒ 首次加载清掉这 3 个键，
+// 让 _wfbReadRect / _wfbApplyCols 回落到新默认。打版本标只迁移一次；
+// 之后用户自己拖的窗口/栏宽照常记忆，不再被清。
+(function _wfbMigrateWideLayout() {
+  try {
+    if (store.get("layoutV", 0) >= 2) return;
+    store.set("win", null);
+    store.set("sideW", null);
+    store.set("detW", null);
+    store.set("layoutV", 2);
+  } catch (e) { /* localStorage 挂了也不许崩 */ }
+})();
+
+/** 一个可缩放长度（学 早期版本 的 z()），乘 --xhwb-k。 */
 const z = (n) => "calc(" + n + "px * var(--xhwb-k, 1))";
 
 // ----------------------------- API 兜底 -----------------------------
@@ -167,8 +181,121 @@ async function createFolderUI() {
     toast("建文件夹失败：" + (e.message || e));
   }
 }
+/** 原地重命名文件夹，并迁移浏览器里所有受影响的相对路径。 */
+async function renameFolderUI(oldRel) {
+  const oldName = oldRel.split("/").pop();
+  const input = await XHAsk.text("重命名文件夹「" + oldName + "」", {
+    defaultValue: oldName,
+    placeholder: "输入新的文件夹名",
+    okText: "重命名",
+  });
+  if (input === null) return;
+  const name = input.trim();
+  if (!name) { toast("文件夹名不能为空"); return; }
+  if (name === oldName) return;
+  try {
+    const d = await postJSON("/xh/workflows/rename_dir", { rel: oldRel, name });
+    migrateFolderPaths(oldRel, d.rel);
+    toast("文件夹已改名为：" + name);
+    await refresh();
+  } catch (e) {
+    toast("文件夹重命名失败：" + (e.message || e));
+  }
+}
+/** 双击文件夹名 / 菜单「改名」：直接在侧栏行里原地改名，不弹对话框。 */
+function startFolderRenameInline(rel) {
+  if (!H || !H.side) return;
+  const row = Array.from(H.side.querySelectorAll("[data-xh-fold]"))
+    .find((el) => el.dataset.xhFold === rel);
+  if (!row) { renameFolderUI(rel); return; }        // 行不在（比如刚好被重渲染）就退回对话框
+  const lbl = row.querySelector(".xhwb-foldlbl");
+  if (!lbl || lbl.isContentEditable) return;
+  const old = rel.split("/").pop();
+  lbl.classList.add("xhwb-editing");
+  lbl.contentEditable = "plaintext-only";
+  lbl.spellcheck = false;
+  lbl.textContent = old;
+  lbl.focus();
+  try {                                             // 全选，直接输入即替换
+    const range = document.createRange();
+    range.selectNodeContents(lbl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch (e) { /* 忽略 */ }
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    lbl.contentEditable = "false";
+    lbl.classList.remove("xhwb-editing");
+    const name = (lbl.textContent || "").trim();
+    if (!save || !name || name === old) { renderSide(); return; }
+    if (/[\\/]/.test(name)) { toast("文件夹名里不能带 / 或 \\"); renderSide(); return; }
+    try {
+      const d = await postJSON("/xh/workflows/rename_dir", { rel, name });
+      migrateFolderPaths(rel, d.rel);
+      toast("文件夹已改名为：" + name);
+      await refresh();
+    } catch (e) {
+      toast("文件夹重命名失败：" + (e.message || e));
+      renderSide();
+    }
+  };
+  lbl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+  });
+  lbl.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); });
+  lbl.addEventListener("pointerdown", (e) => e.stopPropagation());
+  lbl.addEventListener("dragstart", (e) => e.preventDefault());
+  lbl.addEventListener("blur", () => finish(true));
+}
+
+/** 删除整个文件夹（含子目录与里面的工作流），不可撤销 → 先问一句。 */
+async function deleteFolderUI(rel) {
+  if (!rel) return false;
+  const name = rel.split("/").pop();
+  const inside = allFiles().filter((x) => x.rel === rel || x.rel.startsWith(rel + "/")).length;
+  const msg = "确定删除文件夹「" + name + "」吗？\n"
+    + (inside ? ("里面还有 " + inside + " 个工作流，会一起删掉。\n") : "里面的子文件夹也会一起删掉。\n")
+    + "删了找不回来。";
+  if (!await XHAsk.confirm(msg, { danger: true, okText: "删除文件夹" })) return false;
+  try {
+    await postJSON("/xh/workflows/delete_dir", { rel });
+  } catch (e) {
+    toast("删除文件夹失败：" + (e.message || e));
+    return false;
+  }
+  // 清掉指向这个目录的状态，避免收藏 / 备注 / 展开 / 选中还挂在已删除的路径上
+  let favChanged = false;
+  for (const k of Object.keys(STATE.favs || {})) {
+    if (k === rel || k.startsWith(rel + "/")) { delete STATE.favs[k]; favChanged = true; }
+  }
+  if (favChanged) saveFavs();
+  if (STATE.notes) {
+    let noteChanged = false;
+    for (const k of Object.keys(STATE.notes)) {
+      if (k === rel || k.startsWith(rel + "/")) { delete STATE.notes[k]; noteChanged = true; }
+    }
+    if (noteChanged) store.set("notes", STATE.notes);
+  }
+  STATE.exp = (STATE.exp || []).filter((x) => x !== rel && !x.startsWith(rel + "/"));
+  store.set("exp", STATE.exp);
+  const cur = String(STATE.folder || "");
+  if (cur === rel || cur.startsWith(rel + "/")) {
+    STATE.folder = "__ALL__";
+    store.set("folder", STATE.folder);
+  }
+  if (STATE.sel && (STATE.sel === rel || STATE.sel.startsWith(rel + "/"))) STATE.sel = null;
+  toast("文件夹已删除：" + name);
+  await refresh();
+  return true;
+}
 /** 当前正被拖拽的工作流 rel（dragstart 记录）。 */
 let DRAG_REL = null;
+/** 记录上一次点击的文件夹行，用来识别“双击改名”（单击会 renderSide 重建行，原生 dblclick 抓不到）。 */
+let _lastFoldClick = null;
 /** 把工作流移到目标文件夹（dir="" = 移回根目录）。 */
 async function moveWorkflow(rel, dir, dirLabel) {
   if (!rel) return;
@@ -176,6 +303,7 @@ async function moveWorkflow(rel, dir, dirLabel) {
   if (f && (f.dir || "") === dir) { toast("它已经在这个文件夹里了"); return; }
   try {
     const d = await postJSON("/xh/workflows/move", { rel, dir });
+    await migrateWorkflowImages(rel, d.rel);
     // 收藏按旧 rel 记的 → 迁移到新 rel
     if (STATE.favs[rel]) { STATE.favs[d.rel] = true; delete STATE.favs[rel]; saveFavs(); }
     if (STATE.sel === rel) STATE.sel = d.rel;
@@ -185,7 +313,7 @@ async function moveWorkflow(rel, dir, dirLabel) {
     toast("移动失败：" + (e.message || e));
   }
 }
-/** 相对时间（中文，学 Pixaroma fmtWhen）。 */
+/** 相对时间（中文，学 早期版本 fmtWhen）。 */
 function fmtWhen(secs) {
   if (!secs) return "";
   const d = (Date.now() - secs * 1000) / 1000;
@@ -206,7 +334,7 @@ function fmtFull(secs) {
 //   POST   /api/userdata/{file}?overwrite=false     写（同名不覆盖，409）
 //   POST   /api/userdata/{file}/move/{dest}         移动 / 重命名
 //   DELETE /api/userdata/{file}                     删除
-// 照 Pixaroma api.mjs 的做法：不用自己写后端路由，直接用官方端点。
+// 照 早期版本 api.mjs 的做法：不用自己写后端路由，直接用官方端点。
 // ════════════════════════════════════════════════════════════════════
 
 /** rel（相对 workflows 根）→ 官方 userdata 路径（workflows/xxx.json）。 */
@@ -312,6 +440,7 @@ async function renameWorkflow(rel, newName) {
     if (r.status === 409) throw new Error("已经有一个叫「" + newLeaf + "」的工作流了");
     throw new Error("重命名失败：" + (t || r.status));
   }
+  await migrateWorkflowImages(rel, newRel);
   return newRel;
 }
 
@@ -360,7 +489,27 @@ async function deleteWorkflow(rel) {
   return true;
 }
 
-/** 把「当前画布上打开的工作流」另存到指定文件夹（照 Pixaroma 的 "Save open workflow here"）。
+/** 删掉一个工作流文件，并把收藏 / 备注 / 选中状态一起清干净。 */
+async function deleteFileUI(rel) {
+  try {
+    const ok = await deleteWorkflow(rel);
+    if (!ok) return false;
+    await clearWorkflowImages(rel);
+    delete STATE.favs[rel];
+    if (STATE.notes) delete STATE.notes[rel];
+    saveFavs();
+    store.set("notes", STATE.notes || {});
+    if (STATE.sel === rel) STATE.sel = null;
+    toast("已删除");
+    await refresh();
+    return true;
+  } catch (e) {
+    toast("删除失败：" + (e.message || e));
+    return false;
+  }
+}
+
+/** 把「当前画布上打开的工作流」另存到指定文件夹（照 早期版本 的 "Save open workflow here"）。
  *  用官方 store 的 saveAs + saveWorkflow：saveAs 造一个新的 ComfyWorkflow 对象，
  *  saveWorkflow 才真正落盘（workflowStore.ts L220-241 / workflowService.ts L300-309）。 */
 async function saveOpenWorkflowTo(dir) {
@@ -408,6 +557,141 @@ function hueFor(t) {
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return h % 360;
 }
+// 2026-11-18：文件夹色块支持手动自定义。有自定义色用自定义，否则退回 hueFor 自动色。
+function dotColorOf(key, hue) {
+  const custom = STATE.fcolors && STATE.fcolors[key];
+  return (typeof custom === "string" && /^#[0-9a-f]{6}$/i.test(custom)) ? custom : ("hsl(" + hue + ",40%,52%)");
+}
+/** hsl(h,40%,52%) -> #RRGGBB，给原生取色器当初始值 */
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(255 * c).toString(16).padStart(2, "0");
+  };
+  return ("#" + f(0) + f(8) + f(4)).toUpperCase();
+}
+function saveFColors() { store.set("fcolors", STATE.fcolors); }
+
+//  2026-11-18：色块点开先弹预设色板（12 常用色 + 自定义 + 恢复自动），
+//    只有点「自定义…」才走系统原生取色器（原生对话框没法塞预设色）。
+const DOT_PRESET_COLORS = [
+  ["#F0C070", "经典金"], ["#E08A3C", "暖橙"], ["#D9534F", "砖红"],
+  ["#D4537E", "玫粉"], ["#7F77DD", "紫罗兰"], ["#378ADD", "天蓝"],
+  ["#1D9E75", "青绿"], ["#639922", "草绿"], ["#0F6E56", "松绿"],
+  ["#888780", "石板灰"], ["#2C2C2A", "墨黑"], ["#F1EFE8", "浅灰"],
+];
+let _dotPalCleanup = null;
+function closeDotPalette() {
+  if (_dotPalCleanup) { try { _dotPalCleanup(); } catch (e) {} _dotPalCleanup = null; }
+}
+/** 点色块弹预设色板；选完存 fcolors[key] 并重刷。右键色块 = 恢复自动色。 */
+function openDotPicker(key, hue, dotEl) {
+  closeDotPalette();
+  const cur = STATE.fcolors && STATE.fcolors[key];
+  const curHex = /^#[0-9a-f]{6}$/i.test(cur || "") ? cur.toUpperCase() : null;
+
+  const pal = document.createElement("div");
+  pal.className = "xhwb-dotpal";
+  const head = document.createElement("div");
+  head.className = "xhwb-dotpal-h";
+  head.textContent = "选个颜色 · 点一下就换";
+  pal.appendChild(head);
+
+  const grid = document.createElement("div");
+  grid.className = "xhwb-dotpal-g";
+  const commit = (hex) => {
+    if (!STATE.fcolors) STATE.fcolors = {};
+    STATE.fcolors[key] = hex;
+    saveFColors();
+    closeDotPalette();
+    renderSide();
+    toast("色块已换成 " + hex);
+  };
+  for (const [hex, name] of DOT_PRESET_COLORS) {
+    const sw = document.createElement("button");
+    sw.type = "button";
+    sw.className = "xhwb-dotpal-sw" + (hex === curHex ? " on" : "");
+    sw.style.background = hex;
+    sw.title = name + " " + hex;
+    sw.setAttribute("data-xh-icon-done", "1");   // 别被图标 sweep 清掉背景
+    sw.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); commit(hex); });
+    grid.appendChild(sw);
+  }
+  pal.appendChild(grid);
+
+  const foot = document.createElement("div");
+  foot.className = "xhwb-dotpal-f";
+  const bCustom = document.createElement("button");
+  bCustom.type = "button";
+  bCustom.className = "xhwb-dotpal-btn";
+  bCustom.textContent = "自定义…";
+  bCustom.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    closeDotPalette();
+    openSystemPicker(key, hue, dotEl);
+  });
+  const bAuto = document.createElement("button");
+  bAuto.type = "button";
+  bAuto.className = "xhwb-dotpal-btn";
+  bAuto.textContent = "恢复自动";
+  bAuto.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (STATE.fcolors && STATE.fcolors[key]) { delete STATE.fcolors[key]; saveFColors(); }
+    closeDotPalette();
+    renderSide();
+    toast("已恢复自动色块");
+  });
+  foot.appendChild(bCustom); foot.appendChild(bAuto);
+  pal.appendChild(foot);
+
+  //  浮层挂 body（面板窗口 overflow:hidden 会裁掉它），z-index 高于窗口 1300。
+  document.body.appendChild(pal);
+  const r = dotEl.getBoundingClientRect();
+  pal.style.left = Math.max(6, Math.min(r.left, window.innerWidth - pal.offsetWidth - 6)) + "px";
+  let top = r.bottom + 6;
+  if (top + pal.offsetHeight > window.innerHeight - 6) top = r.top - pal.offsetHeight - 6;
+  pal.style.top = Math.max(6, top) + "px";
+
+  const onDoc = (e) => { if (!pal.contains(e.target)) closeDotPalette(); };
+  const onKey = (e) => { if (e.key === "Escape") closeDotPalette(); };
+  setTimeout(() => {
+    document.addEventListener("pointerdown", onDoc, true);
+    document.addEventListener("keydown", onKey, true);
+  }, 0);
+  _dotPalCleanup = () => {
+    document.removeEventListener("pointerdown", onDoc, true);
+    document.removeEventListener("keydown", onKey, true);
+    try { pal.remove(); } catch (e) {}
+  };
+}
+
+/** 系统原生取色器（只有点色板「自定义…」才会走这里）。 */
+function openSystemPicker(key, hue, dotEl) {
+  const cur = STATE.fcolors && STATE.fcolors[key];
+  const input = document.createElement("input");
+  input.type = "color";
+  input.value = /^#[0-9a-f]{6}$/i.test(cur || "") ? cur : hslToHex(hue, 40, 52);
+  input.style.cssText = "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;";
+  document.body.appendChild(input);
+  const done = () => {
+    const v = input.value;
+    if (/^#[0-9a-f]{6}$/i.test(v)) {
+      if (!STATE.fcolors) STATE.fcolors = {};
+      STATE.fcolors[key] = v.toUpperCase();
+      saveFColors();
+      renderSide();
+    }
+    try { input.remove(); } catch (e) {}
+  };
+  input.addEventListener("input", () => {
+    if (/^#[0-9a-f]{6}$/i.test(input.value) && dotEl) dotEl.style.background = input.value;
+  });
+  input.addEventListener("change", done);
+  try { input.click(); } catch (e) { done(); }
+}
 /** 模型名展示：去扩展名、截短。 */
 function modelShort(m) {
   const b = String(m || "").replace(/\.(safetensors|ckpt|pt|pth|gguf|sft)$/i, "");
@@ -424,13 +708,39 @@ const STATE = {
   k: store.get("k", "m"),              // s | m | l  （字号三档）
   sel: null,           // 当前选中的 rel
   favs: store.get("favs", {}),         // rel -> true
-  notes: store.get("notes", {}),       // rel -> 备注（照 Pixaroma meta.notes，可搜索）
-  exp: store.get("exp", []),           // 照 Pixaroma folderExpanded：展开的文件夹路径列表
+  notes: store.get("notes", {}),       // rel -> 备注（照 早期版本 meta.notes，可搜索）
+  exp: store.get("exp", []),           // 照 早期版本 folderExpanded：展开的文件夹路径列表
+  fcolors: store.get("fcolors", {}),   // 2026-11-18：文件夹路径 -> 自定义色块色（#RRGGBB）；没有则用 hueFor 自动色
+  images: {},                          // 2026-11-18：自定义示例图 rel -> [{name, v}]，第一张作封面
   panel: null,
   open: false,
 };
 
 function saveFavs() { store.set("favs", STATE.favs); }
+/** 目录改名后，只迁移该目录及其后代路径，避免误伤同前缀目录。 */
+function migrateFolderPaths(oldRel, newRel) {
+  const remap = (path) => {
+    const p = String(path || "");
+    if (p === oldRel) return newRel;
+    return p.startsWith(oldRel + "/") ? newRel + p.slice(oldRel.length) : p;
+  };
+  const remapKeys = (obj) => {
+    const out = {};
+    for (const [key, value] of Object.entries(obj || {})) out[remap(key)] = value;
+    return out;
+  };
+  STATE.folder = remap(STATE.folder);
+  STATE.sel = STATE.sel ? remap(STATE.sel) : STATE.sel;
+  STATE.exp = [...new Set((STATE.exp || []).map(remap))];
+  STATE.favs = remapKeys(STATE.favs);
+  STATE.notes = remapKeys(STATE.notes);
+  STATE.fcolors = remapKeys(STATE.fcolors);
+  store.set("folder", STATE.folder);
+  store.set("exp", STATE.exp);
+  saveFavs();
+  store.set("notes", STATE.notes);
+  saveFColors();
+}
 function setK(k) {
   STATE.k = k;
   store.set("k", k);
@@ -444,9 +754,9 @@ function injectCSS() {
   const style = document.createElement("style");
   style.id = CSS_ID;
   style.textContent = `
-/* 窗口尺寸完全由 JS 内联像素控制（照 Pixaroma window.mjs 复刻）：CSS 不写
-   width/height，因此不存在 !important 硬上限与内联值打架。默认 1040x720、最小
-   560x340、最多 1040x720，钳制在视口留边内，永远盖不住画布。 */
+/* 窗口尺寸完全由 JS 内联像素控制（照 早期版本 window.mjs 复刻）：CSS 不写
+   width/height，因此不存在 !important 硬上限与内联值打架。默认 1240x780、最小
+   620x340，可拖大，钳制在视口留边内，永远盖不住画布。 */
 .xhwb-win {
   position: fixed; z-index: 1300; display: flex; flex-direction: column;
   background: var(--xh-surface); border: 1px solid var(--xh-border); border-radius: 10px;
@@ -455,7 +765,7 @@ function injectCSS() {
   overflow: hidden; user-select: none;
 }
 /* ── 顶栏按钮：平时融进官方风格，面板打开时才亮出家族色 ──
-   照 Pixaroma css.mjs L64-71 的做法：用官方 .comfyui-button class + !important 覆盖，
+   照 早期版本 css.mjs L64-71 的做法：用官方 .comfyui-button class + !important 覆盖，
    所以边框、圆角、字体跟官方按钮完全一致，只是底色被压成灰。
    （具体样式在 XH_TB_CSS 里，由 ensureToolbarButtonCSS() 注入，三个面板共用） */
 .xhwb-title {
@@ -521,13 +831,13 @@ function injectCSS() {
   transition: background .12s, border-color .12s, color .12s;
 }
 .xhwb-tbtn:hover { border-color: var(--xh-primary); color: var(--xh-text-strong, #1c1c1c); }
-/* ⏱ 2026-11-08：常态 = 午夜蓝低彩，hover 才亮琥珀金（瞬时信号） */
-.xhwb-tbtn.xhwb-primary { background: var(--xh-rest,#01386A); border-color: var(--xh-rest-bd,rgba(255,255,255,.28)); color: var(--xh-on-rest,#fff); }
+/* ⏱ 2026-11-17：常态 = 主题标题色（classic=暖黑），hover 才亮琥珀金（瞬时信号） */
+.xhwb-tbtn.xhwb-primary { background: var(--xh-rest,#1A1613); border-color: var(--xh-rest-bd,rgba(255,255,255,.28)); color: var(--xh-on-rest,#fff); }
 .xhwb-tbtn.xhwb-primary:hover { background: var(--xh-primary,#E8A33C); border-color: var(--xh-primary,#E8A33C); color: var(--xh-on-primary,#1c1c1c); filter: none; }
 
 /* 主体三栏 */
 .xhwb-body { display: flex; flex: 1; min-height: 0; }
-.xhwb-side { width: ${z(204)}; min-width: ${z(130)}; flex: none; background: var(--xh-card); overflow-y: auto; padding: 8px 6px; }
+.xhwb-side { width: ${z(296)}; min-width: ${z(130)}; flex: none; background: var(--xh-card); overflow-y: auto; padding: 8px 6px; }
 .xhwb-sidegrip, .xhwb-detgrip { width: 6px; flex: none; cursor: ew-resize; background: transparent; z-index: 2; }
 .xhwb-sidegrip::after, .xhwb-detgrip::after {
   content: ""; display: block; width: 1px; height: 100%; margin-left: 2px;
@@ -539,13 +849,77 @@ function injectCSS() {
   font-size: ${z(9.5)}; font-weight: 700; color: var(--xh-sub); text-transform: uppercase;
   letter-spacing: .07em; padding: 9px 7px 4px;
 }
+/* 详情页示例图相册（第一张 = 封面） */
+.xhwb-imgbar { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.xhwb-imgbar .xhwb-grouphead { padding: 9px 0 4px; }
+.xhwb-imgbar .xhwb-tbtn { padding: 2px 8px; font-size: ${z(10)}; }
+.xhwb-imgnone { color: var(--xh-sub); font-size: ${z(10)}; line-height: 1.5; padding: 2px 0 4px; }
+.xhwb-imggrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; padding-bottom: 4px; }
+.xhwb-imgcell {
+  position: relative; aspect-ratio: 1 / 1; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--xh-border, rgba(255,255,255,.12)); background: var(--xh-input-bg, #1d1d1d);
+}
+.xhwb-imgcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.xhwb-imgbadge {
+  position: absolute; left: 3px; top: 3px; padding: 1px 4px; border-radius: 3px;
+  background: rgba(0,0,0,.62); color: #fff; font-size: ${z(8)}; pointer-events: none;
+}
+.xhwb-imgops {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px; background: rgba(0,0,0,.55); opacity: 0; transition: opacity .12s;
+}
+.xhwb-imgcell:hover .xhwb-imgops { opacity: 1; }
+.xhwb-imgop {
+  border: 0; border-radius: 3px; padding: 2px 6px; background: rgba(255,255,255,.92);
+  color: #222; font-size: ${z(9)}; cursor: pointer;
+}
+.xhwb-imgop.danger { background: #f07167; color: #fff; }
 .xhwb-fold {
   display: flex; align-items: center; gap: 7px; width: 100%; text-align: left;
-  background: none; border: none; cursor: pointer; color: var(--xh-text);
+  background: none; border: none; border-left: 3px solid transparent; cursor: pointer; color: var(--xh-text);
   font-family: inherit; font-size: ${z(11.5)}; padding: 4px 7px; border-radius: 5px;
+  box-sizing: border-box; transition: background .12s, color .12s, border-color .12s;
 }
-.xhwb-fold:hover { background: var(--xh-hover); color: var(--xh-text-strong, #1c1c1c); }
+/* 2026-11-18：hover 要「跳出来」——左侧主题色竖条 + 底色提亮 + 文字变亮 */
+.xhwb-fold:hover {
+  border-left-color: var(--xh-primary, #E8A33C);
+  background: color-mix(in srgb, var(--xh-primary, #E8A33C) 16%, var(--xh-hover));
+  color: var(--xh-text-strong, #1c1c1c);
+}
+.xhwb-fold:hover .xhwb-foldlbl { color: var(--xh-text-strong, #1c1c1c); }
+.xhwb-fold:hover .xhwb-cnt { color: var(--xh-text-strong, #1c1c1c); }
+/* 文件夹行尾的「⋯」：只占一个字符宽，hover 才显形，避免挤压文件名 */
+.xhwb-foldmore {
+  flex: none; padding: 0 2px; border-radius: 3px; color: var(--xh-sub);
+  font-size: ${z(13)}; line-height: 1.2; opacity: 0; cursor: pointer; transition: opacity .12s;
+}
+.xhwb-fold:hover .xhwb-foldmore, .xhwb-foldmore:focus-visible { opacity: 1; }
+.xhwb-foldmore:hover, .xhwb-foldmore:focus-visible {
+  color: var(--xh-text-strong, #1c1c1c); background: var(--xh-hover); outline: none;
+}
+/* 双击文件夹名后的原地改名：临时放开省略号/选中限制 */
+.xhwb-foldlbl.xhwb-editing {
+  overflow: visible; text-overflow: clip; white-space: nowrap; cursor: text;
+  user-select: text; outline: 1px solid var(--xh-primary); outline-offset: 1px;
+  border-radius: 3px; background: var(--xh-input-bg); color: var(--xh-text);
+}
+/* 工作流卡片右键菜单 */
+.xhwb-ctx {
+  position: fixed; z-index: 1500; min-width: 132px; padding: 4px; border-radius: 8px;
+  background: var(--xh-card); border: 1px solid var(--xh-border, rgba(255,255,255,.12));
+  box-shadow: 0 10px 26px var(--xh-shadow);
+}
+.xhwb-ctxitem {
+  display: block; width: 100%; text-align: left; padding: 6px 10px; border: 0; border-radius: 5px;
+  background: transparent; color: var(--xh-text-strong, #eaeaea); font-size: ${z(11.5)}; cursor: pointer;
+  white-space: nowrap;
+}
+.xhwb-ctxitem:hover { background: var(--xh-hover); }
+.xhwb-ctxitem.danger { color: #f07167; }
+.xhwb-ctxitem.danger:hover { background: #3a1f1c; color: #ff9d90; }
 .xhwb-fold.on { color: var(--xh-on-primary-dim); background: color-mix(in srgb, var(--xh-primary) 15%, transparent); }
+/* 选中行也要 hover 突出（.on 写在 :hover 后面会盖掉它，这里补回） */
+.xhwb-fold.on:hover { border-left-color: var(--xh-primary, #E8A33C); background: color-mix(in srgb, var(--xh-primary) 26%, var(--xh-hover)); color: var(--xh-text-strong, #1c1c1c); }
 .xhwb-fold.droptgt { color: var(--xh-on-primary-dim); background: color-mix(in srgb, var(--xh-primary) 32%, transparent); outline: 1px dashed var(--xh-primary); outline-offset: -2px; }
 .xhwb-newfold { color: var(--xh-sub); font-size: ${z(10)}; cursor: pointer; margin-left: auto; padding: 1px 5px; border-radius: 4px; flex: none; }
 .xhwb-newfold:hover { color: var(--xh-text-strong, #1c1c1c); background: var(--xh-hover); }
@@ -557,9 +931,34 @@ function injectCSS() {
 }
 .xhwb-toast.show { opacity: 1; }
 .xhwb-fold .xhwb-cnt { margin-left: auto; font-size: ${z(9.5)}; color: var(--xh-sub); font-variant-numeric: tabular-nums; padding-left: 6px; flex: none; }
-.xhwb-fold .xhwb-dot { width: ${z(9)}; height: ${z(9)}; border-radius: 2px; flex: none; }
+.xhwb-fold .xhwb-dot { width: ${z(9)}; height: ${z(9)}; border-radius: 2px; flex: none; transition: width .12s, height .12s, box-shadow .12s; }
+/* 2026-11-18：hover 时色块放大 + 描边（既突出，也好点中换色） */
+.xhwb-fold .xhwb-dot { cursor: pointer; }
+.xhwb-fold:hover .xhwb-dot { width: ${z(13)}; height: ${z(13)}; box-shadow: 0 0 0 2px var(--xh-card, #1c1c1c), 0 0 0 3px var(--xh-primary, #E8A33C); }
 .xhwb-fold .xhwb-foldlbl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* ── 嵌套树：缩进占位 + 展开箭头（照 Pixaroma .pixwb-nest / .pixwb-chev）── */
+/* ── 2026-11-18：色块预设色板浮层（挂 body，z-index 高于窗口 1300）── */
+.xhwb-dotpal {
+  position: fixed; z-index: 1500; user-select: none;
+  background: var(--xh-surface); border: 1px solid var(--xh-border); border-radius: 9px;
+  box-shadow: 0 12px 32px var(--xh-shadow); padding: 9px 10px 10px;
+  font-family: inherit; font-size: ${z(11)}; color: var(--xh-text);
+}
+.xhwb-dotpal-h { color: var(--xh-sub); font-size: ${z(10.5)}; margin-bottom: 8px; }
+.xhwb-dotpal-g { display: grid; grid-template-columns: repeat(6, ${z(17)}); gap: ${z(6)}; }
+.xhwb-dotpal-sw {
+  width: ${z(17)}; height: ${z(17)}; border-radius: 4px; cursor: pointer; padding: 0;
+  border: 1px solid rgba(128,128,128,.35); transition: transform .1s;
+}
+.xhwb-dotpal-sw:hover { transform: scale(1.16); }
+.xhwb-dotpal-sw.on { outline: 2px solid var(--xh-text-strong, #fff); outline-offset: 1px; }
+.xhwb-dotpal-f { display: flex; gap: ${z(6)}; margin-top: 10px; }
+.xhwb-dotpal-btn {
+  flex: 1; background: var(--xh-hover); color: var(--xh-text); cursor: pointer;
+  border: 1px solid var(--xh-border); border-radius: 6px; padding: ${z(4)} 0;
+  font-family: inherit; font-size: ${z(11)};
+}
+.xhwb-dotpal-btn:hover { background: var(--xh-primary); color: var(--xh-on-primary); border-color: var(--xh-primary); }
+/* ── 嵌套树：缩进占位 + 展开箭头（照 早期版本 .wfb-nest / .wfb-chev）── */
 .xhwb-nest { flex: none; }
 .xhwb-chev {
   flex: none; width: ${z(11)}; text-align: center; cursor: pointer;
@@ -572,7 +971,7 @@ function injectCSS() {
 .xhwb-favstar { color: var(--xh-primary); font-size: ${z(12)}; line-height: 1; flex: none; width: ${z(13)}; text-align: center; }
 
 /* 网格 / 列表 */
-.xhwb-main { flex: 1; min-width: 0; overflow-y: auto; padding: 10px; }
+.xhwb-main { flex: 1; min-width: 320px; overflow-y: auto; padding: 10px; }
 .xhwb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(${z(132)}, 1fr)); gap: ${z(10)}; align-content: start; }
 .xhwb-card {
   background: var(--xh-card); border: 1px solid var(--xh-border); border-radius: 7px; overflow: hidden;
@@ -580,7 +979,7 @@ function injectCSS() {
 }
 .xhwb-card:hover { border-color: var(--xh-primary); }
 .xhwb-card.sel { border-color: var(--xh-primary); box-shadow: 0 0 0 1px color-mix(in srgb, var(--xh-primary) 45%, transparent); }
-.xhwb-cov { display: block; width: 100%; height: ${z(68)}; background: var(--xh-surface); }
+.xhwb-cov { display: block; width: 100%; height: ${z(68)}; background: var(--xh-surface); object-fit: contain; }
 .xhwb-cardname {
   padding: 5px 6px 1px; font-size: ${z(10.5)}; color: var(--xh-text); line-height: 1.3;
   overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -590,19 +989,27 @@ function injectCSS() {
 .xhwb-star {
   position: absolute; top: 3px; right: 3px;
   width: ${z(26)}; height: ${z(26)}; display: flex; align-items: center; justify-content: center;
-  font-size: ${z(15)}; line-height: 1; cursor: pointer; border-radius: 6px;
+  font-size: ${z(17)}; line-height: 1; cursor: pointer; border-radius: 6px;
   color: var(--xh-text-strong, #1c1c1c); background: var(--xh-shadow);
   transition: background .12s, color .12s, transform .08s;
 }
 .xhwb-card:hover .xhwb-star { background: rgba(0,0,0,.55); }
 .xhwb-star:hover { background: rgba(0,0,0,.7); transform: scale(1.12); }
+/* 2026-11-18：卡片压暗背景时未收藏星必须白字才看得清；行内星背景是浅色，保持深字 */
+.xhwb-card:hover .xhwb-star:not(.on),
+.xhwb-star:not(.xhwb-rowstar):hover:not(.on) { color: #fff; }
 .xhwb-star.on { color: var(--xh-primary); background: var(--xh-shadow); }
 .xhwb-rowstar {
-  position: static; width: ${z(20)}; height: ${z(20)}; font-size: ${z(13)};
+  position: static; width: ${z(20)}; height: ${z(20)}; font-size: ${z(15)};
   background: none; border-radius: 4px; margin-left: 4px; flex: none;
 }
 .xhwb-rowstar:hover { background: rgba(255,255,255,.1); transform: scale(1.12); }
 .xhwb-rowstar.on { background: none; }
+/* 2026-11-18：实心星照 早期版本 用字符 ★ / ☆。
+   ⛔ 家族 Lucide 星是描边 mask（fill:none），CSS 填不实，别再换回去。
+   收藏态 = 家族主色实心；未收藏 = 亮灰空心（⛔ 别用 --xh-sub，在卡片上太灰看不清轮廓）。 */
+.xhwb-star:not(.on) { color: var(--xh-text-strong, #1c1c1c); }
+.xhwb-star.on { color: var(--xh-primary); }
 
 .xhwb-list { display: flex; flex-direction: column; }
 .xhwb-row {
@@ -611,7 +1018,7 @@ function injectCSS() {
 }
 .xhwb-row:hover { background: var(--xh-hover); color: var(--xh-text-strong, #1c1c1c); }
 .xhwb-row.sel { border-color: var(--xh-primary); background: color-mix(in srgb, var(--xh-primary) 12%, transparent); color: var(--xh-text-strong, #1c1c1c); }
-.xhwb-row .xhwb-rowcov { width: ${z(40)}; height: ${z(23)}; flex: none; border-radius: 3px; background: var(--xh-surface); }
+.xhwb-row .xhwb-rowcov { width: ${z(40)}; height: ${z(23)}; flex: none; border-radius: 3px; background: var(--xh-surface); object-fit: contain; }
 .xhwb-row .xhwb-rowname { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .xhwb-row .xhwb-rowfold {
   color: var(--xh-sub); font-size: ${z(10)}; margin-left: auto; white-space: nowrap;
@@ -621,9 +1028,9 @@ function injectCSS() {
 .xhwb-empty { color: var(--xh-sub); font-size: ${z(12)}; padding: 26px 10px; text-align: center; }
 
 /* 详情栏 */
-.xhwb-detail { width: ${z(208)}; min-width: ${z(150)}; flex: none; background: var(--xh-side); overflow-y: auto; padding: 10px; }
+.xhwb-detail { width: ${z(336)}; min-width: ${z(150)}; flex: none; background: var(--xh-side); overflow-y: auto; padding: 10px; }
 .xhwb-detail.hidden { display: none; }
-.xhwb-detcov { width: 100%; height: ${z(104)}; border-radius: 6px; background: var(--xh-surface); display: block; }
+.xhwb-detcov { width: 100%; height: ${z(104)}; border-radius: 6px; background: var(--xh-surface); display: block; object-fit: contain; }
 .xhwb-detname { color: var(--xh-text); font-size: ${z(12.5)}; font-weight: 600; margin: 8px 0 2px; line-height: 1.35; word-break: break-word; }
 .xhwb-detpath { color: var(--xh-sub); font-size: ${z(10)}; margin-bottom: 9px; word-break: break-word; }
 .xhwb-kv { display: flex; font-size: ${z(10.5)}; color: var(--xh-sub); padding: 2px 0; gap: 8px; }
@@ -636,6 +1043,17 @@ function injectCSS() {
 }
 /* LoRA 用不同颜色 */
 .xhwb-mod.xhwb-modlora { border-color: var(--xh-primary); color: var(--xh-text); }
+.xhwb-modname { flex: 1 1 auto; min-width: 0; word-break: break-all; }
+.xhwb-modcopy {
+  flex: none; width: ${z(20)}; height: ${z(20)}; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 3px; background: transparent;
+  color: var(--xh-sub); cursor: pointer; opacity: .7;
+}
+.xhwb-modcopy:hover, .xhwb-modcopy:focus-visible {
+  color: var(--xh-text); background: var(--xh-hover); opacity: 1; outline: none;
+}
+.xhwb-modcopy.ok { color: var(--xh-primary); opacity: 1; }
 /* ── 节点包列表 ── */
 .xhwb-packlist { margin: 6px 0 9px; display: flex; flex-direction: column; gap: 3px; }
 .xhwb-pack {
@@ -658,13 +1076,14 @@ function injectCSS() {
   color: #c99a94; font-size: ${z(9.5)}; line-height: 1.5; margin: 2px 0 5px;
 }
 .xhwb-mod {
+  display: flex; align-items: center; gap: 5px;
   background: var(--xh-surface); border: 1px solid var(--xh-border);
-  border-radius: 4px; padding: 3px 6px;
-  font-size: ${z(10)}; margin-bottom: 3px; word-break: break-all; line-height: 1.4;
+  border-radius: 4px; padding: 3px 4px 3px 6px;
+  font-size: ${z(10)}; margin-bottom: 3px; line-height: 1.4;
   color: var(--xh-text);
 }
 .xhwb-acts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
-/* 备注框（照 Pixaroma .pixwb-note） */
+/* 备注框（照 早期版本 .wfb-note） */
 .xhwb-note {
   width: 100%; box-sizing: border-box; min-height: ${z(46)}; resize: vertical;
   background: var(--xh-surface); border: 1px solid var(--xh-border); border-radius: 5px;
@@ -672,7 +1091,7 @@ function injectCSS() {
   padding: 6px 7px; margin-bottom: 2px;
 }
 .xhwb-note:focus { outline: none; border-color: var(--xh-primary); }
-/* 危险按钮（删除）——照 Pixaroma .pixwb-danger */
+/* 危险按钮（删除）——照 早期版本 .wfb-danger */
 .xhwb-tbtn.xhwb-danger { color: #f07167; border-color: #4d2f2c; }
 .xhwb-tbtn.xhwb-danger:hover { background: #3a1f1c; color: #ff9d90; }
 .xhwb-acts .xhwb-tbtn { padding: 4px 8px; font-size: ${z(11)}; }
@@ -708,36 +1127,84 @@ function injectCSS() {
 }
 
 // ----------------------------- 缩略图 -----------------------------
-/** 把后端给的节点方块画到 canvas 上（学 Pixaroma drawMap）。 */
+/** 把后端给的节点方块画到 canvas 上（照 早期版本 cover.mjs::drawMap 精致化）。
+ *  2026-11-18：原来只是纯色直角块被吐槽「太简陋」，照抄原作者四件事：
+ *  ① 提亮（节点原色太暗，缩略图糊成一团）② 连线 ③ 圆角 ④ 留边 + 透明度。 */
 function drawMap(cv, map) {
   if (!cv) return;
-  const dpr = window.devicePixelRatio || 1;
   const w = cv.clientWidth || 160;
   const h = cv.clientHeight || 60;
-  cv.width = Math.max(1, w * dpr);
-  cv.height = Math.max(1, h * dpr);
-  const ctx = cv.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = "var(--xh-surface)";
-  ctx.fillRect(0, 0, w, h);
-  if (!map || !map.length) return;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const b of map) {
-    if (b.x < minX) minX = b.x;
-    if (b.y < minY) minY = b.y;
-    if (b.x + b.w > maxX) maxX = b.x + b.w;
-    if (b.y + b.h > maxY) maxY = b.y + b.h;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
   }
-  if (maxX < minX) return;
+  const ctx = cv.getContext("2d");
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  // canvas 2D 不认 CSS 变量：getComputedStyle 取真实值，读不到退回深灰
+  let bg = "";
+  try { bg = getComputedStyle(document.documentElement).getPropertyValue("--xh-surface").trim(); } catch (e) {}
+  ctx.fillStyle = /^(#|rgb|hsl)/i.test(bg) ? bg : "#252525";
+  ctx.fillRect(0, 0, w, h);
+  // 空图也给条中线，不留黑洞（照作者 cover.mjs L113-121）
+  if (!Array.isArray(map) || !map.length) {
+    ctx.strokeStyle = "rgba(140,140,140,.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.3, h * 0.5); ctx.lineTo(w * 0.7, h * 0.5);
+    ctx.stroke();
+    return;
+  }
+  // 数据来自不可信的工作流文件：非数坐标会在 rAF 里抛错，先过滤（作者 L124-129 同款坑）
+  const boxes = map.filter((b) => b && Number.isFinite(+b.x) && Number.isFinite(+b.y)
+    && Number.isFinite(+b.w) && Number.isFinite(+b.h));
+  if (!boxes.length) return;
+  // 后端给的是绝对像素坐标 {x,y,w,h,c}，先归一化再按画布缩放。
+  // 用 relit 色相算法绘制细节，不改后端契约（改后端要重启，前端能做的先做完）。
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const b of boxes) {
+    if (+b.x < minX) minX = +b.x;
+    if (+b.y < minY) minY = +b.y;
+    if (+b.x + +b.w > maxX) maxX = +b.x + +b.w;
+    if (+b.y + +b.h > maxY) maxY = +b.y + +b.h;
+  }
   const bw = maxX - minX || 1;
   const bh = maxY - minY || 1;
-  const s = Math.min((w - 4) / bw, (h - 4) / bh);
-  const ox = (w - bw * s) / 2 - minX * s;
-  const oy = (h - bh * s) / 2 - minY * s;
-  for (const b of map) {
-    ctx.fillStyle = "hsl(" + b.c + ",45%,50%)";
-    ctx.fillRect(ox + b.x * s, oy + b.y * s, Math.max(1, b.w * s - 1), Math.max(1, b.h * s - 1));
+  const pad = Math.max(2, Math.min(6, Math.round(w * 0.06)));   // 小行图别被留边吃掉太多
+  const iw = Math.max(1, w - pad * 2);
+  const ih = Math.max(1, h - pad * 2);
+  const s = Math.min(iw / bw, ih / bh);
+  const ox = pad + (iw - bw * s) / 2 - minX * s;
+  const oy = pad + (ih - bh * s) / 2 - minY * s;
+  // 连线先画（方块盖上面）：真实 link 表没带，按阅读顺序连方块中心（作者 L137-148）
+  ctx.strokeStyle = "rgba(120,150,180,.35)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 1; i < boxes.length; i++) {
+    const a = boxes[i - 1], b = boxes[i];
+    ctx.moveTo(ox + (+a.x + +a.w / 2) * s, oy + (+a.y + +a.h / 2) * s);
+    ctx.lineTo(ox + (+b.x + +b.w / 2) * s, oy + (+b.y + +b.h / 2) * s);
   }
+  ctx.stroke();
+  // 圆角块 + 提亮：色相保留（同类节点同色），明度 50%→62%、饱和 45%，
+  // 照原作者 lift() 目标——节点原色是给深色画布的标题色，缩略图里太暗。
+  for (const b of boxes) {
+    const x = ox + (+b.x) * s;
+    const y = oy + (+b.y) * s;
+    const rw = Math.max(2, (+b.w) * s);
+    const rh = Math.max(2, (+b.h) * s);
+    const hue = (((+b.c) % 360) + 360) % 360;
+    ctx.fillStyle = "hsl(" + hue + ",45%,62%)";
+    ctx.globalAlpha = 0.95;
+    const r = Math.min(2, rw / 2, rh / 2);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, rw, rh, r);
+    else ctx.rect(x, y, rw, rh);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 // ----------------------------- 数据视图 -----------------------------
@@ -780,7 +1247,7 @@ function visibleFiles() {
 }
 
 function folderCounts() {
-  // 照 Pixaroma folders.mjs L306-314：子文件夹里的工作流也算进所有父级，
+  // 照 早期版本 folders.mjs L306-314：子文件夹里的工作流也算进所有父级，
   // 否则一个只装子文件夹的文件夹会显示成空的，计数和官方侧栏也对不上
   // （例：MinimaxH3 直下 36 + Herrgo 9 + 上下文 7 + 自研 3 = 官方 55）。
   const m = {};
@@ -796,7 +1263,7 @@ function folderCounts() {
   return m;
 }
 
-// ── 照 Pixaroma sort.mjs + folders.mjs orderedFolders 复刻 ──
+// ── 照 早期版本 sort.mjs + folders.mjs orderedFolders 复刻 ──
 // 一个 Collator（作者注释：带 options 的 localeCompare 每次调用新建 Collator，慢 ~30 倍）：
 // 忽略大小写、数字按数值比（"2." 排在 "10." 前）——中文按系统 locale 拼音排，
 // 和 ComfyUI 官方侧栏顺序一致。
@@ -845,11 +1312,40 @@ function toggleFolder(path) {
 // ----------------------------- 渲染 -----------------------------
 let H = null; // 面板 DOM 引用集合
 
-// ── 窗口尺寸/位置：照 Pixaroma 的 makeRect() 思路复刻 ──
+// ── 窗口尺寸/位置：照 早期版本 的 makeRect() 思路复刻 ──
 // 尺寸是 JS 内联像素（left/top/width/height），CSS 不写 width/height，
-// 所以没有任何 !important 打架。默认 1040x720、最小 560x340、最多 1040x720，
-// 钳制在视口留边 edge=24 内 → 永远盖不住画布。
-const WFB = { minW: 560, minH: 340, prefW: 1040, prefH: 720, edge: 24, homeX: 80, homeY: 60 };
+// 所以没有任何 !important 打架。默认 1240x780（2026-11-19 加宽，原 1040x720）、
+// 最小 620x340，pref 只是首选不是上限（可拖大），钳制在视口留边 edge=24 内。
+const WFB = { minW: 620, minH: 340, prefW: 1240, prefH: 780, edge: 24, homeX: 80, homeY: 60 };
+// 三栏宽度：左栏 130~640、右栏 150~640（原来都卡在 420，拖不过去）；
+// 中间列表至少留 MAIN_MIN，两条 grip 各 6px —— 上限还要按面板实际宽度动态收。
+//  2026-11-19：默认加宽（用户嫌窄）左 204→296、右 208→336；窗口见 WFB.prefW。
+const WFB_SIDE_MIN = 130, WFB_SIDE_MAX = 640, WFB_SIDE_DEF = 296;
+const WFB_DET_MIN = 150, WFB_DET_MAX = 640, WFB_DET_DEF = 336;
+const WFB_MAIN_MIN = 320, WFB_GRIP_W = 12;
+/** 某一栏当前能拖到的最大宽度：不超过 640，也不把中间列表挤到 320 以下。 */
+function _wfbColMax(which) {
+  if (!H) return which === "side" ? WFB_SIDE_MAX : WFB_DET_MAX;
+  const total = H.root.clientWidth || 0;
+  const other = which === "side" ? H.detail.offsetWidth : H.side.offsetWidth;
+  const ownMin = which === "side" ? WFB_SIDE_MIN : WFB_DET_MIN;
+  const ownMax = which === "side" ? WFB_SIDE_MAX : WFB_DET_MAX;
+  return Math.max(ownMin, Math.min(ownMax, total - other - WFB_GRIP_W - WFB_MAIN_MIN));
+}
+/** 打开面板时恢复上次拖好的左右栏宽度（之前只改 style，没存盘）。 */
+function _wfbApplyCols() {
+  if (!H) return;
+  const sw = Number(store.get("sideW", WFB_SIDE_DEF)) || WFB_SIDE_DEF;
+  const dw = Number(store.get("detW", WFB_DET_DEF)) || WFB_DET_DEF;
+  H.side.style.width = Math.max(WFB_SIDE_MIN, Math.min(sw, _wfbColMax("side"))) + "px";
+  H.detail.style.width = Math.max(WFB_DET_MIN, Math.min(dw, _wfbColMax("det"))) + "px";
+}
+/** 窗口被拖小 / 浏览器窗口变化时，把两栏收回到合法范围，保住中间列表。 */
+function _wfbClampCols() {
+  if (!H) return;
+  H.side.style.width = Math.max(WFB_SIDE_MIN, Math.min(H.side.offsetWidth, _wfbColMax("side"))) + "px";
+  H.detail.style.width = Math.max(WFB_DET_MIN, Math.min(H.detail.offsetWidth, _wfbColMax("det"))) + "px";
+}
 function _wfbDefaultRect() {
   const vw = window.innerWidth, vh = window.innerHeight;
   const top = WFB.edge;
@@ -862,7 +1358,7 @@ function _wfbDefaultRect() {
 function _wfbClampRect(r) {
   const d = _wfbDefaultRect();
   const vw = window.innerWidth, vh = window.innerHeight;
-  // 照 Pixaroma clampRect：prefW/prefH 只是"默认尺寸"，不是上限！
+  // 照 早期版本 clampRect：prefW/prefH 只是"默认尺寸"，不是上限！
   // 上限只有「视口 - 留边」（floating_window.mjs L145-146: min(r.w, vw - edge)）。
   // 之前错把 prefW=1040 当上限 → 窗口到 1040 就拖不大了。
   const w = Math.round(Math.max(WFB.minW, Math.min((r && r.w) || d.w, vw - WFB.edge)));
@@ -893,7 +1389,7 @@ function buildPanel() {
   setK(STATE.k); // 恢复字号
   const root = document.createElement("div");
   root.id = "xh-wfb-root";
-  root.className = "xhwb-win";   // 照 Pixaroma：外层 div 自己就是定位+尺寸的窗口，没有内层 wrapper
+  root.className = "xhwb-win";   // 照 早期版本：外层 div 自己就是定位+尺寸的窗口，没有内层 wrapper
   root.style.display = "none";    // 默认隐藏，togglePanel 时才显示
   root.innerHTML =
     '  <div class="xhwb-title" id="xh-wfb-title">' +
@@ -915,7 +1411,7 @@ function buildPanel() {
     "    </div>" +
     '    <button class="xhwb-tbtn" id="xh-wfb-sort" title="点击切换排序方式" style="display:inline-flex;align-items:center;gap:5px;">' + xhIconHTML("sort-asc", { size: 14, color: "current" }) + '<span id="xh-wfb-sort-txt">排序: 最近修改</span></button>' +
     '    <button class="xhwb-tbtn" id="xh-wfb-openfolder" title="在资源管理器中打开 workflows 目录" style="display:inline-flex;align-items:center;gap:5px;">' + xhIconHTML("folder-open", { size: 14, color: "current" }) + ' 打开文件夹</button>' +
-    '    <button class="xhwb-tbtn" id="xh-wfb-saveopen" title="把画布上当前打开的工作流另存到某个文件夹（照 Pixaroma Save open workflow here）" style="display:inline-flex;align-items:center;gap:5px;">' + xhIconHTML("save", { size: 14, color: "current" }) + ' 存当前工作流</button>' +
+    '    <button class="xhwb-tbtn" id="xh-wfb-saveopen" title="把画布上当前打开的工作流另存到某个文件夹" style="display:inline-flex;align-items:center;gap:5px;">' + xhIconHTML("save", { size: 14, color: "current" }) + ' 存当前工作流</button>' +
     "  </div>" +
     '  <div class="xhwb-body">' +
     '    <div class="xhwb-side" id="xh-wfb-side"></div>' +
@@ -945,7 +1441,9 @@ function buildPanel() {
     main: root.querySelector("#xh-wfb-main"),
     detail: root.querySelector("#xh-wfb-detail"),
   };
-  _wfbApplyRect(_wfbReadRect());   // 照 Pixaroma：尺寸/位置从持久化 rect 恢复并钳制在视口内（必须在 H 赋值之后）
+  _wfbApplyRect(_wfbReadRect());   // 照 早期版本：尺寸/位置从持久化 rect 恢复并钳制在视口内（必须在 H 赋值之后）
+  _wfbApplyCols();                 // 左右栏宽度也从 store 恢复
+  window.addEventListener("resize", _wfbClampCols);
 
   // ---- 事件 ----
   root.querySelector("#xh-wfb-close").onclick = () => togglePanel(false);
@@ -966,7 +1464,7 @@ function buildPanel() {
   root.querySelector("#xh-wfb-openfolder").onclick = () => {
     fetchJSON("/xh/workflows/openfolder").catch(() => {});
   };
-  // 「存当前工作流」：把画布上打开的工作流另存到某个文件夹（照 Pixaroma Save open workflow here）
+  // 「存当前工作流」：把画布上打开的工作流另存到某个文件夹（照 早期版本 Save open workflow here）
   root.querySelector("#xh-wfb-saveopen").onclick = async () => {
     const folders = (STATE.data && STATE.data.folders) || [];
     // 默认目标 = 当前左侧选中的文件夹（选中的是特殊项时退回根目录）
@@ -1028,13 +1526,14 @@ function makeResizable() {
     if (!on) return;
     //  2026-10-27 修复"拖缩放窗口瞬移到左上角"：
     // 之前只传 {w,h}，x/y 缺失 → 钳制函数填了默认出生坐标 (80,60)，每次 mousemove 都瞬移。
-    // 照 Pixaroma：缩放时必须保留当前 x/y（clampRect 的 r.x/r.y ?? d.x 语义），只改 w/h。
+    // 照 早期版本：缩放时必须保留当前 x/y（clampRect 的 r.x/r.y ?? d.x 语义），只改 w/h。
     const r = _wfbClampRect({
       x: H.rect.x, y: H.rect.y,
       w: Math.max(WFB.minW, ow + e.clientX - sx),
       h: Math.max(WFB.minH, oh + e.clientY - sy),
     });
     _wfbApplyRect(r);
+    _wfbClampCols();   // 窗口变窄时先把两栏收回来，别把中间列表挤没
   });
   document.addEventListener("mouseup", () => {
     if (!on) return;
@@ -1048,8 +1547,16 @@ function makeSideResizable() {
   const side = H.side;
   let sx = 0, ow = 0, on = false;
   grip.addEventListener("mousedown", (e) => { on = true; sx = e.clientX; ow = side.offsetWidth; grip.classList.add("xhwb-dragging"); e.preventDefault(); e.stopPropagation(); });
-  document.addEventListener("mousemove", (e) => { if (on) side.style.width = Math.max(130, Math.min(420, ow + e.clientX - sx)) + "px"; });
-  document.addEventListener("mouseup", () => { if (on) { on = false; grip.classList.remove("xhwb-dragging"); } });
+  document.addEventListener("mousemove", (e) => {
+    if (!on) return;
+    side.style.width = Math.max(WFB_SIDE_MIN, Math.min(_wfbColMax("side"), ow + e.clientX - sx)) + "px";
+  });
+  document.addEventListener("mouseup", () => {
+    if (!on) return;
+    on = false;
+    grip.classList.remove("xhwb-dragging");
+    store.set("sideW", Math.round(side.offsetWidth));   // 记住这次拖到的宽度
+  });
 }
 
 function makeDetailResizable() {
@@ -1057,16 +1564,27 @@ function makeDetailResizable() {
   const det = H.detail;
   let sx = 0, ow = 0, on = false;
   grip.addEventListener("mousedown", (e) => { on = true; sx = e.clientX; ow = det.offsetWidth; grip.classList.add("xhwb-dragging"); e.preventDefault(); e.stopPropagation(); });
-  document.addEventListener("mousemove", (e) => { if (on) det.style.width = Math.max(150, Math.min(420, ow - (e.clientX - sx))) + "px"; });
-  document.addEventListener("mouseup", () => { if (on) { on = false; grip.classList.remove("xhwb-dragging"); } });
+  document.addEventListener("mousemove", (e) => {
+    if (!on) return;
+    det.style.width = Math.max(WFB_DET_MIN, Math.min(_wfbColMax("det"), ow - (e.clientX - sx))) + "px";
+  });
+  document.addEventListener("mouseup", () => {
+    if (!on) return;
+    on = false;
+    grip.classList.remove("xhwb-dragging");
+    store.set("detW", Math.round(det.offsetWidth));     // 记住这次拖到的宽度
+  });
 }
 
 function saveWin() { _wfbSaveRect(); }
 
-/** 一键恢复默认窗口尺寸/位置：清掉旧记忆 + 重新套用默认（学 Pixaroma applyRect(defaultRect)）。 */
+/** 一键恢复默认窗口尺寸/位置：清掉旧记忆 + 重新套用默认（学 早期版本 applyRect(defaultRect)）。 */
 function resetWin() {
   store.set("win", null);
+  store.set("sideW", null);        // 左右栏宽度也一起回默认
+  store.set("detW", null);
   _wfbApplyRect(_wfbDefaultRect());
+  _wfbApplyCols();
   _wfbSaveRect();
   toast("窗口已重置为默认大小");
 }
@@ -1083,7 +1601,7 @@ function renderSegs() {
 
 function renderCount() {
   if (!H || !H.count) return;
-  // 照 Pixaroma index.js L261-264：
+  // 照 早期版本 index.js L261-264：
   //   可见数 == 总数 → 只显示总数；否则显示「当前 of 总数」。
   //   作者面板上写的是 "21 of 307"（当前文件夹 21 个 / 库里一共 307 个），
   //   我们原来写死 "307 个工作流"，选进任何文件夹都不变 —— 少了这个上下文。
@@ -1110,7 +1628,7 @@ function renderSide() {
       ic.innerHTML = xhIconHTML(opts.icon, { size: 14, color: "current" });
       b.appendChild(ic);
     }
-    // ── 照 Pixaroma folders.mjs addRow：缩进占位 → 展开箭头 → 色点 → 星 → 标签 → 计数 ──
+    // ── 照 早期版本 folders.mjs addRow：缩进占位 → 展开箭头 → 色点 → 星 → 标签 → 计数 ──
     if (opts && opts.indent) {
       const sp = document.createElement("span");
       sp.className = "xhwb-nest";
@@ -1145,7 +1663,23 @@ function renderSide() {
     if (opts && opts.dot != null) {
       const d = document.createElement("span");
       d.className = "xhwb-dot";
-      d.style.background = "hsl(" + opts.dot + ",40%,52%)";
+      d.style.background = dotColorOf(key, opts.dot);
+      const custom = STATE.fcolors && STATE.fcolors[key];
+      d.title = custom ? ("色块已自定义 " + custom + "\n点一下换色 · 右键恢复自动") : "点一下给这个文件夹换个颜色 · 右键恢复自动";
+      d.setAttribute("data-xh-icon-done", "1");   // 别被图标 sweep 清掉背景
+      d.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation();   // 不触发选中文件夹 / 拖放
+        openDotPicker(key, opts.dot, d);
+      });
+      d.addEventListener("contextmenu", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (STATE.fcolors && STATE.fcolors[key]) {
+          delete STATE.fcolors[key];
+          saveFColors();
+          renderSide();
+          toast("已恢复自动色块");
+        }
+      });
       b.appendChild(d);
     }
     const lbl = document.createElement("span");
@@ -1153,11 +1687,54 @@ function renderSide() {
     lbl.textContent = label;
     lbl.title = label;
     b.appendChild(lbl);
+    if (opts && opts.menuPath) {
+      b.dataset.xhFold = opts.menuPath;
+    }
     const c = document.createElement("span");
     c.className = "xhwb-cnt";
     c.textContent = opts && opts.count != null ? opts.count : "";
     b.appendChild(c);
-    b.onclick = () => { STATE.folder = key; STATE.sel = null; renderSide(); renderMain(); };
+    if (opts && opts.menuPath) {
+      // 只占一个「⋯」的位置（约 16px），hover 才显形；改名/删除收进弹出菜单，
+      // 行内文字宽度不再被两个文字按钮挤压。
+      const mb = document.createElement("span");
+      mb.className = "xhwb-foldmore";
+      mb.textContent = "⋯";
+      mb.title = "更多：改名 / 删除文件夹";
+      mb.setAttribute("role", "button");
+      mb.tabIndex = 0;
+      const openMenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const r = mb.getBoundingClientRect();
+        openFolderMenu(opts.menuPath, r.left, r.bottom + 2);
+      };
+      mb.addEventListener("click", openMenu);
+      mb.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") openMenu(e);
+      });
+      mb.addEventListener("pointerdown", (e) => e.stopPropagation());
+      mb.addEventListener("dragstart", (e) => { e.preventDefault(); e.stopPropagation(); });
+      mb.addEventListener("drop", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        b.classList.remove("droptgt");
+        DRAG_REL = null;
+      });
+      b.appendChild(mb);
+    }
+    b.onclick = () => {
+      // 350ms 内再点同一行 = 双击改名（单击会重渲染，所以不能用原生 dblclick）
+      const now = Date.now();
+      if (opts && opts.menuPath && _lastFoldClick
+          && _lastFoldClick.rel === opts.menuPath && now - _lastFoldClick.t < 350) {
+        _lastFoldClick = null;
+        startFolderRenameInline(opts.menuPath);
+        return;
+      }
+      _lastFoldClick = opts && opts.menuPath ? { rel: opts.menuPath, t: now } : null;
+      STATE.folder = key; STATE.sel = null; renderSide(); renderMain();
+    };
     //  2026-10-27：文件夹按钮 = 拖放目标（卡片拖进来 = 移动文件）。
     //   「全部工作流」(__ALL__) 视为根目录，拖上去 = 移回根目录。
     b.addEventListener("dragover", (e) => {
@@ -1181,7 +1758,7 @@ function renderSide() {
   const head = document.createElement("div");
   head.className = "xhwb-grouphead";
   head.innerHTML = xhIconHTML("folder", { size: 13, color: "current" }) + ' <span>文件夹</span>';
-  // 「+ 新建」：直接在 UI 建文件夹，不用再去磁盘手动搞（学 Pixaroma）
+  // 「+ 新建」：直接在 UI 建文件夹，不用再去磁盘手动搞（学 早期版本）
   const nf = document.createElement("span");
   nf.className = "xhwb-newfold";
   nf.innerHTML = xhIconHTML("plus", { size: 12, color: "current" }) + ' 新建';
@@ -1189,10 +1766,8 @@ function renderSide() {
   nf.onclick = (e) => { e.stopPropagation(); createFolderUI(); };
   head.appendChild(nf);
   side.appendChild(head);
-  // ── 真实文件夹：照 Pixaroma 画成嵌套树（父在子前、缩进、▶ 收起/展开）──
+  // ── 真实文件夹：照 早期版本 画成嵌套树（父在子前、缩进、▶ 收起/展开）──
   const folders = orderedFolders((STATE.data && STATE.data.folders) || []);
-  // (散落文件)：不在任何文件夹里的工作流（作者 folders.mjs L316-320）
-  mk("(散落文件)", "__ROOT__", { dot: hueFor("__root__"), count: allFiles().filter((x) => !(x.dir || "")).length, twisty: null });
   const open = new Set(STATE.exp || []);
   // 选中的文件夹的祖先链强制显示（只影响这一次渲染，不改用户的展开偏好）
   if (STATE.folder && STATE.folder.indexOf("__") !== 0) {
@@ -1215,15 +1790,24 @@ function renderSide() {
       count: m[f] != null ? m[f] : 0,
       indent: depth,
       twisty: hasKids ? { open: isOpen, path: f } : null,
+      menuPath: f,
     });
   }
+  //  2026-11-18：散落文件（不在任何文件夹里的工作流）挪到**所有文件夹最下面**。
+  //    原来这一行在文件夹循环之前 ⇒ 显示在列表顶部；用户要求「放在最最下面」，
+  //    所以等整棵树画完，最后再补这一行。纯渲染顺序，不碰任何点击/拖放逻辑。
+  mk("(散落文件)", "__ROOT__", { dot: hueFor("__root__"), count: allFiles().filter((x) => !(x.dir || "")).length, twisty: null });
 }
 
 function starEl(rel, inList) {
   const fav = !!STATE.favs[rel];
   const s = document.createElement("div");
   s.className = "xhwb-star" + (inList ? " xhwb-rowstar" : "") + (fav ? " on" : "");
-  s.textContent = fav ? "" : "";
+  //  2026-11-18：用户要的是原作者那种**实心星**。家族 Lucide 星是描边图标
+  //    （fill:none、CSS mask），填不实 ⇒ 跟原作者一样直接用字符 ★ / ☆。
+  //    sweep() 只扫 <button>，这里是 <div>，字符不会被图标清理吃掉。
+  s.textContent = fav ? "★" : "☆";
+  s.setAttribute("data-xh-icon-done", "1");
   s.title = fav ? "从收藏移除" : "加入收藏";
   s.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -1238,11 +1822,182 @@ function starEl(rel, inList) {
   return s;
 }
 
-function covEl(entry, cls) {
+// ----------------------------- 封面图 -----------------------------
+/** 取卡片/详情页封面：只用本插件自己的自定义示例图，没有就返回 null（退节点地图）。 */
+function coverUrlOf(entry) {
+  const mine = customImagesOf(entry.rel);
+  return mine.length ? customImageUrl(entry.rel, mine[0]) : null;
+}
+
+/** 某个工作流的自定义示例图列表（第一张 = 封面）。 */
+function customImagesOf(rel) {
+  const arr = STATE.images && STATE.images[rel];
+  return Array.isArray(arr) ? arr : [];
+}
+
+function customImageUrl(rel, rec) {
+  return "/xh/workflows/image?rel=" + encodeURIComponent(rel)
+    + "&name=" + encodeURIComponent(rec.name) + "&v=" + (rec.v || 1);
+}
+
+/** 打开文件选择器，选完逐张上传（可多选）。 */
+function pickWorkflowImages(rel) {
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = "image/png,image/jpeg,image/webp,image/gif";
+  inp.multiple = true;
+  inp.style.display = "none";
+  document.body.appendChild(inp);
+  inp.addEventListener("change", async () => {
+    const files = Array.from(inp.files || []);
+    inp.remove();
+    if (files.length) await uploadWorkflowImages(rel, files);
+  });
+  inp.click();
+}
+
+async function uploadWorkflowImages(rel, files) {
+  let ok = 0;
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append("rel", rel);
+    fd.append("file", file, file.name);
+    try {
+      const r = await fetch("/xh/workflows/images/upload", { method: "POST", body: fd });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.error || ("HTTP " + r.status));
+      }
+      ok++;
+    } catch (e) {
+      toast("「" + file.name + "」上传失败：" + (e.message || e));
+    }
+  }
+  if (!ok) return;
+  toast("已添加 " + ok + " 张示例图");
+  await loadImages();
+  renderMain();
+  if (STATE.sel === rel) renderDetail();
+}
+
+async function removeWorkflowImage(rel, name) {
+  try {
+    await postJSON("/xh/workflows/images/delete", { rel, name });
+    toast("已删除这张示例图");
+    await loadImages();
+    renderMain();
+    if (STATE.sel === rel) renderDetail();
+  } catch (e) { toast("删除失败：" + (e.message || e)); }
+}
+
+async function setWorkflowCover(rel, name) {
+  try {
+    await postJSON("/xh/workflows/images/cover", { rel, name });
+    await loadImages();
+    renderMain();
+    if (STATE.sel === rel) renderDetail();
+  } catch (e) { toast("设为封面失败：" + (e.message || e)); }
+}
+
+/** 工作流改名 / 移动时迁移图片索引（失败不影响主操作）。 */
+async function migrateWorkflowImages(fromRel, toRel) {
+  try { await postJSON("/xh/workflows/images/migrate", { from: fromRel, to: toRel }); } catch (e) { /* 忽略 */ }
+}
+
+/** 工作流被删除时清掉它的示例图（失败不影响主操作）。 */
+async function clearWorkflowImages(rel) {
+  try { await postJSON("/xh/workflows/images/clear", { rel }); } catch (e) { /* 忽略 */ }
+}
+
+async function loadImages() {
+  try {
+    const r = await fetchJSON("/xh/workflows/images");
+    STATE.images = (r && r.items) || {};
+  } catch (e) { STATE.images = {}; }
+}
+
+/** 没有成品图时的兜底：画节点地图。 */
+function mapEl(entry, cls) {
   const cv = document.createElement("canvas");
   cv.className = cls;
   requestAnimationFrame(() => drawMap(cv, entry.map));
   return cv;
+}
+
+function covEl(entry, cls) {
+  const url = coverUrlOf(entry);
+  if (!url) return mapEl(entry, cls);
+  // 照 早期版本：有成品图（跑完自动记的 / 手动选的封面）就显示图片；
+  // 图片被删了 / 404 就退回节点地图，绝不留一块空白。
+  const img = document.createElement("img");
+  img.className = cls;
+  img.alt = "";
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.onerror = () => {
+    if (img.parentNode) img.parentNode.replaceChild(mapEl(entry, cls), img);
+  };
+  img.src = url;
+  return img;
+}
+
+// ----------------------------- 卡片右键菜单 -----------------------------
+// 文件浏览器习惯：右键出菜单。这里只放最常用的「打开 / 删除文件」，
+// 其余操作（重命名 / 复制 / 定位 / 备注）仍在右侧详情面板，不重复堆。
+let _fileMenuEl = null;
+function _fileMenuOutside(e) {
+  if (_fileMenuEl && !_fileMenuEl.contains(e.target)) closeFileMenu();
+}
+function _fileMenuEsc(e) {
+  if (e.key === "Escape") closeFileMenu();
+}
+function closeFileMenu() {
+  if (_fileMenuEl) { _fileMenuEl.remove(); _fileMenuEl = null; }
+  document.removeEventListener("pointerdown", _fileMenuOutside, true);
+  document.removeEventListener("keydown", _fileMenuEsc, true);
+}
+function showFileMenu(f, x, y) {
+  openCtxMenu(x, y, [
+    { label: "打开", fn: () => openWorkflow(f.rel) },
+    { label: "添加示例图", fn: () => pickWorkflowImages(f.rel) },
+    { label: "删除文件", fn: () => deleteFileUI(f.rel), danger: true },
+  ]);
+}
+
+/** 侧栏文件夹行尾「⋯」的菜单：改名 / 删除文件夹。 */
+function openFolderMenu(rel, x, y) {
+  openCtxMenu(x, y, [
+    { label: "改名", fn: () => startFolderRenameInline(rel) },
+    { label: "删除文件夹", fn: () => deleteFolderUI(rel), danger: true },
+  ]);
+}
+
+/** 通用小型弹出菜单（文件卡右键、文件夹「⋯」共用）。 */
+function openCtxMenu(x, y, items) {
+  closeFileMenu();
+  const m = document.createElement("div");
+  m.className = "xhwb-ctx";
+  for (const it of items) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "xhwb-ctxitem" + (it.danger ? " danger" : "");
+    b.textContent = it.label;
+    b.onclick = async () => {
+      closeFileMenu();
+      try { await it.fn(); } catch (e) { toast((e.message || e)); }
+    };
+    m.appendChild(b);
+  }
+  document.body.appendChild(m);
+  // 贴边时往回收，别出视口
+  const w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + "px";
+  m.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + "px";
+  _fileMenuEl = m;
+  setTimeout(() => {
+    document.addEventListener("pointerdown", _fileMenuOutside, true);
+    document.addEventListener("keydown", _fileMenuEsc, true);
+  }, 0);
 }
 
 function renderMain() {
@@ -1273,17 +2028,11 @@ function renderMain() {
       nm.className = "xhwb-rowname";
       nm.textContent = f.name;
       card.appendChild(nm);
-      if (mod) {
-        const mt = document.createElement("span");
-        mt.className = "xhwb-modtag";
-        mt.textContent = modelShort(mod);
-        mt.title = allMods.join("\n");
-        card.appendChild(mt);
-      }
-      const right = document.createElement("span");
-      right.className = "xhwb-rowfold";
-      right.textContent = ((f.dir ? f.dir + " · " : "") + fmtWhen(f.mtime)).trim();
-      card.appendChild(right);
+      //  2026-11-18：列表行只留「缩略图 + 名字」，不再显示模型名 / 目录·日期小字。
+      //    用户：「单纯显示名字就够了，右侧详情已经很全，后面小字把框撑得老长」。
+      //    模型 / 目录 / 修改时间 / 节点数在右侧详情面板都看得到，这里不重复。
+      //    （网格视图的小字是卡片自带缩略信息，是另一套布局，保持不动。）
+      //  名字本身 flex:1，会自动占满整行，收藏星仍在最右，不需要额外占位。
     } else {
       card.appendChild(covEl(f, "xhwb-cov"));
       const nm = document.createElement("div");
@@ -1298,7 +2047,7 @@ function renderMain() {
       card.appendChild(meta);
     }
     card.appendChild(starEl(f.rel, STATE.view === "list"));
-    //  2026-10-27：卡片可拖拽 → 拖到侧栏文件夹 = 移动文件（学 Pixaroma）
+    //  2026-10-27：卡片可拖拽 → 拖到侧栏文件夹 = 移动文件（学 早期版本）
     card.draggable = true;
     card.addEventListener("dragstart", (e) => {
       DRAG_REL = f.rel;
@@ -1312,6 +2061,13 @@ function renderMain() {
       renderDetail();
     });
     card.addEventListener("dblclick", () => openWorkflow(f.rel));
+    card.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      STATE.sel = f.rel;
+      renderMain();
+      renderDetail();
+      showFileMenu(f, e.clientX, e.clientY);
+    });
     wrap.appendChild(card);
   }
   main.appendChild(wrap);
@@ -1393,7 +2149,7 @@ function renderDetail() {
   det.appendChild(kv("节点", f.nodes != null ? String(f.nodes) : "解析失败"));
   det.appendChild(kv("大小", (f.size / 1024).toFixed(1) + " KB"));
 
-  // ── 你的备注（照 Pixaroma detail.mjs L89-116：可写、可搜、失焦即存）──
+  // ── 你的备注（照 早期版本 detail.mjs L89-116：可写、可搜、失焦即存）──
   const noteHead = document.createElement("div");
   noteHead.className = "xhwb-grouphead";
   noteHead.textContent = "你的备注";
@@ -1421,7 +2177,64 @@ function renderDetail() {
   note.addEventListener("blur", flushNote);
   det.appendChild(note);
 
-  // ── 操作按钮（照 Pixaroma detail.mjs L118-149 的完整清单）──
+  // ── 示例图（自定义；多图相册，第一张 = 封面）──
+  const imgBar = document.createElement("div");
+  imgBar.className = "xhwb-imgbar";
+  const imgHead = document.createElement("div");
+  imgHead.className = "xhwb-grouphead";
+  imgHead.textContent = "示例图";
+  imgBar.appendChild(imgHead);
+  const addImg = document.createElement("button");
+  addImg.className = "xhwb-tbtn";
+  addImg.textContent = "＋ 添加图片";
+  addImg.title = "可多选；第一张会作为卡片和详情页的封面";
+  addImg.onclick = () => pickWorkflowImages(f.rel);
+  imgBar.appendChild(addImg);
+  det.appendChild(imgBar);
+  const mine = customImagesOf(f.rel);
+  if (!mine.length) {
+    const ph = document.createElement("div");
+    ph.className = "xhwb-imgnone";
+    ph.textContent = "还没有自定义示例图。点「添加图片」上传，可一次选多张。";
+    det.appendChild(ph);
+  } else {
+    const grid = document.createElement("div");
+    grid.className = "xhwb-imggrid";
+    mine.forEach((rec, i) => {
+      const cell = document.createElement("div");
+      cell.className = "xhwb-imgcell";
+      const im = document.createElement("img");
+      im.src = customImageUrl(f.rel, rec);
+      im.loading = "lazy";
+      im.alt = "";
+      cell.appendChild(im);
+      if (i === 0) {
+        const badge = document.createElement("span");
+        badge.className = "xhwb-imgbadge";
+        badge.textContent = "封面";
+        cell.appendChild(badge);
+      }
+      const ops = document.createElement("div");
+      ops.className = "xhwb-imgops";
+      if (i > 0) {
+        const mk = document.createElement("button");
+        mk.className = "xhwb-imgop";
+        mk.textContent = "设为封面";
+        mk.onclick = () => setWorkflowCover(f.rel, rec.name);
+        ops.appendChild(mk);
+      }
+      const del = document.createElement("button");
+      del.className = "xhwb-imgop danger";
+      del.textContent = "删除";
+      del.onclick = () => removeWorkflowImage(f.rel, rec.name);
+      ops.appendChild(del);
+      cell.appendChild(ops);
+      grid.appendChild(cell);
+    });
+    det.appendChild(grid);
+  }
+
+  // ── 操作按钮（照 早期版本 detail.mjs L118-149 的完整清单）──
   const acts = document.createElement("div");
   acts.className = "xhwb-acts";
   const btn = (label, fn, cls, title, icon) => {
@@ -1483,19 +2296,7 @@ function renderDetail() {
   });
 
   // 删除（红色，危险操作）
-  btn("删除", async () => {
-    try {
-      const ok = await deleteWorkflow(f.rel);
-      if (!ok) return;
-      delete STATE.favs[f.rel];
-      if (STATE.notes) delete STATE.notes[f.rel];
-      saveFavs();
-      store.set("notes", STATE.notes || {});
-      STATE.sel = null;
-      toast("已删除");
-      await refresh();
-    } catch (e) { toast("删除失败：" + (e.message || e)); }
-  }, "xhwb-danger", "删了找不回来，会先问一句");
+  btn("删除", async () => { await deleteFileUI(f.rel); }, "xhwb-danger", "删了找不回来，会先问一句");
 
   // 复制文件路径
   const copyBtn = btn("复制路径", () => {
@@ -1511,6 +2312,43 @@ function renderDetail() {
   const models = f.models || [];
   const loras = f.loras || [];
   const mods = models.concat(loras);
+  const createCopyButton = (name, kind) => {
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "xhwb-modcopy";
+    copy.title = "复制完整名称：" + name;
+    copy.setAttribute("aria-label", "复制 " + name);
+    const copyIco = xhIconHTML("copy", { size: 12, color: "current" });
+    copy.innerHTML = copyIco;
+    copy.onclick = async (event) => {
+      event.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(name);
+        copy.innerHTML = xhIconHTML("勾选", { size: 12, color: "current" });
+        copy.classList.add("ok");
+        toast("已复制" + kind + "名称");
+        setTimeout(() => {
+          copy.innerHTML = copyIco;
+          copy.classList.remove("ok");
+        }, 1500);
+      } catch (e) {
+        toast("复制失败：" + (e.message || e));
+      }
+    };
+    return copy;
+  };
+  const appendModelRow = (list, name, isLora) => {
+    const row = document.createElement("div");
+    row.className = "xhwb-mod" + (isLora ? " xhwb-modlora" : "");
+
+    const label = document.createElement("span");
+    label.className = "xhwb-modname";
+    label.textContent = name;
+    label.title = name;
+    row.appendChild(label);
+    row.appendChild(createCopyButton(name, isLora ? " LoRA " : "模型"));
+    list.appendChild(row);
+  };
   if (mods.length) {
     const head = document.createElement("div");
     head.className = "xhwb-grouphead";
@@ -1523,13 +2361,7 @@ function renderDetail() {
       det.appendChild(sub);
       const list = document.createElement("div");
       list.className = "xhwb-modlist";
-      for (const m of models) {
-        const d = document.createElement("div");
-        d.className = "xhwb-mod";
-        d.textContent = m;
-        d.title = m;
-        list.appendChild(d);
-      }
+      for (const m of models) appendModelRow(list, m, false);
       det.appendChild(list);
     }
     if (loras.length) {
@@ -1539,13 +2371,7 @@ function renderDetail() {
       det.appendChild(sub);
       const list = document.createElement("div");
       list.className = "xhwb-modlist";
-      for (const m of loras) {
-        const d = document.createElement("div");
-        d.className = "xhwb-mod xhwb-modlora";
-        d.textContent = m;
-        d.title = m;
-        list.appendChild(d);
-      }
+      for (const m of loras) appendModelRow(list, m, true);
       det.appendChild(list);
     }
     // 一键复制全部文件名（照作者 copyList）
@@ -1601,12 +2427,14 @@ function renderDetail() {
         d.className = "xhwb-pack";
         const nm = document.createElement("span");
         nm.className = "xhwb-packname";
-        nm.textContent = packLabel(p.mod);
+        const packName = packLabel(p.mod);
+        nm.textContent = packName;
         d.appendChild(nm);
         const ct = document.createElement("span");
         ct.className = "xhwb-packcnt";
         ct.textContent = p.count;
         d.appendChild(ct);
+        d.appendChild(createCopyButton(packName, "节点包"));
         d.title = p.mod + (p.cat ? "\n分类：" + p.cat : "") + "\n节点：" + (p.types || []).join(", ");
         list.appendChild(d);
       }
@@ -1625,20 +2453,18 @@ function renderDetail() {
       det.appendChild(tip);
       const list = document.createElement("div");
       list.className = "xhwb-modlist";
-      for (const t of missing.slice(0, 12)) {
+      for (const t of missing) {
         const d = document.createElement("div");
         d.className = "xhwb-mod xhwb-modmissing";
-        d.textContent = t;
+        const nm = document.createElement("span");
+        nm.className = "xhwb-modname";
+        nm.textContent = t;
+        d.appendChild(nm);
+        d.appendChild(createCopyButton(t, "缺失节点"));
         d.title = "当前 ComfyUI 里没有这个节点类型 —— 对应的节点包可能没装";
         list.appendChild(d);
       }
       det.appendChild(list);
-      if (missing.length > 12) {
-        const more = document.createElement("div");
-        more.className = "xhwb-subhead";
-        more.textContent = "还有 " + (missing.length - 12) + " 个…";
-        det.appendChild(more);
-      }
     }
     // 子图节点（type 是 UUID）：不是缺失，只是这个工作流用了组合节点
     if (f.subgraphs) {
@@ -1664,6 +2490,7 @@ async function refresh() {
       H.main.appendChild(d);
     }
   }
+  await loadImages();
   renderCount();
   renderSide();
   renderMain();
@@ -1672,7 +2499,7 @@ async function refresh() {
 
 // ----------------------------- 打开 -----------------------------
 // ────────────────────────────────────────────────────────────────────────────
-// 打开工作流：照 ComfyUI 官方 workflowService.openWorkflow() + Pixaroma api.mjs
+// 打开工作流：照 ComfyUI 官方 workflowService.openWorkflow() + 早期版本 api.mjs
 //
 //  2026-10-27 修复「点开工作流却变成 Unsaved Workflow」：
 //   之前只调 app.loadGraphData(graph, true, true) —— 第 4 参 workflow 没传，
@@ -1774,6 +2601,9 @@ async function openWorkflow(rel) {
 // ----------------------------- 键盘 -----------------------------
 function onKey(e) {
   if (!STATE.open || !H) return;
+  // 正在原地改名（contenteditable）时，按键归编辑器：否则 Enter 会打开工作流、Esc 会关面板
+  const ae = document.activeElement;
+  if (ae && ae.isContentEditable) return;
   if (e.key === "Escape") {
     e.preventDefault();
     togglePanel(false);
@@ -1810,7 +2640,7 @@ function togglePanel(force) {
   STATE.open = typeof force === "boolean" ? force : !STATE.open;
   H.root.style.display = STATE.open ? "flex" : "none";
   // 顶栏按钮同步状态：面板开着 = 亮出家族黄，关着 = 回到常态
-  // （照 Pixaroma index.js L1565: S.btn.classList.toggle("pixwb-btn-open", isOpen)）
+  // （照 早期版本 index.js L1565: S.btn.classList.toggle("wfb-btn-open", isOpen)）
   try {
     const tb = window.__xhWfbBtn || document.querySelector("[data-xh-wfb-btn]");
     setToolbarButtonOpen(tb, !!STATE.open);
@@ -1830,10 +2660,28 @@ function togglePanel(force) {
 //   #comfyui-topbar / .comfyui-menu 已被删除，别再回去用（2026-10-27 踩过坑）。
 
 // ══════════════════════════════════════════════════════════════════════
-//  2026-11-11：顶栏「工作流」图案改走自家图标库（xhIconHTML("工作流")）。
+//  2026-11-11：顶栏「工作流」图案改走自家图标库（xhIconHTML）。
 // 原来这里内联了一份 ComfyUI 官方 comfy--workflow：16 网格 / 1.6px / 描边写死黑色，
 // 跟家族另外三颗的 24 网格 / 2px / currentColor 不是一套。
-// 那份内联常量已删除 —— 图案唯一真源 = web/xh_icons/，调用处零路径零文件名。
+// 那份内联常量已删除 —— 图案唯一真源 = js/xh_icons/，调用处零路径零文件名。
+//  2026-11-18 上午：换成家族库 folder-tree（文件夹树）。
+//  2026-11-18 傍晚：用户发官方图标截图点名「换成这个图案」⇒ 家族例外③「明确跟官方一模一样」，
+//    恢复 ComfyUI 官方 comfy--workflow。图形**原样**提取自 ComfyUI 前端 main CSS 的
+//    .icon-[comfy--workflow] --svg data URI（16 网格 / 1.3px，零手绘零改动）；
+//    ⛔ 不入 xh_icons/svg/（保 2350 Lucide 基线 + ISC 许可），走专用常量（XH_GEAR_SVG 同例）。
+const XH_COMFY_WF_DATAURI = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='16' height='16'%3E%3Cpath fill='none' stroke='black' stroke-linecap='round' stroke-width='1.3' d='M9.186 3.1H6.814m2.372 9.8H7.553C4.466 12.9 2.2 9.904 2.95 6.812l.305-1.262M14.75 2.172l-.594 2.45a1.194 1.194 0 01-1.15.928h-2.3c-.771 0-1.338-.749-1.15-1.522l.593-2.45a1.194 1.194 0 011.15-.928h2.3c.771 0 1.338.749 1.15 1.522Zm-8.304 0-.593 2.45a1.194 1.194 0 01-1.15.928h-2.3c-.772 0-1.338-.749-1.15-1.522l.592-2.45A1.194 1.194 0 012.995.65h2.3c.771 0 1.337.749 1.15 1.522Zm8.304 9.8-.594 2.45a1.194 1.194 0 01-1.15.928h-2.3c-.771 0-1.338-.749-1.15-1.522l.593-2.45a1.194 1.194 0 011.15-.928h2.3c.771 0 1.338.749 1.15 1.522Z'/%3E%3C/svg%3E";
+/** 官方 comfy--workflow 图案（mask 渲染，写法与 xhIconHTML 完全同款）。 */
+function comfyWorkflowIconHTML(size) {
+  const s = size || XH_TB_ICON_SIZE;
+  const u = "url('" + XH_COMFY_WF_DATAURI.replace(/'/g, "%27") + "')";
+  const style = "display:inline-block;width:" + s + "px;height:" + s + "px;"
+      + "vertical-align:middle;flex-shrink:0;background-color:currentColor;"
+      + "-webkit-mask-image:" + u + ";mask-image:" + u + ";"
+      + "-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;"
+      + "-webkit-mask-position:center;mask-position:center;"
+      + "-webkit-mask-size:contain;mask-size:contain;";
+  return '<span class="xh-icon-mask" style="' + style + '"></span>';
+}
 
 function mountToolbarButton() {
   if (window.__xhWFInjected) return;
@@ -1855,7 +2703,9 @@ function mountToolbarButton() {
   //    （用户：「这是官方的图案…我们直接抄官方的图案」）
   //  2026-10-28 13:20：走**统一真源** makeToolbarButton（.xh-tb），
   //    三颗按钮（XiaoHei / 帮助 / 工作流）从此共用同一份样式 ⇒ 不可能再一个紫一个黄。
-  const btn = makeToolbarButton(xhIconHTML("工作流", { color: "current" }),
+  //  2026-11-18 傍晚：用户发官方图标截图点名「换成这个图案」⇒ 恢复 ComfyUI 官方
+  //    comfy--workflow 图案（原样 data URI，见上方 XH_COMFY_WF_DATAURI 注释）。
+  const btn = makeToolbarButton(comfyWorkflowIconHTML(),
                                 "XiaoHei 工作流浏览器 (Alt+W)", () => togglePanel());
   try { btn.setAttribute("aria-label", "XiaoHei 工作流浏览器"); } catch (e) {}
   btn.dataset.xhWfbBtn = "1";
@@ -1875,9 +2725,9 @@ app.registerExtension({
   //   "Keybinding on Alt + w already exists on XH.OpenWorkflowBrowser" 弹窗。
   //   改成 setup 里 window 原生监听 + 全局守卫，重复加载也不会弹错。
   setup() {
-    injectCSS(); // 按钮挂载前就注入，避免按钮样式闪烁（学 Pixaroma）
+    injectCSS(); // 按钮挂载前就注入，避免按钮样式闪烁（学 早期版本）
     mountToolbarButton();
-    // 加载标记：启动后弹一次 toast，用户可直观确认跑的是新代码（结构已照 Pixaroma 复刻，窗口不再盖屏）
+    // 加载标记：启动后弹一次 toast，用户可直观确认跑的是新代码（结构已照 早期版本 复刻，窗口不再盖屏）
     setTimeout(() => toast("XiaoHei 工作流浏览器已加载"), 2500);
     if (!window.__xhWFBKey) {
       window.__xhWFBKey = true;

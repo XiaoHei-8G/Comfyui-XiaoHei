@@ -43,7 +43,7 @@ import { pixAsset } from "./api_url.mjs";
 
 const CSS_ID = "pix-help-css";
 const QUESTION_ICON = "icons/note/question.svg";
-const BRAND = "#E8A33C";
+const BRAND = "var(--xh-primary,#E8A33C)";
 
 // ── Per-node help registry ───────────────────────────────────
 // Maps a node's comfyClass -> its help definition. A single shared surface (the
@@ -138,7 +138,7 @@ const CSS = `
   font-family: monospace; font-size: 11.5px; color: #ffd2c4;
 }
 .pix-help-tip {
-  margin-top: 4px; padding: 8px 11px; background: rgba(246,103,68,0.1);
+  margin-top: 4px; padding: 8px 11px; background: rgba(232,163,60,0.1);
   border-left: 2px solid ${BRAND}; border-radius: 3px; color: #ddd; font-size: 12px;
 }
 .pix-help-more {
@@ -326,12 +326,12 @@ export function openHelpPopup(helpDef, opts = {}) {
   icon.className = "pix-help-h-icon";
   const title = document.createElement("div");
   title.className = "pix-help-h-title";
-  title.textContent = helpDef.title || "Help";
+  title.textContent = helpDef.title || "帮助";
   const close = document.createElement("button");
   close.className = "pix-help-close";
   close.type = "button";
   close.textContent = "✕";
-  close.title = "Close (Esc)";
+  close.title = "关闭（Esc）";
   header.appendChild(icon);
   header.appendChild(title);
   header.appendChild(close);
@@ -373,8 +373,8 @@ export function openHelpPopup(helpDef, opts = {}) {
     const more = document.createElement("button");
     more.type = "button";
     more.className = "pix-help-more";
-    more.textContent = "Open the full help";
-    more.title = "Every node, the canvas tools and the guides, in a window you can keep open";
+    more.textContent = "打开完整帮助";
+    more.title = "全部节点、画布工具和教程，开在一个可以一直留着的窗口里";
     more.addEventListener("click", (e) => {
       e.stopPropagation();
       const cls = opts.comfyClass || opts.pageKey;
@@ -427,7 +427,7 @@ export function createHelpButton(helpDef, opts = {}) {
   const btn = document.createElement("button");
   btn.className = "pix-help-btn";
   btn.type = "button";
-  btn.title = opts.title || `Help: learn how ${helpDef.title || "this node"} works`;
+  btn.title = opts.title || `帮助：看看「${helpDef.title || "这个节点"}」怎么用`;
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
     e.preventDefault();

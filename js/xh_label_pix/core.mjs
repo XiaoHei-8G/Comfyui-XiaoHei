@@ -1,7 +1,8 @@
 import { app } from "../../../scripts/app.js";
+import { xhIconHTML } from "../xh_ui_kit.js";
 import { createPixaromaColorPicker, PIXAROMA_PALETTE } from "../shared/color_picker.mjs";
 import { openHelpPopup, openHelpFor, closeHelpPopup } from "../shared/help.mjs";
-import { pixAsset } from "../shared/api_url.mjs";
+import { makeXhLogo } from "../shared/brand_logo.mjs";
 import { installGraphUndoGuard } from "../shared/graph_undo_guard.mjs";
 import {
   DEFAULTS,
@@ -15,7 +16,7 @@ import {
 // Shared-style help (same themed popup as the Group help). Registered for the
 // selection-toolbar ? button (index.js) AND opened by the in-editor ? button.
 export const LABEL_HELP = {
-  title: "XiaoHei-浮字标签",
+  title: "浮字标签 小黑",
   tagline: "贴在画布上的一块文字说明，用来给工作流写标注。双击画布上的标签即可打开这个编辑器。",
   sections: [
     // 原版这里曾有两个互相覆盖的帮助条目，后加载的会静默盖掉前一个，
@@ -196,17 +197,17 @@ export class LabelEditor {
     // ── Header
     const header = el("div", "xh-lbl-header");
     const titleSpan = el("span", "xh-lbl-title");
-    const logo = document.createElement("img");
-    logo.src = pixAsset("xh_logo.svg");
-    logo.className = "xh-lbl-title-logo";
-    titleSpan.appendChild(logo);
+    // 2026-11-19：原为 <img src="xh_logo.svg">（底色写死旧品牌橙）⇒ 换主题后
+    // 左上角仍是一块橙。改走家族内联 logo，底色跟 --xh-primary。
+    titleSpan.appendChild(makeXhLogo("xh-lbl-title-logo", 18));
     titleSpan.append(" 标签编辑器 ");
     const brandSpan = el("span", "xh-lbl-title-brand");
-    brandSpan.textContent = "XH";
+    brandSpan.textContent = "XiaoHei";
     titleSpan.appendChild(brandSpan);
     header.appendChild(titleSpan);
     const closeBtn = el("button", "xh-lbl-close");
-    closeBtn.textContent = "×";
+    closeBtn.dataset.xhIconDone = "1";
+    closeBtn.innerHTML = xhIconHTML("x", { size: 14, color: "current" });
     closeBtn.onclick = () => this.close();
     header.appendChild(closeBtn);
     panel.appendChild(header);
@@ -484,7 +485,8 @@ export class LabelEditor {
     // ── Footer
     const footer = el("div", "xh-lbl-footer");
     const helpBtn = el("button", "xh-lbl-help-btn");
-    helpBtn.textContent = "?";
+    helpBtn.dataset.xhIconDone = "1";
+    helpBtn.innerHTML = xhIconHTML("circle-help", { size: 14, color: "current" });
     helpBtn.title = "帮助";
     helpBtn.onclick = () => this._showHelp();
     const resetBtn = el("button", "xh-lbl-btn-reset");
@@ -537,8 +539,8 @@ export class LabelEditor {
     v.className = "xh-lbl-spinval";
     const spin = document.createElement("div");
     spin.className = "xh-lbl-spinbtns";
-    const up = document.createElement("button"); up.type = "button"; up.textContent = "▲"; up.title = "增大";
-    const dn = document.createElement("button"); dn.type = "button"; dn.textContent = "▼"; dn.title = "减小";
+    const up = document.createElement("button"); up.type = "button"; up.dataset.xhIconDone = "1"; up.innerHTML = xhIconHTML("chevron-up", { size: 11, color: "current" }); up.title = "增大";
+    const dn = document.createElement("button"); dn.type = "button"; dn.dataset.xhIconDone = "1"; dn.innerHTML = xhIconHTML("chevron-down", { size: 11, color: "current" }); dn.title = "减小";
     spin.appendChild(up); spin.appendChild(dn);
     vWrap.appendChild(v); vWrap.appendChild(spin);
 

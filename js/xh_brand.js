@@ -40,7 +40,9 @@ const { app } = window.comfyAPI.app;
  *  2026-10-29：原来用纯白 #ffffff（毫无身份感）⇒ 改成**家族品牌色**（琥珀金）。
  *    「统一色」模式本来就是"整个家族一个记号"的功能 ⇒ 用品牌色正合适。
  */
-const UNIFORM_HEX = "#E8A33C";   // = XH_BRAND.MAIN（唯一真源在 xh_ui_kit.js）
+//  2026-11-17 主题预设化：统一色改读 window.XH_THEME.main()，未加载时回退经典金。
+const _theme = () => (typeof window !== "undefined" ? window.XH_THEME : null);
+const _uniformHex = () => { const t = _theme(); return t ? t.main() : "#E8A33C"; };
 
 /**
  *  默认模式「统一石墨」（2026-10-29 方案 B；模式名沿用，避免破坏用户已存的设置值）
@@ -52,13 +54,19 @@ const UNIFORM_HEX = "#E8A33C";   // = XH_BRAND.MAIN（唯一真源在 xh_ui_kit.
  *   ② 标题栏左上角的 6px 分类色小方块**取消**（绘制在 xh_ui_kit.js；本文件仍保留
  *      __xhCatHex 作为家族身份链标记， 但不再用于任何显示）。
  *
+ * 🔴 2026-11-17 更新：午夜蓝那条已被「主题预设」取代（见下方注释）。
+ *   「经典黑金」预设原本也用午夜蓝 ⇒ 名不副实（金按钮配蓝标题），
+ *   现已改成暖黑底 + 金色标题字，才是真正的黑金。
+ *
  * 分工：
- *   · 标题栏 = 午夜蓝（全家族一个色，不再五花八门）
+ *   · 标题栏 = 当前主题预设的标题色（全家族一个色，不再五花八门）
  *   · 顶部   = 无（2026-11-06 用户要求去掉黄/金线，标题栏排版全部交回官方）
  *   · 标题前 = 无（2026-11-08 取消小方块）
  *   · 主体   = 官方主题底色，仍跟随官方深/浅色切换（本次不动）
  */
-const GRAPHITE_TITLE_HEX = "#01386A";   // 标题栏午夜蓝（固定；深浅主题都不切官方色）
+//  主题预设化：标题栏色读所选预设（默认松绿）。
+//  2026-11-19：经典黑金预设已删除 ⇒ 兜底从暖黑 #1A1613 改成松绿标题 #0D3527。
+const _titleHex = () => { const t = _theme(); return t ? t.title() : "#0D3527"; };
 const GRAPHITE_BODY_HEX  = "#262626";   // 节点主体（深色主题）
 const GRAPHITE_BODY_LIGHT_HEX  = "#f2f2f2";   // 节点主体（浅色主题）
 
@@ -196,12 +204,12 @@ export function applyAutoColor(node, mode) {
   const cat = String(node.constructor?.category || node.category || "");
 
   //  默认模式（2026-11-08 改）
-  //   标题栏 = 固定午夜蓝， 不再按主题切官方浅色 surface（用户「不用官方的那个」）
+  //   标题栏 = 当前主题预设的标题色， 不按官方浅色 surface 走（用户「不用官方的那个」）
   //   主体   = 官方主题底色，仍随深浅主题切换
   //   __xhCatHex = 只作家族身份链标记， 不再绘制小方块
   if (mode === MODE_GRAPHITE) {
     const light = _isLightThemeSafe();
-    const title = GRAPHITE_TITLE_HEX;
+    const title = _titleHex();
     const body  = light ? GRAPHITE_BODY_LIGHT_HEX  : GRAPHITE_BODY_HEX;
     node.color = title;
     node.bgcolor = body;
@@ -211,7 +219,7 @@ export function applyAutoColor(node, mode) {
     return true;
   }
 
-  const hex = mode === "统一色" ? UNIFORM_HEX : hexForCategory(cat);
+  const hex = mode === "统一色" ? _uniformHex() : hexForCategory(cat);
   if (!hex) return false;
   node.color = hex;
   node.bgcolor = darken(hex, 0.42);
@@ -329,6 +337,15 @@ app.registerExtension({
   async setup() {
     try { installVueTitleAutoColor(); } catch (e) {}
 
+    //  2026-11-17 主题预设切换 ⇒ 重刷全家族节点标题栏。
+    //    refreshNode 内部 stripAutoColor 会先撤掉「我们上的色」再按新预设重铺，
+    //    手动选色/存档色的节点（node.color 有值且非 __xhAutoColorHex）不会被碰。
+    try {
+      document.addEventListener("xh-theme-preset-change", () => {
+        setTimeout(() => { try { refreshAllXHNodes(); } catch (e) {} }, 20);
+      });
+    } catch (e) {}
+
     // 注册设置项
     try {
       const S = app.ui && app.ui.settings;
@@ -338,10 +355,10 @@ app.registerExtension({
           id: SETTING_ID,
           name: "节点配色",
           type: "combo",
-          // 2026-11-08：默认模式标题栏固定午夜蓝，分类小方块已取消；模式名沿用「统一石墨」以免破坏已存设置值
+          // 2026-11-17：默认模式标题栏走主题预设色，分类小方块已取消；模式名沿用「统一石墨」以免破坏已存设置值
           defaultValue: MODE_GRAPHITE,
           options: MODES,
-          tooltip: "XiaoHei 节点的默认配色。统一石墨=全家族标题栏午夜蓝 #01386A（不随官方主题切换）；按分类=每类一个色系；统一色=全家族同色；关闭=不上色。只影响没设过颜色的节点，你自己选过的色不会被覆盖。",
+          tooltip: "XiaoHei 节点的默认配色。统一石墨=全家族标题栏同一个色（跟当前主题预设走，经典黑金=暖黑底金字）；按分类=每类一个色系；统一色=全家族同色；关闭=不上色。只影响没设过颜色的节点，你自己选过的色不会被覆盖。",
           category: ["XiaoHei", "外观", "节点配色"],
           //  2026-10-29：组间顺序只认 sortOrder（降序）+ 组名拼音。
           //    「外观」不写这个就会按拼音排到「连线」后面（wai > lian）⇒ 掉到最底。

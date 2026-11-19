@@ -160,10 +160,10 @@ export function buildBgRemovalDropdown({ container, info, value, onChange }) {
       helpRow.style.display = "";
       helpRow.innerHTML =
         `<a href="${v.downloadUrl}" target="_blank" rel="noopener" ` +
-        `style="color:#E8A33C;text-decoration:underline;cursor:pointer;">下载 ${v.filename}</a>` +
+        `style="color:var(--xh-primary,#E8A33C);text-decoration:underline;cursor:pointer;">下载 ${v.filename}</a>` +
         ` 并放入 <code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">${info.birefnet?.modelDir || "ComfyUI/models/background_removal"}</code>。 ` +
         `<a href="${HELP_DOCS_URL}" target="_blank" rel="noopener" ` +
-        `style="color:#E8A33C;text-decoration:underline;cursor:pointer;">了解更多</a>`;
+        `style="color:var(--xh-primary,#E8A33C);text-decoration:underline;cursor:pointer;">了解更多</a>`;
       return;
     }
 
@@ -177,7 +177,7 @@ export function buildBgRemovalDropdown({ container, info, value, onChange }) {
         `<code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">python.exe -m pip install rembg</code>。 ` +
         `重启 ComfyUI。 ` +
         `<a href="${HELP_DOCS_URL}" target="_blank" rel="noopener" ` +
-        `style="color:#E8A33C;text-decoration:underline;cursor:pointer;">了解更多</a>`;
+        `style="color:var(--xh-primary,#E8A33C);text-decoration:underline;cursor:pointer;">了解更多</a>`;
       return;
     }
 
@@ -189,7 +189,7 @@ export function buildBgRemovalDropdown({ container, info, value, onChange }) {
         `在 ComfyUI/python_embeded 中执行 <code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">python.exe -m pip install --upgrade rembg</code> ` +
         `，然后重启。 ` +
         `<a href="${HELP_DOCS_URL}" target="_blank" rel="noopener" ` +
-        `style="color:#E8A33C;text-decoration:underline;cursor:pointer;">了解更多</a>`;
+        `style="color:var(--xh-primary,#E8A33C);text-decoration:underline;cursor:pointer;">了解更多</a>`;
       return;
     }
 

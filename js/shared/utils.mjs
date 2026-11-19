@@ -7,7 +7,7 @@ import { pixApiUrl, pixAsset } from "./api_url.mjs";
 export const allow_debug = false;
 
 export const PIXAROMA_LOGO = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="#E8A33C"/>  <g transform="translate(14,14) scale(1.5)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">    <circle cx="11" cy="4" r="2" />    <circle cx="18" cy="8" r="2" />    <circle cx="20" cy="16" r="2" />    <path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" />  </g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="var(--xh-primary,#E8A33C)"/>  <g transform="translate(14,14) scale(1.5)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">    <circle cx="11" cy="4" r="2" />    <circle cx="18" cy="8" r="2" />    <circle cx="20" cy="16" r="2" />    <path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" />  </g></svg>
 `)}`;
 
 export const BRAND = "#E8A33C";
@@ -69,7 +69,7 @@ export function createDummyWidget(titleText, subtitleText, instructionText) {
   subtitle.style.cssText = `
       font-size: 18px;
       font-weight: 700;
-      color: #E8A33C;
+      color: var(--xh-primary,#E8A33C);
       margin: 0;
       line-height: 1.2;
     `;
@@ -214,7 +214,7 @@ export function createPlaceholder(name, buttonLabel, node, app) {
     ctx.textAlign = "center";
     ctx.fillText(name, 240, 128);
     ctx.fillStyle = BRAND;
-    ctx.fillText("XH", 240, 150);
+    ctx.fillText("XiaoHei", 240, 150);
     ctx.fillStyle = "#555";
     ctx.font = "11px 'Segoe UI', system-ui, sans-serif";
     ctx.fillText("Click '" + buttonLabel + "' to start", 240, 175);

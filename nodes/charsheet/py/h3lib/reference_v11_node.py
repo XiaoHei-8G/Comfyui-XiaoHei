@@ -12,7 +12,7 @@ from .node import runtime_max_resolution
 
 
 class H3CharacterSheetDesignerReferenceV11:
-    CATEGORY = 'H3/Character Sheet'
+    CATEGORY = '小黑家族'
     DESCRIPTION = (
         '13-view character sheet with two optional part references. Fan out the character '
         'to character_image and Core ref_images.ref_image_0; extra 1/2 to both Designer and Core '

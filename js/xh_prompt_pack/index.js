@@ -14,6 +14,7 @@ import { app } from "../../../scripts/app.js";
 import { api } from "../../../scripts/api.js";
 import { isVueNodes, applyAdaptiveCanvasOnly } from "../shared/nodes2.mjs";
 import { installResizeFloor } from "../shared/resize_floor.mjs";
+import { exposePromptWidget } from "../shared/prompt_assistant_compat.mjs";
 import { installCanvasZoomPassthrough } from "../shared/canvas_zoom.mjs";
 import { installNativeTextMenu } from "../shared/native_text_menu.mjs";
 import { registerNodeAccent, installNodeAccent } from "../shared/node_settings.mjs";
@@ -55,6 +56,8 @@ export function setupNode(node) {
     margin: 4, serialize: false,
   });
   applyAdaptiveCanvasOnly(w);
+  // 让第三方「提示词小助手」认出主文本框：只补 widget 外观属性，不增删 widget。
+  exposePromptWidget(node, w, () => root.querySelector("textarea"));
   // 🔴 拖动下限同样是常量。一旦 measureFn 读「当前 DOM 高度」，用户把节点
   //    拉到 700px 后下限就变成 698px，节点再也缩不回去（2026-11-12 真机实测）。
   //    内容放不下由文本框自己滚动，绝不反向写 node.size。
@@ -69,6 +72,8 @@ export function setupNode(node) {
     try { node._xhPpFloorOff?.(); } catch (_e) { /* ignore */ }
     node._xhPpFloorOff = null;
     node._xhPpRoot = null;
+    node._xhPaBridge?.dispose?.();
+    node._xhPaBridge = null;
     try { return prevRemoved?.apply(this, a); } catch (_e) { return undefined; }
   };
   node.setDirtyCanvas?.(true, true);

@@ -247,7 +247,7 @@ function xhAddCopyBar(node) {
 
     btn.addEventListener("click", async () => {
         const text = xhReadPreview(node);
-        if (!text) { flash(false, "还没有内容可复制", "#E8A33C"); return; }
+        if (!text) { flash(false, "还没有内容可复制", "var(--xh-primary,#E8A33C)"); return; }
         const ok = await xhCopyText(text);
         if (ok) flash(true, "已复制 " + text.length + " 字", "#5DCAA5");
         else flash(false, "复制失败，请手动选中文字", "#F09595");

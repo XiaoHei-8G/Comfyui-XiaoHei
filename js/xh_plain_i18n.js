@@ -223,12 +223,12 @@ const PLAIN = {
     XHImageBatchMulti: {
         zh: {
             title: "图像批量合并",
-            widgets: { inputcount: "输入口数量", image_1: "第 1 张图", image_2: "第 2 张图" },
+            widgets: { image_1: "第 1 张图", image_2: "第 2 张图" },
             slots: { images: "合并图" },
         },
         en: {
             title: "Batch Images",
-            widgets: { inputcount: "Inputs", image_1: "Image 1", image_2: "Image 2" },
+            widgets: { image_1: "Image 1", image_2: "Image 2" },
             slots: { images: "Images" },
         },
     },

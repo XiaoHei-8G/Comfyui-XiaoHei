@@ -56,7 +56,7 @@ img[src*="/xh_icons/svg/"] { filter: brightness(0) invert(1); }
 
 /* ── CSS Custom Properties ──────────────────────────── */
 .pxf-overlay {
-  --pxf-accent: #E8A33C;
+  --pxf-accent: var(--xh-primary,#E8A33C);
   --pxf-accent-hover: #c47f23;
   --pxf-bg-darkest: #131415;
   --pxf-bg-dark: #171718;
@@ -72,7 +72,7 @@ img[src*="/xh_icons/svg/"] { filter: brightness(0) invert(1); }
   --pxf-text-dimmer: #666;
   --pxf-text-label: #999;
   --pxf-select-bg: #2a1800;
-  --pxf-select-border: #E8A33C;
+  --pxf-select-border: var(--xh-primary,#E8A33C);
   --pxf-multi-bg: #0a1a2a;
   --pxf-multi-border: #0ea5e9;
   --pxf-danger: #d46060;
@@ -187,7 +187,7 @@ img[src*="/xh_icons/svg/"] { filter: brightness(0) invert(1); }
    overlapped AudioReact's bottom-left transport buttons. :empty hides it
    until an editor actually writes text via setStatusText(). */
 .pxf-tool-info:empty { display: none; }
-.pxf-tool-info.warn { color: #E8A33C; }
+.pxf-tool-info.warn { color: var(--xh-primary,#E8A33C); }
 .pxf-tool-info.error { color: #f08080; }
 
 /* ── Panel / Section ────────────────────────────────── */

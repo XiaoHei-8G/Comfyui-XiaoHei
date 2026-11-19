@@ -10,14 +10,14 @@ string is attacker-controlled, and any of them that reaches the filesystem needs
 a containment check.
 
 The pack already had three CORRECT containment idioms in-tree
-(`_resolve_pixaroma_path`, `_load_server_image`'s realpath+startswith, and
+(`_resolve_xiaohei_path`, `_load_server_image`'s realpath+startswith, and
 `_font_catalog.resolve_custom_file`) - and the 2026-08-03 audit found that every
 single vulnerable site was one that skipped them. Copy-paste guards drift; a
 shared one cannot. Import from here, do not re-roll.
 
 THE TWO KINDS OF PLACE
 ----------------------
-1. FIXED roots we own (input/pixaroma, output, temp). Use `is_path_under`.
+1. FIXED roots we own (input/xiaohei, output, temp). Use `is_path_under`.
 2. The user's OWN folders, for the deliberately "any folder on my machine"
    features (Save Image's any-folder save, Load Images from Folder). Use
    `folder_allowed`. See the trust model below.
@@ -43,7 +43,7 @@ hand. It is HAND-EDIT ONLY and must NEVER become settable through a route: a
 route that flips it would be a one-call bypass of this whole file, which would
 make the guard decorative. If you are about to add such a route, don't.
 
-Config file: <ComfyUI user dir>/pixaroma/allowed_folders.json
+Config file: <ComfyUI user dir>/xiaohei/allowed_folders.json
     {"folders": ["D:\\\\MyArt", ...], "allow_any": false}
 It lives in ComfyUI's user directory, NOT in this plugin's folder, for the same
 reasons the Civitai key does: the plugin folder is a git repo (one `git add -A`
@@ -246,14 +246,14 @@ def comfy_roots() -> list:
 
 
 def _config_path() -> str:
-    """<ComfyUI user dir>/pixaroma/allowed_folders.json.
+    """<ComfyUI user dir>/xiaohei/allowed_folders.json.
 
     The fallback (very old ComfyUI with no get_user_directory) goes to the
     user's HOME, deliberately NOT to a `user/` folder inside this plugin.
     The plugin folder is a git working tree, and this file lists the user's
     personal folder paths - one `git add -A` from being published. Caught
     2026-08-03 when a harness with no ComfyUI on the path silently created
-    `ComfyUI-Pixaroma/user/pixaroma/` inside the repo, where nothing was
+    `ComfyUI-XiaoHei/user/xiaohei/` inside the repo, where nothing was
     ignoring it. (`user/` is now in .gitignore as a second line of defence,
     which also covers the Civitai key's older same-shaped fallback.)
     """
@@ -264,10 +264,10 @@ def _config_path() -> str:
     except Exception:
         base = None
     if not base:
-        base = os.path.join(os.path.expanduser("~"), ".pixaroma")
+        base = os.path.join(os.path.expanduser("~"), ".xiaohei")
     # NO makedirs here: this is called on every read, and the read path runs
     # per file in a gallery. Creating the directory is the WRITER's job.
-    return os.path.join(base, "pixaroma", _CONFIG_NAME)
+    return os.path.join(base, "xiaohei", _CONFIG_NAME)
 
 
 def _read_config() -> dict:
@@ -530,24 +530,25 @@ def denied_message(path: str) -> str:
         # the last step covers a ComfyUI used from ANOTHER computer (--listen, a service): Browse
         # then opens its window on the ComfyUI PC's screen (review round 1, 2026-10-09)
         steps = (
-            "  - Workflow from someone else? Their folder is not on your PC: click Browse "
-            "on the node and pick a folder of your own.\n"
-            "  - Your own folder? Click Browse and pick it once. After that it always works.\n"
-            "  - No folder window opens (ComfyUI runs on another computer)? Add the folder to "
-            "\"folders\" in\n"
+            "  - 别人的工作流？对方的文件夹不在你这台电脑上：点节点上的「浏览」，"
+            "选一个你自己的文件夹。\n"
+            "  - 就是你自己的文件夹？点「浏览」选一次，之后一直能用。\n"
+            "  - 弹不出文件夹窗口（ComfyUI 跑在别的电脑上）？把文件夹加到\n"
             "    {config}\n"
+            "    里的 \"folders\" 那一项。\n"
         ).format(config=_config_path())
     else:
         steps = (
-            "  - Workflow from someone else? Their folder is not on your PC: type the path "
-            "of a folder of your own inside ComfyUI's input or output folder.\n"
-            "  - Your own folder somewhere else? This install has no folder dialog, so allow "
-            "it by hand: add it to \"folders\" (or set \"allow_any\": true) in\n"
+            "  - 别人的工作流？对方的文件夹不在你这台电脑上：直接手打一个你自己的"
+            "文件夹路径，放在 ComfyUI 的 input 或 output 文件夹里。\n"
+            "  - 是你自己的文件夹，但装在别处？这个环境没有文件夹选择窗口，只能手动放行："
+            "把它加到\n"
             "    {config}\n"
+            "    里的 \"folders\"（或把 \"allow_any\" 设成 true）。\n"
         ).format(config=_config_path())
     return (
-        "[Pixaroma] This folder is not approved on this PC, so it was not used:\n"
+        "[XiaoHei] 这个文件夹没在这台电脑上被放行，所以没有使用：\n"
         "  {path}\n".format(path=path)
         + steps
-        + "  ComfyUI's own input, output and temp folders always work."
+        + "  ComfyUI 自己的 input、output、temp 文件夹永远能用。"
     )

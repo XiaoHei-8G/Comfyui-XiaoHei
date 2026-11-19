@@ -2,22 +2,31 @@
 
 [🇬🇧 English](README_EN.md) · [🇨🇳 中文]
 
-> ComfyUI 实用节点集合：**126 个节点 · 36 个音效**，主打低显存友好 + 工作流提效。
+> ComfyUI 实用节点集合：**141 个节点 · 36 个音效**，主打低显存友好 + 工作流提效。
 
-![版本](https://img.shields.io/badge/version-1.0.2-blue) ![节点数](https://img.shields.io/badge/nodes-126-green) ![协议](https://img.shields.io/badge/license-MIT-yellow)
+![版本](https://img.shields.io/badge/version-1.0.3-blue) ![节点数](https://img.shields.io/badge/nodes-141-green) ![协议](https://img.shields.io/badge/license-MIT-yellow)
 
 ## 安装
 
 **方式一 · Manager 一键装（推荐）**
 在 ComfyUI Manager 搜索以下任一关键词即可安装：
-`小黑` · `Comfyui-XiaoHei` · `工具箱` · `低显存` · `126`
+`小黑` · `Comfyui-XiaoHei` · `工具箱` · `低显存` · `141`
 
 **方式二 · 手动**
 ```bash
 git clone https://github.com/XiaoHei-8G/Comfyui-XiaoHei.git
 # 放进 <ComfyUI>/custom_nodes/ 后重启 ComfyUI
 ```
-依赖（opencv-python / scenedetect / rotary-embedding-torch / imageio-ffmpeg）由 Manager 或启动自检自动处理，详见 [docs/安装与依赖详解.md](docs/安装与依赖详解.md)。
+**依赖怎么装，看你是哪种安装：**
+- **Manager 一键装**：会自动读 `requirements.txt` 把 4 个依赖装好，不用管。
+- **手动装（git clone / 网盘 zip 解压）**：**不会自动装依赖**，必须自己执行一次，否则部分节点加载不出来、界面会报「缺失节点包 / 未知包」—— 那不是包坏了，是缺库：
+```bash
+# 官方便携版
+<ComfyUI>\python_embeded\python.exe -m pip install -r "custom_nodes\Comfyui-XiaoHei\requirements.txt"
+# venv 版
+<ComfyUI>\.venv\Scripts\python.exe -m pip install -r "custom_nodes\Comfyui-XiaoHei\requirements.txt"
+```
+装完**完全退出 ComfyUI 再重开**（刷新网页没用）。四个依赖是 `opencv-python` / `scenedetect` / `rotary-embedding-torch` / `imageio-ffmpeg`，详见 [docs/安装与依赖详解.md](docs/安装与依赖详解.md)。
 
 ## 节点总览
 
@@ -38,7 +47,7 @@ git clone https://github.com/XiaoHei-8G/Comfyui-XiaoHei.git
 
 ```
 Comfyui-XiaoHei/
-├── nodes/      # 26 个功能模块（126 节点）
+├── nodes/      # 34 个功能模块（141 节点）
 ├── js/         # 前端（含 36 个音效 sounds/）
 ├── docs/       # 详细文档（节点清单 / 万能遮罩详解 / 安装依赖）
 ├── __init__.py

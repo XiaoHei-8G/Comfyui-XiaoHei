@@ -1,6 +1,7 @@
 // ============================================================
 // Pixaroma Paint Studio — Core + Full UI  v4 (Framework)
 // ============================================================
+import { xhIconHTML } from "../xh_ui_kit.js";
 import {
   BrushEngine,
   hexToRgb,
@@ -57,14 +58,14 @@ function injectPaintExtraStyles() {
     width:38px; height:38px; border-radius:5px; cursor:pointer; border:2px solid #555;
     transition:border-color .12s; flex-shrink:0;
 }
-.ppx-fg-swatch { border-color:#E8A33C; }
-.ppx-fg-swatch:hover, .ppx-bg-swatch:hover { border-color:#E8A33C; }
-.ppx-swap-btn { background:none; border:none; color:#999; cursor:pointer; font-size:13px; padding:2px; }
-.ppx-swap-btn:hover { color:#E8A33C; }
+.ppx-fg-swatch { border-color:var(--xh-primary,#E8A33C); }
+.ppx-fg-swatch:hover, .ppx-bg-swatch:hover { border-color:var(--xh-primary,#E8A33C); }
+.ppx-swap-btn { background:none; border:none; color:var(--foreground,#999); cursor:pointer; font-size:13px; padding:2px; }
+.ppx-swap-btn:hover { color:var(--xh-primary,#E8A33C); }
 /* Paint-specific: swatch grid */
 .ppx-swatches-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:2px; flex-shrink:0; }
 .ppx-swatch { aspect-ratio:1; border-radius:2px; cursor:pointer; border:1px solid #222; transition:transform .1s; }
-.ppx-swatch:hover { transform:scale(1.25); border-color:#E8A33C; z-index:2; }
+.ppx-swatch:hover { transform:scale(1.25); border-color:var(--xh-primary,#E8A33C); z-index:2; }
 /* Paint-specific: hex row */
 .ppx-hex-row { display:flex; align-items:center; gap:4px; }
 .ppx-hex-row input {
@@ -82,11 +83,11 @@ function injectPaintExtraStyles() {
 /* Paint-specific: shape buttons in top options bar */
 .ppx-shape-btn {
     width:24px; height:22px; cursor:pointer; border:1px solid #3a3d40;
-    background:#1c1e1f; color:#ccc; border-radius:3px; font-size:12px;
+    background:#1c1e1f; color:var(--foreground,#ccc); border-radius:3px; font-size:12px;
     display:flex; align-items:center; justify-content:center; flex-shrink:0;
     transition:all .12s;
 }
-.ppx-shape-btn:hover, .ppx-shape-btn.active { background:#E8A33C; color:#fff; border-color:#E8A33C; }
+.ppx-shape-btn:hover, .ppx-shape-btn.active { background:var(--xh-primary,#E8A33C); color:#fff; border-color:var(--xh-primary,#E8A33C); }
 /* Paint-specific: top options bar extra styling */
 .pxf-top-options label { font-size:10px; color:#999; white-space:nowrap; }
 .pxf-top-options input[type=range] { width:60px; cursor:pointer; flex-shrink:0; }
@@ -103,8 +104,8 @@ function injectPaintExtraStyles() {
     margin-bottom:4px; line-height:1.4;
 }
 /* Paint-specific: layer item drag states (old class compat) */
-.pxf-layer-item.ppx-drag-over-top    { border-top:2px solid #E8A33C !important; }
-.pxf-layer-item.ppx-drag-over-bottom { border-bottom:2px solid #E8A33C !important; }
+.pxf-layer-item.ppx-drag-over-top    { border-top:2px solid var(--xh-primary,#E8A33C) !important; }
+.pxf-layer-item.ppx-drag-over-bottom { border-bottom:2px solid var(--xh-primary,#E8A33C) !important; }
 .pxf-layer-item.ppx-dragging { opacity:0.35; }
 /* Paint-specific: help strip (now uses framework status bar) */
 .ppx-help-strip-unused {
@@ -112,7 +113,7 @@ function injectPaintExtraStyles() {
 /* Paint-specific: BG color popup */
 .ppx-color-popup {
     position:fixed; z-index:20000; background:#1a1c1d;
-    border:1px solid #E8A33C; border-radius:6px;
+    border:1px solid var(--xh-primary,#E8A33C); border-radius:6px;
     padding:8px; display:flex; flex-direction:column; gap:6px;
     box-shadow:0 8px 24px rgba(0,0,0,.6);
 }
@@ -556,7 +557,8 @@ export class PaintStudio {
     const swapBtn = document.createElement("button");
     swapBtn.className = "ppx-swap-btn";
     swapBtn.title = "交换前景/背景（X）";
-    swapBtn.textContent = "\u21c4";
+    swapBtn.dataset.xhIconDone = "1";
+    swapBtn.innerHTML = xhIconHTML("arrow-left-right", { size: 14, color: "current" });
     swapBtn.addEventListener("click", () => this._swapColors());
     const resetColorBtn = document.createElement("button");
     resetColorBtn.className = "ppx-swap-btn";

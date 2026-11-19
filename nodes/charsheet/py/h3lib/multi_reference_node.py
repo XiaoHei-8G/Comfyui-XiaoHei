@@ -28,7 +28,7 @@ def validate_reference_image(image, name, *, required=False):
 
 
 class H3CharacterSheetDesignerMultiReference:
-    CATEGORY = "H3/Character Sheet"
+    CATEGORY = "小黑家族"
     DESCRIPTION = (
         "13 views with a required character image and two optional role references. "
         "Wire character_image, layout_image, reference_image_1 and reference_image_2 "

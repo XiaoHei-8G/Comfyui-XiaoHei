@@ -2,13 +2,15 @@
 // ① 语言桥：window.XH_LANG accessor + xh:lang-changed 广播（全家族同步）
 // ② 中/EN：节点标题 + 参数标签 + 输入/输出端口名（含动态端口 image_1..image_N）
 // ③  家族 12 色 + 自定义取色器（本版新增，之前缺）
-// ④ 动态输入槽：给 XHImageBatchMulti 加「 更新输入口」按钮
-//    （逻辑移植自 comfyui-kjnodes/web/js/jsnodes.js 的 setupDynamicInputs，行为一致）
+// ④ 动态输入槽：XHImageBatchMulti 最后一个口接上线即自动追加下一个空口
+//    （2026-11-16 去掉「输入口数量」+「更新输入口」两个手动控件）
 //
 // 只改 label / title，绝不改 name —— 后端按 name 取参数，改了会坏。
 // 工具条走 addDOMWidget({serialize:false}) 且只 append，禁止 unshift（会顶乱 widgets_values 下标）。
 const { app } = window.comfyAPI.app;
 import { ensureLangBridge, makeXHToolbar, onLangChanged, releaseButtons, applyComboLabels, showXHPicker, fixWidgetValuesFromSaved , paintBarBtn, xhPlaceBeside, xhFollowAnchor, xhIconHTML, xhDecorateButton} from "./xh_ui_kit.js";
+//  XiaoHei-图像对比拼图：文字色 / 背景色 用家族完整取色画板（36 色卡 + SV 平面 + 色相条 + Hex）
+import { opeXHColorPickerPopup, XH_PICKER_PALETTE } from "./xh_color_picker.js";
 //  2026-11-08：1:1 复刻的 WepeNerd 24 个节点接进家族中/EN 三表（专属词条，不污染家族原有词条）
 import { WN_NODES_ZH, WN_NODES_EN, WN_COMBO, isWNNode, wnText, wnUIFull } from "./xh_wepenerd/xh_wn_i18n.mjs";
 //  2026-11-09：XiaoHei-Qwen21 编辑四件套（复刻 BlueBox）接进家族中/EN 三表
@@ -101,7 +103,7 @@ const XH_I18N = {
             XHImageScaleByAspectRatio: "按比例缩放",
             XHLTXIdentityOverlap: "LTX锁脸",
             XHLabel: "标签",
-            XHLabelPix: "浮字标签",
+            XHLabelPix: "浮字标签 XiaoHei",
             XHLoadAudio: "加载音频",
             XHLoadVideo: "加载视频",
             XHLoopIteration: "循环迭代",
@@ -115,7 +117,7 @@ const XH_I18N = {
             XHMultiSet: "多路设置",
             XHNumberConvert: "数值转换",
             XHNumberCounter: "数字计数器",
-            XHPaint: "画板",
+            XHPaint: "画板 XiaoHei",
             XHPowerLoraStack: "LoRA堆栈",
             XHPureLoraStack: "纯LoRA堆栈",
             XHResolutionSelect: "分辨率选择器",
@@ -139,8 +141,33 @@ const XH_I18N = {
             XHVoiceSeparatorSampler: "人声分离(采样)",
             XH_ChainPromptSelector: "提示词表",
             XH_DynamicPromptJoin: "提示词联结(动态)",
+            //  局部重绘两件套（2026-11-19 补：之前漏进表 ⇒ 参数名一直是英文）
+            XHInpaintCrop: "局部重绘裁剪 XiaoHei",
+            XHInpaintStitch: "局部重绘贴回 XiaoHei",
+            //  2026-11-19 第二批：这批节点是 1:1 复刻进来的，之前**整批漏进表**
+            //    ⇒ isXHNode=false，参数标签/端口名/标题都不跟家族语言切换。
+            XHLoadImage: "加载图片 XiaoHei",
+            XHLoadImageMini: "轻量加载图片 XiaoHei",
+            XHSaveImage: "保存图片 XiaoHei",
+            XHInfo: "说明 XiaoHei",
+            XHNumberPick: "数字选择 XiaoHei",
+            XHSketch: "标注 XiaoHei",
+            XH_AudioStudio: "图片蹦迪 XiaoHei",
+            XH_ResolutionQuick: "一键分辨率 XiaoHei",
+            XH_Sizes: "尺寸清单 XiaoHei",
         },
         widgets: {
+            //  局部重绘两件套（XHInpaintCrop / XHInpaintStitch 共用）
+            size_mode: "尺寸模式",
+            target: "目标",
+            multiple: "倍数",
+            context_px: "上下文余量",
+            mask_grow: "遮罩外扩",
+            mask_blur: "遮罩虚化",
+            softness: "接缝羽化",
+            blend_mode: "贴回方式",
+            invert_mask: "反选遮罩",
+            color_match: "颜色校正",
             //  音乐卡点表
             audio: "音频(整首曲子)",
             // XiaoHei-H3 latent接续
@@ -180,10 +207,8 @@ const XH_I18N = {
             resize_mode: "调整类型",
             size: "目标尺寸",
             interpolation: "缩放方法",
-            // 图像批量合并
-            inputcount: "输入口数量",
-            xh_update_inputs: " 更新输入口",
             // 参考图拼接板
+            inputcount: "输入口数量",
             preset: " 目标画幅",
             layout: " 版式",
             gap: " 格间距",
@@ -327,6 +352,8 @@ const XH_I18N = {
             // 图像缩放 v2
             image: "图像",
             mask: "蒙版",
+            crop_info: "裁剪信息",
+            original: "原图",
             IMAGE: "图像",
             MASK: "蒙版",
             // XiaoHei-遮罩上色
@@ -443,7 +470,7 @@ const XH_I18N = {
                 XHImageScaleByAspectRatio: "XHImage Scale By Aspect Ratio",
                 XHLTXIdentityOverlap: "XHLTXIdentity Overlap",
                 XHLabel: "XHLabel",
-                XHLabelPix: "XHLabel Pix",
+                XHLabelPix: "Floating Label XiaoHei",
                 XHLoadAudio: "XHLoad Audio",
                 XHLoadVideo: "XHLoad Video",
                 XHLoopIteration: "XHLoop Iteration",
@@ -457,7 +484,7 @@ const XH_I18N = {
                 XHMultiSet: "XHMulti Set",
                 XHNumberConvert: "XHNumber Convert",
                 XHNumberCounter: "XHNumber Counter",
-                XHPaint: "XHPaint",
+                XHPaint: "Paint XiaoHei",
                 XHPowerLoraStack: "XHPower Lora Stack",
                 XHPureLoraStack: "XHPure Lora Stack",
                 XHResolutionSelect: "XHResolution Select",
@@ -481,8 +508,29 @@ const XH_I18N = {
                 XHVoiceSeparatorSampler: "XHVoice Separator Sampler",
                 XH_ChainPromptSelector: "Chain Prompt Selector",
                 XH_DynamicPromptJoin: "Dynamic Prompt Join",
+                XHInpaintCrop: "Inpaint Crop XiaoHei",
+                XHInpaintStitch: "Inpaint Stitch XiaoHei",
+                XHLoadImage: "Load Image XiaoHei",
+                XHLoadImageMini: "Load Image Mini XiaoHei",
+                XHSaveImage: "Save Image XiaoHei",
+                XHInfo: "Info XiaoHei",
+                XHNumberPick: "Number Pick XiaoHei",
+                XHSketch: "Sketch XiaoHei",
+                XH_AudioStudio: "Audio Studio XiaoHei",
+                XH_ResolutionQuick: "Resolution Quick XiaoHei",
+                XH_Sizes: "Sizes XiaoHei",
             },
         widgets: {
+            size_mode: "Size mode",
+            target: "Target",
+            multiple: "Multiple",
+            context_px: "Context margin",
+            mask_grow: "Mask grow",
+            mask_blur: "Mask blur",
+            softness: "Seam softness",
+            blend_mode: "Blend mode",
+            invert_mask: "Invert mask",
+            color_match: "Color match",
             audio: "audio (whole track)",
             // XiaoHei-H3 latent continuation
             overlap_frames: "Overlap frames",
@@ -521,7 +569,6 @@ const XH_I18N = {
             interpolation: "interpolation",
             divisible_by: "Divisible By",
             inputcount: "Inputs",
-            xh_update_inputs: " Update inputs",
             preset: " Target canvas",
             layout: " Layout",
             gap: " Gap",
@@ -661,6 +708,8 @@ const XH_I18N = {
             frames_now_list: "frames [all N]",
             image: "image",
             mask: "mask",
+            crop_info: "crop info",
+            original: "original",
             IMAGE: "IMAGE",
             MASK: "MASK",
             // XiaoHei-Mask Tint
@@ -718,6 +767,31 @@ const XH_I18N = {
 // 下拉框「中文态纯中文、英文态回落原值」（走官方 getOptionLabel 钩子；key 是英文存值，不动）
 // upscale_method / keep_proportion / crop_position / preset / device 的**值本身就是中文**，无需映射
 const COMBO_LABELS = {
+    //  局部重绘两件套：尺寸模式 / 贴回方式 / 颜色校正
+    size_mode: {
+        "keep shape (long side)": "保持形状（长边）",
+        "force size (square)": "强制正方（边长）",
+        "free (multiple only)": "自由（只取倍数）",
+    },
+    blend_mode: {
+        "from crop": "跟裁剪节点走",
+        mask: "只换遮罩内",
+        "whole crop": "整块替换",
+    },
+    color_match: {
+        off: "关",
+        subtle: "轻微",
+        strong: "强",
+    },
+    //  XiaoHei-图像对比拼图「基准图」：原值全英文且不随语言变（用户反馈漏翻译）。
+    //  只换显示文字，w.options.values 一个不动 ⇒ 老工作流/API 的 largest/image1… 照常认。
+    size_base: {
+        largest: "最大图（按它对齐）",
+        smallest: "最小图（按它对齐）",
+        image1: "图 1（按它对齐）",
+        image2: "图 2（按它对齐）",
+        image3: "图 3（按它对齐）",
+    },
     //  2026-10-31：XiaoHei-身份配色 的排序方式（用户原话：「这英文我看不懂」）
     //   值 = 存档值（不动），只换显示文字。
     sort_by: {
@@ -906,6 +980,61 @@ function mkColorSwatch(node, wName, zhLabel, enLabel, fallback, resetZh, resetEn
     //  2026-10-31 修：Vue Nodes 模式下输入框挂在 **cw.inputEl**（老版画布才是 element/el）。
     //    原先只取 element||el ⇒ Vue 下原生文本框**根本没被藏住** ⇒ 面板里同时出现
     //    「工具条色块」和「原生文本框」两套，两套还各说各话（同色铁律：状态别让人猜）。
+    if (cw) {
+        cw.computeSize = () => [0, 0];
+        cw.getMinHeight = () => 0;
+        cw.draw = () => {};
+        cw.mouse = () => false;
+        const el = cw.inputEl || cw.element || cw.el;
+        if (el && el.style) { el.style.display = "none"; el.style.height = "0px"; el.style.overflow = "hidden"; }
+    }
+    refresh();
+    return { box, refresh };
+}
+
+// ─── XiaoHei-图像对比拼图：文字色 / 背景色 的「色块 + 家族完整画板」───────
+// 用户要求：不单要有画板，还要给几个颜色案例。
+// 案例色排在家族 36 色色卡最前面；点色块弹 opeXHColorPickerPopup
+// （SV 平面 + 色相条 + Hex 输入 + 36 色卡 + 自定义），⛔ 不是简化小弹窗。
+// 原生 STRING(hex) widget 只视觉隐藏：name / 顺序 / widgets_values 一个不动。
+const XH_COMPARE_TEXT_CASES = [
+    "#000000", "#ffffff", "#333333", "#ff0000", "#1e40af", "#a16207", "#0e7490", "#00a651",
+];
+const XH_COMPARE_BG_CASES = [
+    "#ffffff", "#000000", "#e6e6e6", "#f5f5dc", "#fff7d6", "#e8f2ff", "#d9d9d9", "#f2f2f2",
+];
+function mkCompareColorBox(node, wName, zhLabel, enLabel, fallback, tipZh, tipEn, cases) {
+    const cw = (node.widgets || []).find((w) => w && w.name === wName);
+    const box = document.createElement("div");
+    box.style.cssText = "display:flex;align-items:center;gap:4px;flex:0 0 auto;";
+    const label = document.createElement("span");
+    label.style.cssText = "font-size:11px;color:#e8e8e8;white-space:nowrap;flex:0 0 auto;";
+    const swatch = document.createElement("button");
+    swatch.type = "button";
+    swatch.style.cssText = "width:34px;height:20px;border:1px solid rgba(255,255,255,.35);border-radius:4px;cursor:pointer;flex:0 0 auto;padding:0;";
+    const validHex = (v) => (/^#[0-9a-f]{6}$/i.test(String(v || "")) ? String(v) : "");
+    const refresh = () => {
+        label.textContent = (window.XH_LANG || "zh") === "zh" ? zhLabel : enLabel;
+        swatch.style.background = validHex(cw && cw.value) || fallback;
+        swatch.title = (window.XH_LANG || "zh") === "zh" ? tipZh : tipEn;
+    };
+    swatch.addEventListener("mousedown", (e) => e.preventDefault());
+    swatch.onclick = (e) => {
+        e.stopPropagation();
+        opeXHColorPickerPopup(swatch, {
+            initialColor: validHex(cw && cw.value) || fallback,
+            resetColor: fallback,
+            swatches: cases.concat(XH_PICKER_PALETTE),   // 案例色排最前，一眼能看到
+            onPick: (hex) => {
+                if (!hex || !cw) return;
+                cw.value = hex;
+                refresh();
+                try { node.setDirtyCanvas?.(true, true); } catch (err) {}
+            },
+        });
+    };
+    box.appendChild(label);
+    box.appendChild(swatch);
     if (cw) {
         cw.computeSize = () => [0, 0];
         cw.getMinHeight = () => 0;
@@ -1957,42 +2086,73 @@ function _xhFinalTextPass() {
 }
 
 
-// ─── 动态输入槽：移植自 comfyui-kjnodes web/js/jsnodes.js 的 setupDynamicInputs ───
-// 按前缀重建槽位，使槽数 = 计数控件的值。计数控件的回调在「API 重载」时也会触发
-// （此时带 canvas 参数的是交互操作，跳过重建，避免拖数字时节点乱跳）。
-function setupDynamicInputs(node, { type, prefix, countWidget = "inputcount", slotOptions } = {}) {
-    const rebuild = () => {
+// ─── 自动增长输入槽（XHImageBatchMulti）────────────────────────────
+// 2026-11-16 用户拍板：删掉「输入口数量」数字框 +「更新输入口」按钮。
+// 改为家族惯例：最后一个 image_N 口接上线 ⇒ 立刻追加 image_(N+1) 空口。
+// 与 xh_chainprompt.js 的 syncJoinInputs 同范式：每次连接事件全量对齐、幂等；
+// 工作图加载时的连线回放也会走这里，只补空口、绝不删已有线。
+function setupAutoGrowInputs(node, { type, prefix, min = 2, max = 1000, slotOptions } = {}) {
+    const slotsOf = () => (node.inputs || []).filter(
+        (i) => i && typeof i.name === "string" && i.name.startsWith(prefix));
+    const lastIndex = (slots) => slots.reduce((m, i) => {
+        const n = parseInt(i.name.slice(prefix.length), 10);
+        return Number.isFinite(n) ? Math.max(m, n) : m;
+    }, 0);
+    const isWired = (inp) => !!inp && inp.link != null;
+
+    const sync = () => {
         if (!node.inputs) node.inputs = [];
-        const countW = node.widgets?.find((w) => w.name === countWidget);
-        if (!countW) return;
-        const target = countW.value;
-        const current = node.inputs.filter((i) => i.name?.startsWith(prefix)).length;
-        if (target === current) return;
-        if (target < current) {
-            for (let i = 0; i < current - target; i++) node.removeInput(node.inputs.length - 1);
-        } else {
-            for (let i = current + 1; i <= target; i++) node.addInput(`${prefix}${i}`, type, slotOptions);
+        let slots = slotsOf();
+        let changed = false;
+        // 保底：至少 min 个口（第 1 个必填 + 1 个空口），编号连续
+        while (lastIndex(slots) < min && slots.length < max) {
+            node.addInput(`${prefix}${lastIndex(slots) + 1}`, type, slotOptions);
+            changed = true;
+            slots = slotsOf();
         }
-        // 新槽也要跟着语言走
-        applyLangToNode(node);
-        try {
-            node.graph?.setDirtyCanvas(true, true);
-        } catch (e) {}
+        // 核心：最后一个口接上线 → 自动多出下一个空口
+        const last = slots[slots.length - 1];
+        if (isWired(last) && slots.length < max) {
+            node.addInput(`${prefix}${lastIndex(slots) + 1}`, type, slotOptions);
+            changed = true;
+        }
+        if (changed) {
+            try { applyLangToNode(node); } catch (e) {}   // 新口也要跟着中/EN 走
+            try { node.graph?.setDirtyCanvas(true, true); } catch (e) {}
+        }
+        return changed;
     };
 
-    // name 用英文键（不进 widgets_values），显示文字交给 label → 可随语言切换
-    node.addWidget("button", "xh_update_inputs", null, rebuild);
+    node._xhBatchAutoGrowSync = sync;
+    // LiteGraph 连/断线：先改数据再回调，这里读到的 link 已是最新状态
+    const origOnConn = node.onConnectionsChange;
+    node.onConnectionsChange = function (...args) {
+        const r = origOnConn ? origOnConn.apply(this, args) : undefined;
+        try { sync(); } catch (e) {}
+        return r;
+    };
+    // 存档恢复：inputs 数量随存档走，这里只补齐空缺 + 确保末尾空口
+    const origConfigure = node.onConfigure;
+    node.onConfigure = function (...args) {
+        const r = origConfigure ? origConfigure.apply(this, args) : undefined;
+        try { sync(); } catch (e) {}
+        return r;
+    };
+    // 新前端插线的回调路径不保证触发 onConnectionsChange ⇒ 低频轮询兜底
+    //   （照 buildTintColorControl 的先例：只在真的变化时动手，不闪不费）
+    const timer = setInterval(() => {
+        if (!node || node._xhBatchDead) { clearInterval(timer); return; }
+        try { sync(); } catch (e) {}
+    }, 600);
+    const origRemoved = node.onRemoved;
+    node.onRemoved = function (...args) {
+        node._xhBatchDead = true;
+        clearInterval(timer);
+        return origRemoved ? origRemoved.apply(this, args) : undefined;
+    };
 
-    const countW = node.widgets?.find((w) => w.name === countWidget);
-    if (countW) {
-        const origCb = countW.callback; // guard: may be nullish
-        countW.callback = function (value, canvas) {
-            const r = origCb ? origCb.apply(this, arguments) : undefined;
-            if (!canvas) rebuild(); // bare = API 重载；跳过交互式拖拽
-            return r;
-        };
-    }
-    return rebuild;
+    sync();
+    return sync;
 }
 
 // ─── 形状遮罩覆盖：内嵌可视化拖拽编辑器（网格 + 可拖拽/缩放的形状） ───
@@ -3730,14 +3890,35 @@ app.registerExtension({
             const r = origOnCreated?.apply(this, arguments);
             try {
                 if (normalizeType(nodeData.name) === "XHImageBatchMulti") {
-                    setupDynamicInputs(this, {
+                    setupAutoGrowInputs(this, {
                         type: "IMAGE",
                         prefix: "image_",
+                        min: 2,
+                        max: 1000,
                         slotOptions: { shape: 7 },
                     });
                 }
                 let appendNodes = [];
                 let prependNodes = [];
+                if (normalizeType(nodeData.name) === "XHImageCompare") {
+                    // 文字色 / 背景色：家族完整画板 + 各自一组案例色（用户 2026-11-16 要求）
+                    const tc = mkCompareColorBox(this, "text_color",
+                        "文字颜色", "Text color", "#000000",
+                        "文字颜色：点开画板选色（案例色 / 36 色卡 / 自定义 Hex）",
+                        "Text color: click for full picker (examples / 36 swatches / custom hex)",
+                        XH_COMPARE_TEXT_CASES);
+                    const bc = mkCompareColorBox(this, "bg_color",
+                        "背景色", "Background", "#FFFFFF",
+                        "背景色：点开画板选色（案例色 / 36 色卡 / 自定义 Hex）",
+                        "Background: click for full picker (examples / 36 swatches / custom hex)",
+                        XH_COMPARE_BG_CASES);
+                    appendNodes.push(tc.box, bc.box);
+                    const prevFillRefresh = this._xhFillRefresh;
+                    this._xhFillRefresh = () => {
+                        try { prevFillRefresh && prevFillRefresh(); } catch (e) {}
+                        try { tc.refresh(); bc.refresh(); } catch (e) {}
+                    };
+                }
                 if (normalizeType(nodeData.name) === "XHShapeMaskOverlay") {
                     const ctl = buildFillColorControl(this);   // 工具条右侧加「填充色」色块
                     if (ctl) appendNodes.push(ctl);

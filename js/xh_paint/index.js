@@ -59,12 +59,12 @@ app.registerExtension({
     node.addWidget("button", "打开画板", null, () => {
       // Don't stack a second editor on this node — that orphans the first
       // (leaked listeners + graph patches, stacked overlays).
-      if (node._pixaromaPaint?.el?.overlay?.isConnected) return;
+      if (node._xhPaintStudio?.el?.overlay?.isConnected) return;
       const studio = new PaintStudio();
       // Stash on the node so the drop-on-closed-node handler (below) can
       // route the dropped file through studio.addImageAsLayer once
       // studio.ready resolves. Cleared on close.
-      node._pixaromaPaint = studio;
+      node._xhPaintStudio = studio;
 
       studio.onSave = (jsonStr, dataURL) => {
         paintJson = jsonStr;
@@ -84,7 +84,7 @@ app.registerExtension({
         downloadDataURL(dataURL, "xh_paint");
 
       studio.onClose = () => {
-        node._pixaromaPaint = null;
+        node._xhPaintStudio = null;
         node.setDirtyCanvas(true, true);
       };
 
@@ -129,13 +129,13 @@ app.registerExtension({
       // Open the studio if it's not already up — reuse the existing
       // button callback so all the onSave/onSaveToDisk/onClose wiring
       // runs through one code path.
-      if (!node._pixaromaPaint) {
+      if (!node._xhPaintStudio) {
         const openBtn = (node.widgets || []).find(
           (w) => w?.type === "button" && w?.name === "打开画板",
         );
         if (openBtn?.callback) openBtn.callback();
       }
-      const studio = node._pixaromaPaint;
+      const studio = node._xhPaintStudio;
       if (!studio) return;
       try {
         await studio.ready;
@@ -151,7 +151,7 @@ app.registerExtension({
       // listeners detached (deleting the node mid-edit would otherwise leak
       // them, and — now that we install the guard — leave it bricked).
       try {
-        if (node._pixaromaPaint?.el?.overlay?.isConnected) node._pixaromaPaint._close();
+        if (node._xhPaintStudio?.el?.overlay?.isConnected) node._xhPaintStudio._close();
       } catch (e) {}
       widget = null;
     };

@@ -14,7 +14,7 @@
 //
 // 我们注册的命令（**只对 XiaoHei 家族节点生效**）：
 //     XH.ShowGuide  → 打开 XiaoHei 自己的指南（帮助浏览器），并定位到该节点说明页
-//   中/EN 语言键       → 切换家族中英文。图标是一个午夜蓝圆钮，内显当前语言「中」/「EN」，
+//   中/EN 语言键       → 切换家族中英文。图标是一个主题色圆钮，内显当前语言「中」/「EN」，
 //                       （用 html[data-xh-lang] + CSS 切换文字，点一下即切，不需要重绘工具条）
 //    按键配色（原 XH.ShowNodeStyle 命令）→ 2026-11-11 已融合进「节点配色」面板（xh_node_style.js 的「按键」页签），命令已移除。
 //  2026-11-06 家族齿轮统一： 只留给「设置」，这颗改外观的已换调色板图标；
@@ -71,14 +71,14 @@ function injectIconCSS() {
     const el = document.createElement("style");
     el.id = CSS_ID;
     el.textContent = `
-    /*  2026-11-11：家族蓝 #01386A 圆底 + 纯白字。帮助=单独「?」，语言=单颗圆钮内显当前语言
+    /*  2026-11-11：家族蓝 #1A1613 圆底 + 纯白字。帮助=单独「?」，语言=单颗圆钮内显当前语言
        font-style: normal 必加：官方把命令图标渲染成 <i> 标签，浏览器默认 <i> 是斜体(italic)，
        我们的 ::before 文字会继承这股斜体 ⇒ 之前「?」和「中/EN」全是歪的。强制正体 + 居中。 */
     .xh-tb-help, .xh-tb-lang {
       display: inline-flex; align-items: center; justify-content: center;
       font-style: normal !important; font-style: normal;
       width: 26px; height: 26px; border-radius: 50%;
-      background: var(--xh-rest, #01386A);
+      background: var(--xh-rest, #1A1613);
       color: #ffffff; text-align: center;
       vertical-align: middle; pointer-events: auto; cursor: pointer;
       font-size: 17px; font-weight: 800; line-height: 1;

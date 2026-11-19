@@ -55,3 +55,8 @@ Thumbs.db
 /js/ui.js
 /js/assets/
 /nodes/charsheet/py/web/assets/
+
+# 模型面板本机数据：与打包脚本排除规则保持一致，禁止进 git / Registry 包
+#   data/library.json = 出厂资源库定义，必须发，故不在此列
+/nodes/modelboard/data/index.json
+/nodes/modelboard/data/previews/

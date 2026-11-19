@@ -26,7 +26,7 @@ const NS = "XH.SettingsPanel";
 //  2026-10-29：整套换成 **官方中性黑白灰**（上一版官方深紫+黄跟用户本机界面不符）。
 //    色值按用户本机 ComfyUI 真实像素取：面板 #1C1C1C / 卡 #252525 / 分隔 #333 / 字 #e8e8e8。
 //  2026-11-08：`--xh-primary` 统一为琥珀金 #E8A33C（⏱ 瞬时信号色，不是常态按钮底；
-//    常态按钮走 --xh-rest 午夜蓝）。`--xh-on-primary` 由 applyTheme 按 WCAG 实时算 ⇒ 金底深墨字。
+//    常态按钮走 --xh-rest（主题标题色））。`--xh-on-primary` 由 applyTheme 按 WCAG 实时算 ⇒ 金底深墨字。
 const LS_KEY_THEME = "XH.Help.theme";
 const THEME_MODES = ["auto", "dark", "light"];
 const THEMES = {
@@ -144,17 +144,29 @@ function applyTheme(mode) {
   const actual = resolveTheme(mode);
   const vars = THEMES[actual];
   const root = document.documentElement;
-  for (const k in vars) root.style.setProperty(k, vars[k]);
-  //  主色上的字色按 WCAG 算（亮主色⇒深墨字，暗主色⇒白字）⇒ 一处算，全家引用。
-  try {
-    const pick = (window.XH_pickOnColor || pickOnColorFallback);
-    const on = pick(vars["--xh-primary"]);
-    root.style.setProperty("--xh-on-primary", on);
-    // 同一主色的**稀释版**当底色时（color-mix 15~32%），字色另算一份
-    root.style.setProperty("--xh-on-primary-dim", pick(mixWithBg(vars["--xh-primary"], vars["--xh-surface"], 0.32)));
-  } catch (e) { /* 忽略 */ }
+  for (const k in vars) {
+    //  2026-11-17 配色预设化：主色一组变量交给 XH_THEME 注入，
+    //    THEMES 里写死的金色不再是真源（明暗只管中性壳色，配色管色相 ⇒ 正交）。
+    if (k === "--xh-primary" || k === "--xh-on-primary") continue;
+    root.style.setProperty(k, vars[k]);
+  }
+  //  先落 body class：主题预设的 isLightMode() 要读它判断深/浅版，顺序不能反。
   document.body.classList.remove("xh-light", "xh-dark");
   document.body.classList.add("xh-" + actual);
+  //  主色变量由主题预设模块按当前明暗写深浅版（它监听 xh-help-theme-change）。
+  //    模块未加载时兜底：仍按 THEMES 写死值 + WCAG 算字色，界面不会缺色。
+  const T = (typeof window !== "undefined") ? window.XH_THEME : null;
+  if (T) {
+    try { T.apply(); } catch (e) {}
+  } else {
+    try {
+      const pick = (window.XH_pickOnColor || pickOnColorFallback);
+      const prim = vars["--xh-primary"];
+      root.style.setProperty("--xh-primary", prim);
+      root.style.setProperty("--xh-on-primary", pick(prim));
+      root.style.setProperty("--xh-on-primary-dim", pick(mixWithBg(prim, vars["--xh-surface"], 0.32)));
+    } catch (e) { /* 忽略 */ }
+  }
   try { document.dispatchEvent(new CustomEvent("xh-help-theme-change")); } catch (e) {}
   return actual;
 }
@@ -444,7 +456,10 @@ function buildPanel() {
     //  2026-10-28：去掉标题里的  齿轮 emoji —— 顶栏入口已改成「XiaoHei」文字，
     //    面板标题再挂齿轮就跟外边对不上（用户：「跟外边那个图标要一致，名字要一致」）。
     //  标题只保留「XiaoHei 设置」，前面的 XiaoHei 徽章已按用户要求移除。
-    '    <span style="font-weight:700;font-size:15px;letter-spacing:.5px;">XiaoHei 设置</span>' +
+    //  2026-11-17：标题跟随当前配色预设（CSS 变量实时生效，切预设无需重建面板头）。
+    //    用 --xh-accent-light（各预设的亮一档主色）而非 --xh-primary：深蓝/藏青主色偏暗，
+    //    直接当深底上的标题字会发闷，亮一档才清晰；fallback 经典金。
+    '    <span style="font-weight:700;font-size:15px;letter-spacing:.5px;color:var(--xh-accent-light,var(--xh-primary,#E8A33C));">XiaoHei 设置</span>' +
     //  2026-11-10：标题后面那行「（与 ComfyUI 原生设置同步）」也是小字 ⇒ 一并去掉。
     //    详细说明的唯一入口改成右上角「? 全部说明」（跳问号帮助的「设置项说明」专题）。
     '    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">' +
@@ -576,6 +591,103 @@ function genCtrl(def, cur) {
   return wrap;
 }
 
+// ════════════════════════════════════════════════════════════════════════
+//  配色方案选择器（6 预设 + 自定义，与明暗正交；2026-11-19 默认松绿）
+//    色值真源在 xh_theme_presets.js（window.XH_THEME）；这里只渲染 + 绑定。
+//    所有色号都从 XH_THEME.PRESETS 读，不在这里写死颜色。
+// ════════════════════════════════════════════════════════════════════════
+const _xhPaletteIco = (name, size) =>
+  (typeof window !== "undefined" && typeof window.XH_iconHTML === "function")
+    ? window.XH_iconHTML(name, { size: size || 14, color: "current" }) : "";
+
+function renderPaletteBlock(C) {
+  const T = (typeof window !== "undefined") ? window.XH_THEME : null;
+  if (!T) return "";
+  const active = T.getActiveId();
+  const order = ["pine", "navy", "qqblue", "graphite", "burgundy", "iris"];
+  let cells = "";
+  order.forEach((id) => {
+    const p = T.PRESETS[id];
+    if (!p) return;
+    const on = id === active;
+    const main = p.dark.main, title = p.dark.title;
+    cells +=
+      //  data-xh-icon-done=1：豁免 xh_icon_fill.js 全页 sweep（它见中文+前导空白就清空
+      //    textContent 重排图标，会把色卡里的色条 span 一起抹掉 ⇒ 色卡只剩文字）。
+      '<button type="button" class="xh-sp-pal-cell" data-pal="' + id + '" data-xh-icon-done="1" ' +
+      ' title="' + esc(p.name) + '" ' +
+      ' style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 3px;' +
+      'cursor:pointer;border-radius:8px;border:' + (on ? '2px solid ' + C.PRIMARY : '1px solid ' + C.BORDER) + ';' +
+      'background:' + (on ? 'color-mix(in srgb,' + C.PRIMARY + ' 12%,transparent)' : 'transparent') + ';">' +
+      //  色卡底色 = 该预设主色（一眼分出松绿/藏青/QQ蓝/石墨灰/勃艮第/鸢尾紫），
+      //    里面那一小条换成深色标题栏色 title 做点缀对比。原来底是 title（都很深）⇒ 整片黑灰分不清。
+      '  <span style="width:100%;height:22px;border-radius:5px;overflow:hidden;display:block;background:' + main + ';">' +
+      '    <span style="display:block;margin:14px auto 0;width:60%;height:6px;border-radius:3px;background:' + title + ';"></span>' +
+      '  </span>' +
+      '  <span style="font-size:12px;color:' + C.TEXT + ';font-weight:' + (on ? '700' : '500') + ';">' + esc(p.name) + '</span>' +
+      '</button>';
+  });
+  const customOn = active === "custom";
+  const customMain = (function () {
+    try { const j = JSON.parse(localStorage.getItem(T.LS_CUSTOM) || "null"); return (j && j.main) || "#6F00FF"; }
+    catch (e) { return "#6F00FF"; }
+  })();
+  cells +=
+    '<button type="button" class="xh-sp-pal-cell" data-pal="custom" title="自定义色板" data-xh-icon-done="1" ' +
+    ' style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 3px;' +
+    'cursor:pointer;border-radius:8px;border:' + (customOn ? '2px solid ' + C.PRIMARY : '1px dashed ' + C.BORDER) + ';' +
+    'background:' + (customOn ? 'color-mix(in srgb,' + C.PRIMARY + ' 12%,transparent)' : 'transparent') + ';">' +
+    //  2026-11-17：自定义格底色也用它的主色，滴管图标按 WCAG 取对比色（不再是灰底+彩图标）。
+    '  <span style="width:100%;height:22px;border-radius:5px;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:4px;background:' + customMain + ';">' +
+    '    <span style="display:inline-flex;color:' + (window.XH_THEME ? window.XH_THEME.pickOn(customMain) : '#fff') + ';">' + _xhPaletteIco("pipette", 15) + '</span>' +
+    '  </span>' +
+    '  <span style="font-size:12px;color:' + C.TEXT + ';font-weight:' + (customOn ? '700' : '500') + ';">自定义</span>' +
+    '</button>';
+
+  return '<div style="margin-top:6px;padding:10px 12px;border-radius:9px;border:1px solid ' + C.BORDER + ';' +
+    'background:color-mix(in srgb,' + C.PRIMARY + ' 6%,transparent);">' +
+    '  <div style="display:flex;align-items:center;gap:6px;margin-bottom:9px;color:' + C.TEXT + ';font-weight:700;font-size:13px;">' +
+    '    <span style="display:inline-flex;color:' + C.PRIMARY + ';">' + _xhPaletteIco("palette", 15) + '</span>配色方案' +
+    '    <span style="margin-left:auto;font-weight:400;font-size:11px;color:' + C.SUB + ';">选一个，全家族一起变</span>' +
+    '  </div>' +
+    '  <div style="display:flex;gap:7px;">' + cells + '</div>' +
+    '  <div id="xh-sp-custom-row" style="' + (customOn ? '' : 'display:none;') + 'margin-top:10px;padding-top:9px;border-top:1px solid ' + C.BORDER + ';display:' + (customOn ? 'flex' : 'none') + ';align-items:center;gap:10px;flex-wrap:wrap;">' +
+    '    <span style="font-size:12px;color:' + C.TEXT + ';">主色</span>' +
+    '    <input type="color" id="xh-sp-custom-color" value="' + esc(customMain) + '" style="width:38px;height:28px;padding:0;border:1px solid ' + C.BORDER + ';border-radius:5px;background:transparent;cursor:pointer;">' +
+    '    <span style="font-size:11px;color:' + C.SUB + ';">标题栏 / 按钮 / 高亮 / 字色自动配好，实时预览</span>' +
+    '    <button type="button" id="xh-sp-custom-apply" style="height:28px;padding:0 12px;border-radius:6px;border:1px solid ' + C.PRIMARY + ';background:' + C.PRIMARY + ';color:' + (window.XH_THEME ? window.XH_THEME.pickOn(mainColorSafe(C.PRIMARY)) : '#1c1c1c') + ';cursor:pointer;font-size:12px;">应用</button>' +
+    '  </div>' +
+    '</div>';
+}
+function mainColorSafe(hex) { return /^#[0-9a-f]{6}$/i.test(String(hex)) ? hex : "#E8A33C"; }
+
+function bindPaletteBlock() {
+  const body = document.querySelector("#xh-sp-body");
+  if (!body) return;
+  const T = (typeof window !== "undefined") ? window.XH_THEME : null;
+  if (!T) return;
+  body.querySelectorAll(".xh-sp-pal-cell").forEach((btn) => {
+    btn.onclick = () => {
+      const id = btn.getAttribute("data-pal");
+      if (id === "custom") {
+        // 展开自定义行；若还没选过自定义色，先用当前主色打底
+        const row = body.querySelector("#xh-sp-custom-row");
+        if (row) row.style.display = "flex";
+        return;
+      }
+      T.setPreset(id);
+      renderBody();
+    };
+  });
+  const applyBtn = body.querySelector("#xh-sp-custom-apply");
+  if (applyBtn) {
+    applyBtn.onclick = () => {
+      const input = body.querySelector("#xh-sp-custom-color");
+      if (input && T.setCustom(input.value)) renderBody();
+    };
+  }
+}
+
 function renderBody() {
   const body = document.querySelector("#xh-sp-body");
   if (!body) return;
@@ -616,7 +728,8 @@ function renderBody() {
     } catch (e) { return ""; }
   };
 
-  let html = "";
+  //  配色方案选择器：6 预设 + 自定义，与明暗正交（默认松绿）。
+  let html = renderPaletteBlock(C);
   groupKeys.forEach((g) => {
     // 分组标题条：深紫主题下用极淡的紫底 + 主色左边框；浅色主题下用淡紫底。
     //  别写死半透明黄 —— 浅色主题下会变成一块脏兮兮的淡黄饼。
@@ -629,9 +742,16 @@ function renderBody() {
       //  2026-11-10 用户要求：只留功能主名字 + 右侧控件。
       //    名字后面的「i」信息图标：悬停直接浮出该项说明小浮窗（不再跳问号帮助）。
       //    description 仍是 SETTING_DEFS 里的唯一真源，悬停浮窗直接读它渲染，不重复维护。
+      //  2026-11-19 用户要求：顶栏按钮那几行名称前放家族图库对应图案（行首一眼认出是哪颗按钮）。
+      //    def.icon 是家族图库语义名，由 BUTTONS push 进来；没有 icon 的项保持原样（纯文字）。
+      //    data-xh-icon-done=1 豁免 xh_icon_fill.js 全页 sweep（中文+图案混排会被清空重排）。
+      const rowIco = def.icon
+        ? '<span data-xh-icon-done="1" style="display:inline-flex;flex:none;margin-right:8px;opacity:.9;vertical-align:-2px;color:' + C.PRIMARY + ';">' +
+          _xhPaletteIco(def.icon, 15) + '</span>'
+        : '';
       html +=
         '<div style="display:flex;align-items:center;gap:12px;padding:8px 10px;border-bottom:1px solid ' + C.BORDER + ';">' +
-        '  <div style="flex:1;min-width:0;font-weight:600;font-size:14px;">' + esc(def.name) +
+        '  <div style="flex:1;min-width:0;font-weight:600;font-size:14px;" data-xh-icon-done="1">' + rowIco + esc(def.name) +
         '    <button type="button" data-xh-help="' + esc(def.id) + '" ' +
         '      style="margin-left:6px;width:18px;height:18px;padding:0;border:none;background:transparent;color:' + C.TEXT + ';cursor:pointer;opacity:.55;display:inline-flex;align-items:center;justify-content:center;">' +
         '      ' + (typeof window !== "undefined" && typeof window.XH_iconHTML === "function"
@@ -643,6 +763,9 @@ function renderBody() {
     });
   });
   body.innerHTML = html;
+
+  // 2026-11-17 配色方案选择器事件绑定
+  try { bindPaletteBlock(); } catch (e) { console.error("[XiaoHei] 配色选择器绑定失败", e); }
 
   // 逐个注入控件（DOM 操作，避免事件被字符串化丢失）
   defs.forEach((def) => {

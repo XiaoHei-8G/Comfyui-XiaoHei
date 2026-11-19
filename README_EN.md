@@ -2,15 +2,15 @@
 
 [🇨🇳 中文](README.md) · [🇬🇧 English]
 
-> A practical ComfyUI node collection: **126 nodes · 36 sound effects**, built for low-VRAM friendliness and faster workflows.
+> A practical ComfyUI node collection: **141 nodes · 36 sound effects**, built for low-VRAM friendliness and faster workflows.
 
-![version](https://img.shields.io/badge/version-1.0.2-blue) ![nodes](https://img.shields.io/badge/nodes-126-green) ![license](https://img.shields.io/badge/license-MIT-yellow)
+![version](https://img.shields.io/badge/version-1.0.3-blue) ![nodes](https://img.shields.io/badge/nodes-141-green) ![license](https://img.shields.io/badge/license-MIT-yellow)
 
 ## Install
 
 **Option A · ComfyUI Manager (recommended)**
 Search any of these in ComfyUI Manager to install:
-`小黑` · `Comfyui-XiaoHei` · `工具箱` · `低显存` · `126`
+`小黑` · `Comfyui-XiaoHei` · `工具箱` · `低显存` · `141`
 
 **Option B · Manual**
 ```bash
@@ -38,7 +38,7 @@ Dependencies (opencv-python / scenedetect / rotary-embedding-torch / imageio-ffm
 
 ```
 Comfyui-XiaoHei/
-├── nodes/      # 26 feature modules (126 nodes)
+├── nodes/      # 34 feature modules (141 nodes)
 ├── js/         # Frontend (incl. 36 sound effects in sounds/)
 ├── docs/       # Detailed docs (node list / mask guide / install)
 ├── __init__.py

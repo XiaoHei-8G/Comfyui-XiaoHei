@@ -58,17 +58,13 @@ const XH_LINK_STYLES = {
     pulse: { name: "呼吸脉冲", dash: [],       speed: 0,  width: 1.4, alpha: 0.75, breathe: true  },
     ball:  { name: "小球巡游", mode: "particle", shape: "ball",  size: 5, pcount: 2, pspeed: 0.35, glow: true, dash: [], width: 1.0, alpha: 0.9 },
     arrow: { name: "箭头巡游", mode: "particle", shape: "arrow", size: 7, pcount: 2, pspeed: 0.30, glow: true, dash: [], width: 1.0, alpha: 0.9 },
+    //  2026-11-17 新增：电流传输（起点端口弹出 → 拖尾飞行 → 终点端口吸收）
+    spark: { name: "电流传输", mode: "particle", shape: "spark", size: 5, pcount: 1, pspeed: 0.45, glow: true, dash: [], width: 1.0, alpha: 1.0 },
     //  2026-10-19 新增：蛇身（长条连续沿连线爬）/ 吃豆人（黄圆张嘴+前方豆子）
     snake:  { name: "贪吃蛇", mode: "particle", shape: "snake",  size: 7, pcount: 1, pspeed: 0.18, glow: false, dash: [], width: 1.0, alpha: 0.9, segs: 46, slen: 0.26, shead: 13 },
     pacman: { name: "吃豆人", mode: "particle", shape: "pacman", size: 5, pcount: 1, pspeed: 0.24, glow: false, dash: [], width: 1.0, alpha: 0.9, beans: 0.055, prad: 14 },
     //  2026-10-27 新增：Pac-Man 幽灵（紫圆头 + 波浪下摆 + 眼睛 + 渐隐尾迹）
     ghost:  { name: "Pac-Man 幽灵", mode: "particle", shape: "ghost", size: 6, pcount: 1, pspeed: 0.22, glow: true, dash: [], width: 1.0, alpha: 0.95, gradSize: 0.28, gcount: 5 },
-    //  2026-10-27 新增：迷你像素马里奥（红帽+黑胡子+蓝裤+棕鞋 + 跳步动画 + 金币尾迹）
-    mario:  { name: "像素马里奥", mode: "particle", shape: "mario", size: 5, pcount: 1, pspeed: 0.22, glow: true, dash: [], width: 1.0, alpha: 0.95, gradSize: 0.30, gcount: 5 },
-    //  2026-10-27 新增：Mega Man X SNES 风格（12 色蓝盔甲 + 走路/跳跃/滑铲帧 + 能量弹尾迹）
-    mmx:    { name: "Mega Man X", mode: "particle", shape: "mmx", size: 5, pcount: 1, pspeed: 0.20, glow: true, dash: [], width: 1.0, alpha: 0.95, gradSize: 0.30, gcount: 4 },
-    //  2026-10-27 手工绘制：粉色派大星（NES 风格，16×16 奔跑帧 A/B，纯手绘）
-    patrick:{ name: "派大星", mode: "particle", shape: "patrick", size: 5, pcount: 1, pspeed: 0.22, glow: true, dash: [], width: 1.0, alpha: 0.95, gradSize: 0.30, gcount: 4 },
     //  2026-10-27 新增：小老鼠（纯 Canvas 2D 简单形状，跟幽灵同风格）
     mouse:   { name: "小老鼠", mode: "particle", shape: "mouse", size: 5, pcount: 1, pspeed: 0.22, glow: true, dash: [], width: 1.0, alpha: 0.95, gradSize: 0.30, gcount: 4 },
     //  2026-10-19 文字流动：自定义文字沿连线流动（字符按**弧长**等距排布，不因线长而挤压/稀疏）
@@ -200,7 +196,7 @@ function _captureOfficialPaths(canvas) {
 //   { id, startPoint, endPoint, controlPoints[], startDirection, endDirection, centerPos }
 //   h = { style, colors, patterns, animation, scale, highlightedIds }
 //   ⇒ 挂钩 drawLink 就能拿到官方的**贝塞尔控制点**，XiaoHei 用官方的 findPointOnBezier
-//      求值 ⇒ 图案（吃豆人/蛇/幽灵/马里奥…）**与官方线严丝合缝**。
+//      求值 ⇒ 图案（吃豆人/蛇/幽灵/小老鼠…）**与官方线严丝合缝**。
 //
 //  为什么以前会脱线：官方控制点 = 沿**插槽方向**偏移 max(30, 距离×0.25)；
 //   XiaoHei 自己算的是 **水平**偏移 max(40, |dx|×0.25) ⇒ 两条完全不同的曲线。
@@ -679,7 +675,7 @@ function _pathOf(ctx, seg, canvas) {
 /**
  * 曲线上 t∈[0,1] 处的点。
  *  2026-10-29：**优先用官方算好的曲线参数**（贝塞尔控制点 + 官方 findPointOnBezier），
- *    ⇒ 吃豆人 / 蛇 / 幽灵 / 马里奥等图案**与官方线严丝合缝**（以前是走 XiaoHei 自己的
+ *    ⇒ 吃豆人 / 蛇 / 幽灵 / 小老鼠等图案**与官方线严丝合缝**（以前是走 XiaoHei 自己的
  *    近似曲线 ⇒ 图案与线明显脱节，用户的原话「没有贴合官方线的方向流动」）。
  *    拿不到官方参数时才退回原来的近似算法（老前端兜底）。
  */
@@ -1177,80 +1173,120 @@ function _shade(hex, amt) {
 }
 function _drawSnake(ctx, seg, canvas, col, size, spd, dir, now) {
     try {
-        //  2026-10-19 第二版（用户选的方案③ + 两处返工）：
-        //   ① 蜿蜒：蛇身沿路径做 S 形横向摆动（蛇爬行的动势），不再是笔直一根。
-        //   ② 粗细收敛：头尾半径比 15% → 58%（原 `1 - f*0.82` 尾巴只剩一点，头还 ×1.12 放大
-        //      ⇒ 头重尾轻像棒槌）；整体基准 HEAD 也从 13 收到 ~7，不再那么粗。
-        //   ③ 颜色：走统一图案色 _patternColor()（默认青蓝 #8a8a8a；留空/非法 = 跟随连线色）。
-        const N = 46, LEN = 0.32;
-        //  2026-10-20 用户："贪吃蛇还是太粗了，变细一半"
-        //   ⇒ 基准 HEAD 从 max(5.5, size*1.05) 砍到 **max(3.0, size*0.55)**（正好约一半）。
-        //    眼睛/信子/描边原来是**写死的像素值**，头一细就会戳到脑袋外面去
-        //      ⇒ 全部改成按 HEAD 的比例缩放（下面眼睛那几行）。
-        const HEAD = Math.max(3.0, (size || 7) * 0.55);
-        const AMP = Math.max(3.2, HEAD * 0.95), FREQ = 0.55;   // 摆幅也跟着收，免得细身子甩成波浪线
+        //  2026-11-17 第三版（重写）：还原诺基亚 3310《贪吃蛇》Snake II 的原始观感——
+        //  一条由实心方块连成的线，没有眼睛、没有描边、没有渐变、没有花纹。
+        //  旧版是"圆点串 + 尖头 + 眼睛 + 分叉信子"，用户反馈"不像蛇"，故整体替换。
+        const CELL = Math.max(3, Math.round((size || 7) * 0.8));
+        const LEN = 0.32;
         const body = _patternColor(col);
-        const dark = _shade(body, -0.35);
         const pt = (tt) => _pointOf(seg, tt < 0 ? tt + 1 : tt > 1 ? tt - 1 : tt, canvas);
         let ht = ((now / 1000) * spd * dir) % 1; if (ht < 0) ht += 1;
-        const tanAt = (tt) => {
-            const p1 = pt(tt - 0.004), p2 = pt(tt + 0.004);
-            const dx = p2[0] - p1[0], dy = p2[1] - p1[1], l = Math.hypot(dx, dy) || 1;
-            return [dx / l, dy / l];
-        };
-        const nrmAt = (tt) => { const [tx, ty] = tanAt(tt); return [-ty, tx]; };
-        const pw = now / 240;
-
-        // ---- 蛇身：沿路径 S 形摆动，头粗尾细（收敛后）----
-        for (let k = N; k >= 1; k--) {
-            const tt = ht - LEN * k / N;
-            const [x, y] = pt(tt);
-            const [nx, ny] = nrmAt(tt);
-            const f = k / N;
-            const w = Math.sin(k * FREQ - pw) * AMP * (1 - f * 0.45);   // 尾部摆幅渐弱
-            const r = HEAD * (1 - f * 0.42);                            //  尾巴保留 58%
-            ctx.fillStyle = body;
-            ctx.beginPath(); ctx.arc(x + nx * w, y + ny * w, r, 0, 7); ctx.fill();
-            if (k % 6 === 0) {                                          // 高光（鳞片感）
-                ctx.fillStyle = "rgba(255,255,255,.15)";
-                ctx.beginPath(); ctx.arc(x + nx * w - r * 0.3, y + ny * w - r * 0.35, r * 0.38, 0, 7); ctx.fill();
-            }
+        const t0 = ht - LEN;
+        // 估算这段弧长（像素），决定取样密度：每 CELL/2 像素取一次，保证相邻方块连成一条
+        let len = 0, pv = pt(t0);
+        for (let i = 1; i <= 20; i++) {
+            const p = pt(t0 + LEN * i / 20);
+            len += Math.hypot(p[0] - pv[0], p[1] - pv[1]); pv = p;
         }
-
-        // ---- 蛇头：尖形（带下颌），跟着摆动 ----
-        const [hx, hy] = pt(ht);
-        const [tx, ty] = tanAt(ht), [nx, ny] = nrmAt(ht);
-        const hw = Math.sin(-pw) * AMP;
-        const HX = hx + nx * hw, HY = hy + ny * hw;
-        const ang = Math.atan2(ty, tx);
-        ctx.save();
-        ctx.translate(HX, HY);
-        ctx.rotate(ang);
+        const steps = Math.max(8, Math.min(400, Math.ceil(len / (CELL * 0.4))));
+        // 按 CELL 网格对齐：走过哪一格就填哪一格，天然连续、也保留了原版"卡格子"的观感
+        const seen = new Set();
         ctx.fillStyle = body;
-        ctx.beginPath();
-        ctx.moveTo(HEAD * 1.5, 0);
-        ctx.quadraticCurveTo(HEAD * 0.4, -HEAD * 0.95, -HEAD * 0.75, -HEAD * 0.55);
-        ctx.quadraticCurveTo(-HEAD * 1.1, 0, -HEAD * 0.75, HEAD * 0.55);
-        ctx.quadraticCurveTo(HEAD * 0.4, HEAD * 0.95, HEAD * 1.5, 0);
-        ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = dark; ctx.lineWidth = Math.max(0.6, HEAD * 0.16); ctx.stroke();
-        // 眼睛（左右对称，俯视视角；白眼球 + 黑瞳 + 高光）
-        //  全部按 HEAD 比例：原来写死 3.5/5/3.6，头细一半后眼睛会整个戳出来
-        const ey = HEAD * 0.68, er = HEAD * 0.49;
-        for (const s of [-1, 1]) {
-            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(HEAD * 0.48, s * ey, er, 0, 7); ctx.fill();
-            ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(HEAD * 0.63, s * ey, er * 0.53, 0, 7); ctx.fill();
-            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(HEAD * 0.72, s * ey - er * 0.15, er * 0.22, 0, 7); ctx.fill();
+        for (let i = 0; i <= steps; i++) {
+            const [x, y] = pt(t0 + LEN * i / steps);
+            const gx = Math.round(x / CELL), gy = Math.round(y / CELL);
+            const key = gx + "," + gy;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            ctx.fillRect(gx * CELL, gy * CELL, CELL - 1, CELL - 1);
         }
-        // 分叉红信（一伸一缩）
-        const flick = (Math.sin(now / 150) + 1) / 2;
-        if (flick > 0.5) {
-            ctx.strokeStyle = "#ff5252"; ctx.lineWidth = Math.max(0.8, HEAD * 0.24);
+    } catch (e) {}
+}
+
+/**
+ * 电流传输：一次完整的"发送→抵达"。
+ *   ① 起点端口炸出电火花  ② 一道**锯齿状电弧**沿连线窜过去（白芯 + 彩色辉光 + 随机分叉）
+ *   ③ 终点端口被击中闪爆  ④ 余辉熄灭后重新发射
+ * 周期 0~1 为飞行，1~1.25 为空档；dir=-1 时反向（从终点发往起点）。
+ */
+function _drawSpark(ctx, seg, canvas, col, size, spd, dir, now) {
+    try {
+        const R = Math.max(2.5, size * 0.8);
+        const pt = (tt) => _pointOf(seg, tt < 0 ? tt + 1 : tt > 1 ? tt - 1 : tt, canvas);
+        const sg = dir < 0 ? -1 : 1;
+        let s = ((now / 1000) * spd) % 1.25; if (s < 0) s += 1.25;
+        const head = sg > 0 ? Math.min(s, 1) : 1 - Math.min(s, 1);
+        const emitT = sg > 0 ? 0 : 1, absT = sg > 0 ? 1 : 0;
+        // 形状每 50ms 重掷一次：看起来是"噼啪抖动"而不是滑动的线
+        const bucket = Math.floor(now / 50);
+        const rnd = (i) => { const v = Math.sin(i * 127.1 + bucket * 311.7) * 43758.5453; return v - Math.floor(v); };
+        const TAIL = 0.24, N = 14;
+        const flick = 0.72 + 0.28 * rnd(99);
+
+        // 采样出一条抖动的折线（尾 → 头）
+        const pts = [];
+        for (let i = 0; i <= N; i++) {
+            const f = i / N;                       // 0=尾 1=头
+            const tt = head - sg * TAIL * (1 - f);
+            if (tt < 0 || tt > 1) continue;
+            const [x, y] = pt(tt);
+            const [x2, y2] = pt(Math.min(1, Math.max(0, tt + 0.004 * sg)));
+            let nx = -(y2 - y), ny = (x2 - x);
+            const L = Math.hypot(nx, ny) || 1; nx /= L; ny /= L;
+            const amp = R * 1.15 * (0.35 + f * 0.65);      // 越靠头抖得越凶
+            const off = (rnd(i) * 2 - 1) * amp;
+            pts.push([x + nx * off, y + ny * off]);
+        }
+        if (pts.length < 2) return;
+
+        const stroke = (list, w, color, alpha) => {
+            ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = w;
             ctx.beginPath();
-            ctx.moveTo(HEAD * 1.5, 0); ctx.lineTo(HEAD * 1.5 + HEAD * 1.2, -HEAD * 0.48);
-            ctx.moveTo(HEAD * 1.5, 0); ctx.lineTo(HEAD * 1.5 + HEAD * 1.2, HEAD * 0.48);
+            ctx.moveTo(list[0][0], list[0][1]);
+            for (let i = 1; i < list.length; i++) ctx.lineTo(list[i][0], list[i][1]);
+            ctx.stroke();
+        };
+        ctx.save();
+        ctx.lineCap = "round"; ctx.lineJoin = "round";
+        stroke(pts, Math.max(2.2, R * 1.7), col, 0.28 * flick);       // 外辉光
+        stroke(pts, Math.max(1.4, R * 0.75), col, 0.85 * flick);      // 主体
+        stroke(pts, Math.max(0.8, R * 0.26), "#FFFFFF", flick);       // 白芯
+
+        // 分叉：从中间随机两点甩出短小闪电
+        ctx.globalAlpha = 0.75 * flick; ctx.strokeStyle = col;
+        ctx.lineWidth = Math.max(1, R * 0.35);
+        for (let b = 0; b < 2; b++) {
+            const i0 = 3 + Math.floor(rnd(b * 7 + 3) * Math.max(1, pts.length - 5));
+            const p0 = pts[Math.min(pts.length - 1, i0)];
+            if (!p0) continue;
+            let px = p0[0], py = p0[1];
+            ctx.beginPath(); ctx.moveTo(px, py);
+            for (let k = 1; k <= 3; k++) {
+                px += (rnd(b * 13 + k) * 2 - 1) * R * 1.5;
+                py += (rnd(b * 17 + k) * 2 - 1) * R * 1.5;
+                ctx.lineTo(px, py);
+            }
             ctx.stroke();
         }
+
+        // 头部电球
+        const [hx, hy] = pt(head);
+        ctx.globalAlpha = flick; ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(hx, hy, R * 0.85, 0, 7); ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.beginPath(); ctx.arc(hx, hy, R * 0.4, 0, 7); ctx.fill();
+
+        // 端口：发射 / 击中
+        ctx.fillStyle = col;
+        const ring = (tt, rad, a) => {
+            if (a <= 0) return;
+            const [x, y] = pt(tt);
+            ctx.globalAlpha = Math.min(1, a);
+            ctx.beginPath(); ctx.arc(x, y, rad, 0, 7); ctx.fill();
+        };
+        if (s < 0.16) ring(emitT, R * 0.4 + R * 1.6 * (1 - s / 0.16), 1 - s / 0.16);
+        if (s > 0.84 && s <= 1) { const f = (s - 0.84) / 0.16; ring(absT, R * (0.5 + 1.5 * f), 0.9 * (1 - f * 0.3)); }
+        if (s > 1) { const f = (s - 1) / 0.25; ring(absT, R * 0.3 + R * 2.0 * (1 - f), 0.9 * (1 - f)); }
         ctx.restore();
     } catch (e) {}
 }
@@ -1540,540 +1576,6 @@ function _drawGhostShape(ctx, cx, cy, R, color, alpha) {
     ctx.closePath();
     ctx.fill();
 
-    ctx.restore();
-}
-
-// ============================================================================
-//  2026-10-27 终极版：NES SMB1 Small Mario 12×16 原版复刻
-//   来源：mariospritesource.wordpress.com（精确 3 色 + 透明）
-//   R=#d82800 红帽/红背带裤    G=#887000 棕(头发/眼睛/胡子/内搭/鞋)
-//   T=#fc9838 橙褐(脸/手/扣子)   .=透明
-//   关键：没有蓝！没有黑！overalls是红的！（1985年原版！）
-// ============================================================================
-
-// Standing frame（12×16，经典 NES 站桩）
-const XH_MARIO_STAND = [
-    "............",   // 0
-    "...RRRRRR...",   // 1  红帽
-    "..RRRRRRRR..",   // 2  帽檐侧影
-    "..RTTTGGR...",   // 3  脸 + 棕头发/眼睛
-    ".RTGGTGGTGR",    // 4  瞳孔（G=棕）
-    ".RTGGGGGTGR",    // 5  胡子（G=棕）！
-    ".RTTTTTTTGR",    // 6  脸
-    "..GGGGGGGG..",   // 7  内搭 T 恤（G=棕）
-    ".GGRRRRRRGG.",   // 8  红背带裤开始
-    ".GRRRRRRRRG.",   // 9
-    "GRRTTRRRTTRG",   // 10 红裤 + 橙褐扣子（T=Tan）
-    "GRRRRRRRRRRG",   // 11
-    "GRRRRRRRRRRG",   // 12
-    ".GGGG.GGGG..",   // 13 鞋（G=棕）
-    ".GGGG.GGGG..",   // 14
-    "..GG...GG...",   // 15 鞋底
-];
-
-// Walking Frame A（脚分开）
-const XH_MARIO_WALK_A = [
-    "............",
-    "...RRRRRR...",
-    "..RRRRRRRR..",
-    "..RTTTGGR...",
-    ".RTGGTGGTGR",
-    ".RTGGGGGTGR",
-    ".RTTTTTTTGR",
-    "..GGGGGGGG..",
-    ".GGRRRRRRGG.",
-    ".GRRRRRRRRG.",
-    "GRRTTRRRTTRG",
-    "GRRRRRRRRRRG",
-    "GRRRRRRRRRRG",
-    ".GGG.....GGG",   // ← 走路 A：两脚分开
-    "GGG.......GGG",
-    "G...........G",
-];
-
-// Walking Frame B（脚并拢）
-const XH_MARIO_WALK_B = [
-    "............",
-    "...RRRRRR...",
-    "..RRRRRRRR..",
-    "..RTTTGGR...",
-    ".RTGGTGGTGR",
-    ".RTGGGGGTGR",
-    ".RTTTTTTTGR",
-    "..GGGGGGGG..",
-    ".GGRRRRRRGG.",
-    ".GRRRRRRRRG.",
-    "GRRTTRRRTTRG",
-    "GRRRRRRRRRRG",
-    "GRRRRRRRRRRG",
-    "...GGGGGG...",   // ← 走路 B：两脚并拢向前
-    "...GGGGGG...",
-    "....GGGG....",
-];
-
-// 精确 NES 1985 原版 3 色 palette
-const XH_MARIO_COLORS = {
-    R: "#d82800",   // 红帽 + 红背带裤（不是蓝！不是蓝！不是蓝！）
-    G: "#887000",   // 棕色：头发/眼睛/胡子/内搭T恤/鞋（不是黑！）
-    T: "#fc9838",   // 橙褐：脸/手/扣子（不是纯白！）
-};
-
-/** 画像素马里奥主函数 —— 奔跑感！腿甩起来！帧切换跟粒子速度完全解耦！ */
-function _drawMario(ctx, seg, canvas, col, size, spd, dir, now, st) {
-    try {
-        const pt = (tt) => _pointOf(seg, tt < 0 ? tt + 1 : tt > 1 ? tt - 1 : tt, canvas);
-        let ht = ((now / 1000) * spd * dir) % 1; if (ht < 0) ht += 1;
-
-        const cell = Math.max(4, size * 1.5);
-        const H = 16;
-
-        //  帧切换：纯时间驱动（跟 spd 解耦，速度归零腿还在甩）
-        // 10Hz = 每秒切 10 次 = 每 100ms 换一次脚，肉眼清晰可见
-        const walkFrame = Math.floor((now / 1000) * 10) % 2;
-        const runFrame = walkFrame === 0 ? XH_MARIO_WALK_A : XH_MARIO_WALK_B;
-
-        // ---- 跳跃：绑定 ht（粒子跑一圈跳一次）+ 独立时间兜底 ----
-        const jumpPos = ((ht + 0.02) % 1);
-        // 如果 spd 太小（粒子几乎不动），改用时间驱动跳跃
-        const spdEffective = Math.max(spd, 0.02);
-        const timeJumpPos = (((now / 1000) * spdEffective + 0.02) % 1);
-        const isJumping = (jumpPos < 0.08) || (timeJumpPos < 0.08 && spd < 0.1);
-        let hop = 0;
-        let drawFrame = runFrame;
-        if (isJumping) {
-            const t = (spd >= 0.1 ? jumpPos : timeJumpPos) / 0.08;
-            hop = -Math.sin(Math.min(1, t) * Math.PI) * 26;
-            drawFrame = XH_MARIO_STAND;
-        } else {
-            //  走路起伏也用时间驱动，跟帧切换同频
-            hop = -Math.sin((now / 1000) * 32 * Math.PI * 2) * 2.8;
-        }
-
-        // ---- 金币尾迹 ----
-        const trailCount = Math.max(0, (st && st.gcount) || 5);
-        const trailLen = Math.max(0.04, (st && st.gradSize) || 0.30);
-        for (let i = trailCount; i >= 1; i--) {
-            const tt = ht - (trailLen * i / trailCount);
-            const [x, y] = pt(tt);
-            const a = 0.35 * (1 - i / trailCount);
-            _drawCoin(ctx, x, y - H * cell / 2 + hop, cell * 1.2, a);
-        }
-
-        const [mx, my] = pt(ht);
-        _drawMarioPixel(ctx, mx, my + hop, cell, 1.0, drawFrame);
-
-        if (st && st.glow) {
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = "#d82800";
-        }
-    } catch (e) {}
-}
-
-/** 画马里奥像素方块（接受 frame 参数）*/
-function _drawMarioPixel(ctx, cx, cy, cell, alpha, frame) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    const W = 12, H = 16;
-    const tmpl = frame || XH_MARIO_STAND;
-    const startX = cx - (W * cell) / 2;
-    const startY = cy - (H * cell) / 2;
-
-    for (let row = 0; row < H; row++) {
-        const line = tmpl[row] || "";
-        for (let col = 0; col < W; col++) {
-            const code = line[col];
-            if (code === "." || !code) continue;
-            const color = XH_MARIO_COLORS[code];
-            if (!color) continue;
-            ctx.fillStyle = color;
-            ctx.fillRect(startX + col * cell, startY + row * cell, cell + 0.5, cell + 0.5);
-        }
-    }
-    ctx.restore();
-}
-
-/** 画一个迷你金币（3×3 金色方块 + 中心高光） */
-function _drawCoin(ctx, cx, cy, size, alpha) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    // 外框（金色）
-    ctx.fillStyle = "#FFD700";
-    ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
-    // 内圈（深金）
-    const inner = size * 0.55;
-    ctx.fillStyle = "#E5B800";
-    ctx.fillRect(cx - inner / 2, cy - inner / 2, inner, inner);
-    // 中心高光（小白点）
-    const hl = size * 0.2;
-    ctx.fillStyle = "#FFF8DC";
-    ctx.fillRect(cx - hl / 2 - size * 0.1, cy - hl / 2 - size * 0.1, hl, hl);
-    ctx.restore();
-}
-
-// ============================================================================
-//  2026-10-27 Mega Man X SNES Style（从附件 PNG 逐像素提取）
-//   源文件：用户上传的精灵表（MMX SNES 风格，CUSTOM by Zedrusk）
-//   3 个 frame：跑步 A（28×31）、跑步 B（30×31）、跳跃（22×32）
-//   12 色精确 hex（用 Node.js v3 提取器逐像素 RGBA 拿到）
-// ============================================================================
-
-// Row8 Col3 — 跑步帧 A（脚分开，略宽）
-const XH_MMX_RUN_A = [
-    ".................AAA..........",
-    "...............AABCCAA........",
-    "..............ADDEDBCBA.......",
-    ".............ADDEFEDBCBA......",
-    ".............ADEEEEEDDDA......",
-    "............ADDEEEEDBCCBA.....",
-    "............ADCCEEEDBCCBA.....",
-    "............ACAGCEAADBBDA.....",
-    "............ACHCCAIJAAAA......",
-    "...........AABACBKJKJJIA......",
-    ".........AABCABBLKJIAJA.......",
-    "........ALBCCBAAAKJJJI........",
-    "......AALBCCBLLBAKJAJJA..AAA..",
-    ".....ADFDDCLAABCCAIJIA..AFAFA.",
-    ".....ADEFDDAAACCCCBAABAAAEAFFA",
-    "......ADDEFFEABCBAALBCDFDEFAEA",
-    ".......ADEFFFADDDA.ALDEEEDEEA.",
-    "........AEFFEDEFEA..AADDDAAA..",
-    ".........AEEADEFDCA...AAA.....",
-    ".........AAACLDDBCCA..........",
-    ".........ALCCLALBBCBAA........",
-    "........ADDABA.ALBBAEDA.......",
-    ".......ADDEEAA..ALADEFA.......",
-    "......ADDEFFA....ADDFFDA......",
-    ".....ADDEFFEA....ADDFFFA......",
-    "....ADDDEFFA.....ADDEFFA......",
-    "...AAAAAEFEA.....ADDDEAAA.....",
-    "..ADDDDEAEA......ADDDAEFEA....",
-    ".ADDDEFFEAA.....ADAAAEFFFEA...",
-    "ADDDEFFFFDA.....ADDDDDEFFFEA..",
-    "AAAAAAAAAAA.....AAAAAAAAAAAA..",
-];
-
-// Row8 Col4 — 跑步帧 B（脚并拢，更紧凑）
-const XH_MMX_RUN_B = [
-    "...............AAA..........",
-    ".............AABCCAA........",
-    "............ADDEDBCBA.......",
-    "...........ADDEFEDBCBA......",
-    "...........ADEEEEEDDDA......",
-    "..........ADDEEEEDBCCBA.....",
-    "..........ADCCEEEDBCCBA.....",
-    "..........ACAGCEAADBBDA.....",
-    "..........ACHCCAIGAAAA......",
-    ".........AABACBJKGAKIA......",
-    ".......AABCABBLJKKAKA.......",
-    "......ALBCCBAAAJKKKI........",
-    "....AALBCCBLLBAJKAJKA..AAA..",
-    "...ADFDDCLAABCCAIHJA..AFAFA.",
-    "...ADEFDDAAACCCCBAABAAAEAFFA",
-    "....ADDEFFEABCBAALBCDFDEFAEA",
-    ".....ADEFFFADDDA.ALDEEEDEEA.",
-    "......AEFFEDEFEA..AADDDAAA..",
-    ".......AEEADEFDCA...AAA.....",
-    ".......AAACLDDBCCA..........",
-    ".......ALCCLALBBCBAA........",
-    "......ADDABA.ALBBAEDA.......",
-    ".....ADDEEAA..ALADEFA.......",
-    "....ADDEFFA....ADDFFDA......",
-    "...ADDEFFEA....ADDFFFA......",
-    "..ADDDEFFA.....ADDEFFA......",
-    ".AAAAAEFEA.....ADDDEAAA.....",
-    "ADDDDEAEA......ADDDAEFEA....",
-    "DDDEFFEAA.....ADAAAEFFFEA...",
-    "DDEFFFFDA.....ADDDDDEFFFEA..",
-    "AAAAAAAAA.....AAAAAAAAAAAA..",
-];
-
-// Row9 Col4 — 跳跃帧（身体紧凑，脚收起，手抬起来）
-const XH_MMX_JUMP = [
-    "..............AAA.....",
-    "............AABCCAA...",
-    "...........ADDEDBCBA..",
-    "..........ADDEFEDBCBA.",
-    "..........ADEEEEEDDDA.",
-    ".........ADDEEEEDBCCBA",
-    ".........ADCCEEEDBCCBA",
-    ".........ACAGCEAADBBDA",
-    ".........ACHCCAIGAAAA.",
-    ".........ABACBJKGAKIA.",
-    ".........AAABLJKKAKA..",
-    ".........ALBALJKKKI...",
-    "........ALBCCAJKAKKA..",
-    ".......AALCCCAAIKIA...",
-    "......ADABCCBALAAA....",
-    "......ADABCCABCAAA....",
-    ".......AABCBAABAEEA...",
-    "....AAADALBDFFAEFFEA..",
-    "...ADDAEDAAAEEDEFFEA..",
-    "..ADDAADABDAAAAAEEA...",
-    ".ADEADAALBCBA..AAA....",
-    ".AEFAEEALBCCA.........",
-    "ADFFAFFEABCCAA........",
-    "AFFFEAFFFAAAEA........",
-    "AFFFFAAAEFFFAA........",
-    "AFFFEA.AAAAAEA........",
-    "AFFEA.ADDEEEEA........",
-    "AFEA..ADDEEAAA........",
-    ".AA...ADDDADEDA.......",
-    ".....ADAAADEEEDA......",
-    ".....ADDDEEEEEEDA.....",
-    ".....AAAAAAAAAAAA.....",
-];
-
-// SNES Mega Man X 精确 12 色 palette（从精灵表逐像素 RGBA 提取）
-const XH_MMX_COLORS = {
-    A: "#100c13",   // 黑轮廓 —— Mega Man 盔甲描边
-    B: "#4fa1f0",   // 盔甲中等蓝 —— 护甲主体
-    C: "#79d9f0",   // 盔甲浅蓝高光 —— 盔甲反光
-    D: "#1a2c81",   // 盔甲深蓝阴影 —— 盔甲暗部
-    E: "#003ef0",   // 武器/身体中蓝 —— 手臂/腿主体
-    F: "#0081f8",   // 武器亮蓝 —— 炮口/能量弹
-    G: "#f0f0f0",   // 眼睛白 —— 瞳孔高光
-    H: "#f03e07",   // 火箭/炮口红 —— 蓄力射击/火焰
-    I: "#b96047",   // 肤色深 —— 脸阴影
-    J: "#813e1a",   // 肤色更深（深棕）—— 阴影最深
-    K: "#f8b181",   // 肤色浅 —— 脸/手亮面
-    L: "#1158b1",   // 盔甲暗蓝 —— 最暗阴影
-};
-
-/** 画像素 Mega Man X —— 奔跑感！动画全绑定位移，不再绑时间 */
-function _drawMMX(ctx, seg, canvas, col, size, spd, dir, now, st) {
-    try {
-        const pt = (tt) => _pointOf(seg, tt < 0 ? tt + 1 : tt > 1 ? tt - 1 : tt, canvas);
-        let ht = ((now / 1000) * spd * dir) % 1; if (ht < 0) ht += 1;
-
-        const cell = Math.max(4, size * 1.35);
-        const FRAME_H = 31;
-
-        // ==================================================================
-        //  帧切换：纯时间驱动，spd 解耦。10Hz 肉眼清晰。
-        // ==================================================================
-
-        const walkFrame = Math.floor((now / 1000) * 10) % 2;
-        const runFrame = walkFrame === 0 ? XH_MMX_RUN_A : XH_MMX_RUN_B;
-
-        // ---- 跳跃：ht 驱动 + spd=0 时时间兜底 ----
-        const jumpPos = ((ht + 0.02) % 1);
-        const spdEffective = Math.max(spd, 0.02);
-        const timeJumpPos = (((now / 1000) * spdEffective + 0.02) % 1);
-        const isJumping = (jumpPos < 0.10) || (timeJumpPos < 0.10 && spd < 0.1);
-        let hop = 0;
-        let drawFrame = runFrame;
-        if (isJumping) {
-            const t = (spd >= 0.1 ? jumpPos : timeJumpPos) / 0.10;
-            hop = -Math.sin(Math.min(1, t) * Math.PI) * 28;
-            drawFrame = XH_MMX_JUMP;
-        } else {
-            //  走路起伏也时间驱动，跟帧切换同频
-            hop = -Math.sin((now / 1000) * 40 * Math.PI * 2) * 3.2;
-        }
-
-        // ---- 能量弹尾迹（MMX 专属）----
-        const trailCount = Math.max(0, (st && st.gcount) || 4);
-        const trailLen = Math.max(0.04, (st && st.gradSize) || 0.30);
-        for (let i = trailCount; i >= 1; i--) {
-            const tt = ht - (trailLen * i / trailCount);
-            const [x, y] = pt(tt);
-            const a = 0.4 * (1 - i / trailCount);
-            _drawEnergyBolt(ctx, x, y - FRAME_H * cell / 2 + hop, cell * 0.9, a);
-        }
-
-        // ---- 主 Mega Man X ----
-        const [mx, my] = pt(ht);
-        _drawMMXPixel(ctx, mx, my + hop, cell, 1.0, drawFrame);
-
-        // ---- 蓝光外发光 ----
-        if (st && st.glow) {
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "#0081f8";
-        }
-    } catch (e) {}
-}
-
-/** 画 Mega Man X 像素方块（接受 frame 参数）*/
-function _drawMMXPixel(ctx, cx, cy, cell, alpha, frame) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    const tmpl = frame || XH_MMX_RUN_A;
-    const H = tmpl.length;
-    const W = tmpl[0] ? tmpl[0].length : 28;
-    const startX = cx - (W * cell) / 2;
-    const startY = cy - (H * cell) / 2;
-
-    for (let row = 0; row < H; row++) {
-        const line = tmpl[row] || "";
-        for (let col = 0; col < W; col++) {
-            const code = line[col];
-            if (code === "." || !code) continue;
-            const color = XH_MMX_COLORS[code];
-            if (!color) continue;
-            ctx.fillStyle = color;
-            ctx.fillRect(startX + col * cell, startY + row * cell, cell + 0.5, cell + 0.5);
-        }
-    }
-    ctx.restore();
-}
-
-/** 画一个 MMX 能量弹（蓝色发光球 + 外光晕） */
-function _drawEnergyBolt(ctx, cx, cy, size, alpha) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    // 外光晕（半透明亮蓝）
-    const halo = size * 1.6;
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, halo);
-    grad.addColorStop(0, "rgba(0, 129, 248, 0.5)");
-    grad.addColorStop(0.5, "rgba(0, 62, 240, 0.25)");
-    grad.addColorStop(1, "rgba(0, 62, 240, 0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(cx - halo, cy - halo, halo * 2, halo * 2);
-    // 中心（亮蓝方块 + 纯白核心）
-    const core = size * 0.55;
-    ctx.fillStyle = "#0081f8";
-    ctx.fillRect(cx - core / 2, cy - core / 2, core, core);
-    const hl = size * 0.28;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(cx - hl / 2, cy - hl / 2, hl, hl);
-    ctx.restore();
-}
-
-// ============================================================================
-//  2026-10-27 手工手绘：粉色派大星 Patrick Star（NES 风格 16×16）
-//   5 色：P=粉主 #fe6ecc  p=深粉阴影 #d94ba0  W=白 #fff
-//         B=黑（瞳孔/嘴） #100c13  G=绿裤子 #3e8f30  .=透明
-//   奔跑帧 A：左脚前伸右脚后
-//   奔跑帧 B：右脚前伸左脚后
-// ============================================================================
-
-// 派大星颜色表（精确 hex）
-const XH_PT_COLORS = {
-    P: "#fe6ecc",   // 粉色主色（身体）
-    p: "#d94ba0",   // 深粉阴影（立体感）
-    W: "#ffffff",   // 白色（眼睛高光/牙齿）
-    B: "#100c13",   // 黑色（瞳孔/嘴巴轮廓）
-    G: "#3e8f30",   // 绿色短裤（他穿的那条）
-};
-
-// 奔跑帧 A（左脚前伸，右脚在后）—— 16×16
-const XH_PT_RUN_A = [
-    "................",   // 0
-    "....PPPPPPP.....",   // 1  星形顶部
-    "...PpppppPPP....",   // 2
-    "..PpPPpppppP....",   // 3
-    "..PpPWPpWPpP....",   // 4  眼睛：白高光 W
-    "..PpPBPpBPpP....",   // 5  瞳孔：黑 B
-    "..PpPPpppppP....",   // 6
-    "..PpppBBBpppP...",   // 7  嘴巴（黑轮廓）
-    "..PpppWWWpppP...",   // 8  牙齿（白）
-    "..PPppBBpPP.....",   // 9  下巴
-    "...PGGGGGGG.....",   // 10 绿裤子顶
-    "...PGGGGGGG.....",   // 11 绿裤子
-    "...PGGGGGGG.....",   // 12 绿裤子底
-    "...PP....PP.....",   // 13 腿根（分开）
-    "..PPP....PPP....",   // 14 左脚前  右脚后
-    "..pp......pp....",   // 15 脚底
-];
-
-// 奔跑帧 B（右脚前伸，左脚在后）—— 脚的位置跟 A 反过来
-const XH_PT_RUN_B = [
-    "................",
-    "....PPPPPPP.....",
-    "...PpppppPPP....",
-    "..PpPPpppppP....",
-    "..PpPWPpWPpP....",
-    "..PpPBPpBPpP....",
-    "..PpPPpppppP....",
-    "..PpppBBBpppP...",
-    "..PpppWWWpppP...",
-    "..PPppBBpPP.....",
-    "...PGGGGGGG.....",
-    "...PGGGGGGG.....",
-    "...PGGGGGGG.....",
-    "...PP....PP.....",
-    "....PPP..PPP....",   // 14 左脚后  右脚前（跟 A 对称）
-    "......pp..pp....",   // 15
-];
-
-/** 画手工手绘的粉色派大星 —— 奔跑！帧切换纯时间驱动 */
-function _drawPatrick(ctx, seg, canvas, col, size, spd, dir, now, st) {
-    try {
-        const pt = (tt) => _pointOf(seg, tt < 0 ? tt + 1 : tt > 1 ? tt - 1 : tt, canvas);
-        let ht = ((now / 1000) * spd * dir) % 1; if (ht < 0) ht += 1;
-
-        const cell = Math.max(4, size * 1.4);
-        const H = 16;
-
-        //  帧切换：纯时间驱动，跟粒子速度解耦（速度归零腿照样甩）
-        // 10Hz = 每秒切 10 次 = 每 100ms 换脚，肉眼清晰
-        const walkFrame = Math.floor((now / 1000) * 10) % 2;
-        const runFrame = walkFrame === 0 ? XH_PT_RUN_A : XH_PT_RUN_B;
-
-        // 走路小起伏（纯时间驱动，跟帧切换同频）
-        const hop = -Math.sin((now / 1000) * 20 * Math.PI * 2) * 2.5;
-
-        // ---- 粉色星星尾迹（跟 MMX 能量弹同机制，换粉色）----
-        const trailCount = Math.max(0, (st && st.gcount) || 4);
-        const trailLen = Math.max(0.04, (st && st.gradSize) || 0.30);
-        for (let i = trailCount; i >= 1; i--) {
-            const tt = ht - (trailLen * i / trailCount);
-            const [x, y] = pt(tt);
-            const a = 0.35 * (1 - i / trailCount);
-            _drawPinkSparkle(ctx, x, y - H * cell / 2 + hop, cell * 0.9, a);
-        }
-
-        const [mx, my] = pt(ht);
-        _drawPtPixel(ctx, mx, my + hop, cell, 1.0, runFrame);
-
-        if (st && st.glow) {
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "#fe6ecc";  // 粉色发光
-        }
-    } catch (e) {}
-}
-
-/** 画派大星像素方块 */
-function _drawPtPixel(ctx, cx, cy, cell, alpha, frame) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    const tmpl = frame || XH_PT_RUN_A;
-    const H = tmpl.length;
-    const W = tmpl[0] ? tmpl[0].length : 16;
-    const startX = cx - (W * cell) / 2;
-    const startY = cy - (H * cell) / 2;
-
-    for (let row = 0; row < H; row++) {
-        const line = tmpl[row] || "";
-        for (let col = 0; col < W; col++) {
-            const code = line[col];
-            if (code === "." || !code) continue;
-            const color = XH_PT_COLORS[code];
-            if (!color) continue;
-            ctx.fillStyle = color;
-            ctx.fillRect(startX + col * cell, startY + row * cell, cell + 0.5, cell + 0.5);
-        }
-    }
-    ctx.restore();
-}
-
-/** 画一个粉色闪星星尾迹 */
-function _drawPinkSparkle(ctx, cx, cy, size, alpha) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    const halo = size * 1.6;
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, halo);
-    grad.addColorStop(0, "rgba(254, 110, 204, 0.6)");
-    grad.addColorStop(0.5, "rgba(217, 75, 160, 0.25)");
-    grad.addColorStop(1, "rgba(217, 75, 160, 0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(cx - halo, cy - halo, halo * 2, halo * 2);
-    const core = size * 0.55;
-    ctx.fillStyle = "#fe6ecc";
-    ctx.fillRect(cx - core / 2, cy - core / 2, core, core);
-    const hl = size * 0.28;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(cx - hl / 2, cy - hl / 2, hl, hl);
     ctx.restore();
 }
 
@@ -2531,14 +2033,10 @@ function _drawAll(ctx, canvas, opts) {
         _drawPacman(ctx, seg, canvas, hot ? "#FFFFFF" : col, size, spd, dir, now, st);
     } else if (st.shape === "ghost") {
         _drawGhost(ctx, seg, canvas, hot ? "#FFFFFF" : col, size, spd, dir, now, st);
-    } else if (st.shape === "mario") {
-        _drawMario(ctx, seg, canvas, hot ? "#FFFFFF" : col, size, spd, dir, now, st);
-    } else if (st.shape === "mmx") {
-        _drawMMX(ctx, seg, canvas, hot ? "#FFFFFF" : col, size, spd, dir, now, st);
-    } else if (st.shape === "patrick") {
-        _drawPatrick(ctx, seg, canvas, hot ? "#FFFFFF" : col, size, spd, dir, now, st);
     } else if (st.shape === "mouse") {
         _drawMouse(ctx, seg, canvas, hot ? "#FFFFFF" : col, size, spd, dir, now, st);
+    } else if (st.shape === "spark") {
+        _drawSpark(ctx, seg, canvas, hot ? "#FFFFFF" : col, size, spd, dir, now);
     } else if (st.shape === "text") {
         _drawText(ctx, seg, canvas, hot ? "#FFFFFF" : col, size, spd, dir, now);
     } else {
@@ -3357,6 +2855,37 @@ const SETTING_DEFS = [
         group: "连线",
         description: "光晕半径（像素）。0 = 不发光（等同关掉「执行发光」）；14 = 默认柔和光晕；30+ = 明显大光晕。只影响执行时那根线，平时不动。",
         onChange: (v) => { CFG.execGlowSize = Number(v) || 0; },
+    },
+    {
+        //  2026-11-17 新增：接线特效（拖线时端口放大发光 + 接上时火花 + 音效）
+        //    实现在 js/xh_connection_fx.js：先读 window.__XH_CFX（下面 onChange 写的），
+        //    读不到再按 id 去设置库里取，所以两个面板拖滑条都立刻生效。
+        id: `${NS}.connFx`, name: "接线特效", type: "boolean", defaultValue: true,
+        group: "连线",
+        description: "拖线时把最近的可连接端口放大发光，松手接上时炸一圈火花。纯视觉，不改接线逻辑；关掉即恢复原样。",
+        onChange: (v) => { (window.__XH_CFX = window.__XH_CFX || {}).connFx = !!v; },
+    },
+    {
+        id: `${NS}.connFxSfx`, name: "接线音效", type: "combo",
+        options: ["卡扣+电流", "卡扣", "通电", "滋啦", "脉冲"],
+        defaultValue: "卡扣+电流",
+        group: "连线",
+        description: "接上连线时那一声的样式。卡扣+电流 = 咔哒一声再带一点电流尾音（推荐，最耐听）；卡扣 = 纯机械插入；通电 = 低频上扫 + 嗡鸣；滋啦 = 老的电弧声；脉冲 = 三连短音，最轻。全部实时合成，无音频文件。",
+        onChange: (v) => { (window.__XH_CFX = window.__XH_CFX || {}).connFxSfx = v || "卡扣+电流"; },
+    },
+    {
+        id: `${NS}.connFxSize`, name: "接线特效大小", type: "slider",
+        attrs: { min: 0.8, max: 3, step: 0.1 }, defaultValue: 2.2,
+        group: "连线",
+        description: "端口光晕、流动粒子、电弧整体的尺寸倍数。1.0 ≈ Pixaroma 原版；2.2 = 默认（比原版大一倍多）；3.0 = 很夸张。改完立刻生效。",
+        onChange: (v) => { (window.__XH_CFX = window.__XH_CFX || {}).connFxSize = Number(v); },
+    },
+    {
+        id: `${NS}.connFxVolume`, name: "接线音效音量", type: "slider",
+        attrs: { min: 0, max: 100, step: 5 }, defaultValue: 60,
+        group: "连线",
+        description: "接上连线时那声「滋啦」的音量（%）。0 = 静音。音效由浏览器实时合成，不需要任何音频文件，也不占体积。",
+        onChange: (v) => { (window.__XH_CFX = window.__XH_CFX || {}).connFxVolume = Number(v); },
     }
 ];
 

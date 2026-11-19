@@ -664,7 +664,7 @@ function openNodeColorsPalette(targets, node) {
   // Toggle wiring. setColor does NOT fire onChange, so toggling re-applies nothing.
   titleBtn.addEventListener("click", () => { target = "title"; syncSeg(); syncHexVisibility(); picker.setColor(titleHex); });
   bodyBtn.addEventListener("click",  () => { target = "body";  syncSeg(); syncHexVisibility(); picker.setColor(bodyHex); });
-  if (btnBtn) btnBtn.addEventListener("click", () => { target = "btn"; syncSeg(); syncHexVisibility(); picker.setColor(btnHex || "#01386a"); });
+  if (btnBtn) btnBtn.addEventListener("click", () => { target = "btn"; syncSeg(); syncHexVisibility(); picker.setColor(btnHex || "#1A1613"); });
   syncSeg(); syncHexVisibility();
 
   // ── Preset node colors (one compact grid, derived from the group palette) ──
@@ -693,7 +693,7 @@ function openNodeColorsPalette(targets, node) {
     for (const n of targets) applyBtnColor(n, null);   // 顺带清掉按键色
     const c = captureColors(node);
     titleHex = c.title; bodyHex = c.body; btnHex = null;
-    picker.setColor(target === "title" ? titleHex : (target === "body" ? bodyHex : "#01386a"));
+    picker.setColor(target === "title" ? titleHex : (target === "body" ? bodyHex : "#1A1613"));
     refreshHex();
   }));
   modal.appendChild(foot);

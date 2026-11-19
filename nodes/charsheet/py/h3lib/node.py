@@ -14,7 +14,7 @@ def runtime_max_resolution() -> int:
 
 
 class H3CharacterSheetDesigner:
-    CATEGORY = "H3/Character Sheet"
+    CATEGORY = "小黑家族"
     DESCRIPTION = (
         "Design a static multi-view character sheet. Connect prompt, width, and height "
         "to the native MiniMaxH3ReferenceToVideo node. Reference images are connected "

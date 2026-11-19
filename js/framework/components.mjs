@@ -4,6 +4,7 @@
 // ╚═══════════════════════════════════════════════════════════════╝
 
 import { pixAsset } from "../shared/api_url.mjs";
+import { fl } from "./i18n.mjs";
 import { xhIconHTML } from "../xh_ui_kit.js";
 
 // ── Button ───────────────────────────────────────────────────
@@ -338,20 +339,20 @@ export function createZoomControls(onZoomIn, onZoomOut, onFit) {
   bar.appendChild(
     createButton("\u2212", {
       variant: "sm",
-      title: "缩小",
+      title: fl("缩小"),
       onClick: onZoomOut,
     }),
   );
   bar.appendChild(
-    createButton("适应", {
+    createButton(fl("适应"), {
       variant: "sm",
-      title: "适配视图",
+      title: fl("适配视图"),
       onClick: onFit,
     }),
   );
   bar.appendChild(label);
   bar.appendChild(
-    createButton("+", { variant: "sm", title: "放大", onClick: onZoomIn }),
+    createButton("+", { variant: "sm", title: fl("放大"), onClick: onZoomIn }),
   );
 
   return {
@@ -367,46 +368,46 @@ export function createTransformPanel(config) {
   const _ui = "icons/ui/";
   const collapsed =
     config.startCollapsed !== undefined ? config.startCollapsed : true;
-  const panel = createPanel("变换属性", {
+  const panel = createPanel(fl("变换属性"), {
     collapsible: true,
     collapsed,
   });
 
-  const fitW = createButton("适配宽", {
+  const fitW = createButton(fl("适配宽"), {
     variant: "sm",
     iconSrc: pixAsset(_ui + "fit-width.svg"),
     onClick: config.onFitWidth,
-    title: "适配到画布宽度",
+    title: fl("适配到画布宽度"),
   });
-  const fitH = createButton("适配高", {
+  const fitH = createButton(fl("适配高"), {
     variant: "sm",
     iconSrc: pixAsset(_ui + "fit-height.svg"),
     onClick: config.onFitHeight,
-    title: "适配到画布高度",
+    title: fl("适配到画布高度"),
   });
-  const flipH = createButton("水平翻转", {
+  const flipH = createButton(fl("水平翻转"), {
     variant: "sm",
     iconSrc: pixAsset(_ui + "flip-horizontal.svg"),
     onClick: config.onFlipH,
-    title: "水平翻转",
+    title: fl("水平翻转"),
   });
-  const flipV = createButton("垂直翻转", {
+  const flipV = createButton(fl("垂直翻转"), {
     variant: "sm",
     iconSrc: pixAsset(_ui + "flip-vertical.svg"),
     onClick: config.onFlipV,
-    title: "垂直翻转",
+    title: fl("垂直翻转"),
   });
   const rotCCW = createButton("-90°", {
     variant: "sm",
     iconSrc: pixAsset(_ui + "rotate-ccw.svg"),
     onClick: config.onRotateCCW,
-    title: "旋转 -90°",
+    title: fl("旋转 -90°"),
   });
   const rotCW = createButton("+90°", {
     variant: "sm",
     iconSrc: pixAsset(_ui + "rotate-cw.svg"),
     onClick: config.onRotateCW,
-    title: "旋转 +90°",
+    title: fl("旋转 +90°"),
   });
 
   [fitW, fitH, flipH, flipV, rotCCW, rotCW].forEach(
@@ -421,10 +422,10 @@ export function createTransformPanel(config) {
 
   let resetBtn = null;
   if (config.onReset) {
-    resetBtn = createButton("重置变换", {
+    resetBtn = createButton(fl("重置变换"), {
       variant: "full",
       onClick: config.onReset,
-      title: "将所有变换重置为默认",
+      title: fl("将所有变换重置为默认"),
     });
     resetBtn.classList.add("pxf-btn-danger");
     resetBtn.insertBefore(
@@ -442,7 +443,7 @@ export function createTransformPanel(config) {
   const sliders = {};
 
   if (config.showRotateSlider !== false) {
-    const s = createSliderRow("旋转", 0, 360, 0, config.onRotateChange, {
+    const s = createSliderRow(fl("旋转"), 0, 360, 0, config.onRotateChange, {
       step: 1,
     });
     sliderWrap.appendChild(s.el);
@@ -451,7 +452,7 @@ export function createTransformPanel(config) {
     sliders.setRotate = (v) => s.setValue(v);
   }
   if (config.showScaleSlider !== false) {
-    const s = createSliderRow("缩放 %", 5, 300, 100, config.onScaleChange, {
+    const s = createSliderRow(fl("缩放 %"), 5, 300, 100, config.onScaleChange, {
       step: 1,
     });
     sliderWrap.appendChild(s.el);
@@ -461,14 +462,14 @@ export function createTransformPanel(config) {
   }
   if (config.showStretchSliders !== false) {
     const sh = createSliderRow(
-      "水平 %",
+      fl("水平 %"),
       5,
       300,
       100,
       config.onStretchHChange,
       { step: 1 },
     );
-    const sv = createSliderRow("垂直 %", 5, 300, 100, config.onStretchVChange, {
+    const sv = createSliderRow(fl("垂直 %"), 5, 300, 100, config.onStretchVChange, {
       step: 1,
     });
     sliderWrap.append(sh.el, sv.el);
@@ -480,7 +481,7 @@ export function createTransformPanel(config) {
     sliders.setStretchV = (v) => sv.setValue(v);
   }
   if (config.showOpacitySlider !== false) {
-    const s = createSliderRow("不透明度", 0, 100, 100, config.onOpacityChange, {
+    const s = createSliderRow(fl("不透明度"), 0, 100, 100, config.onOpacityChange, {
       step: 1,
     });
     sliderWrap.appendChild(s.el);
@@ -489,7 +490,7 @@ export function createTransformPanel(config) {
     sliders.setOpacity = (v) => s.setValue(v);
   }
   if (config.showBlurSlider === true) {
-    const s = createSliderRow("模糊", 0, 100, 0, config.onBlurChange, {
+    const s = createSliderRow(fl("模糊"), 0, 100, 0, config.onBlurChange, {
       step: 1,
     });
     sliderWrap.appendChild(s.el);

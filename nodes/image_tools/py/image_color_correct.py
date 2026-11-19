@@ -14,10 +14,14 @@
 # 兼容性：INPUT_TYPES 的字段名 / 顺序 / 默认值 / 输出，全部与原版一致，
 #         所以老工作流里把 `ColorCorrect` 直接换成 XHColorCorrect`，连线与参数一根都不用动。
 
-import cv2
 import numpy as np
 import torch
 from PIL import Image, ImageEnhance
+
+# 2026-11-16：cv2 故意【不】在顶层 import。
+# 顶层导入会让缺 opencv-python 的环境把整个 image_tools 模块拖垮，连坐带走
+# 「身份配色 / 遮罩上色」等只用 torch 的节点，界面误报成「缺失节点包」。
+# 本模块的用法是 docs/安装与依赖详解.md §5.0.1 写的「运行时可选」，改为函数内延迟导入。
 
 
 class XHColorCorrect:
@@ -95,6 +99,15 @@ class XHColorCorrect:
     )
 
     def color_correct(self, image, temperature, hue, brightness, contrast, saturation, gamma):
+        # 只有真正跑这个节点时才要 cv2；缺了给一句人话，而不是让整包静默少节点。
+        try:
+            import cv2
+        except ImportError as _e:
+            raise RuntimeError(
+                "[XiaoHei-色彩校正] 需要 opencv-python。请在运行 ComfyUI 的 Python 环境里执行 "
+                "\"python -m pip install opencv-python\"，然后完全退出 ComfyUI 再重开。"
+            ) from _e
+
         batch_size, height, width, _ = image.shape
         result = torch.zeros_like(image)
 

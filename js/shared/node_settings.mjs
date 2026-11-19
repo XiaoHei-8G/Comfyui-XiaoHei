@@ -225,17 +225,40 @@ function accentPropOf(comfyClass) {
 }
 
 /**
+ * Current theme preset's main colour (2026-11-17). Read lazily so it always
+ * reflects the latest preset the fan picked - no cached value, no import cycle
+ * (the theme module hangs off window, loaded later than this file).
+ */
+export function themeAccent() {
+  try {
+    const t = window.XH_THEME;
+    const m = t && typeof t.main === "function" ? t.main() : null;
+    if (typeof m === "string" && m.trim()) return m.trim();
+  } catch {}
+  return null;
+}
+
+/**
  * The colour this node should paint with. Safe to call for a node that never
- * registered anything - it just falls through to the master default / brand.
+ * registered anything - it just falls through to the theme default / brand.
+ *
+ * Priority (2026-11-17: theme inserted before the legacy global):
+ *   1. the node's own saved pick      -> fan personalisation, always wins
+ *   2. the per-node-type setting      -> fan's choice for a node family
+ *   3. the active THEME preset colour -> NEW global default, follows preset
+ *   4. legacy Pixaroma.Accent.Default -> old global (orange residue #f66744)
+ *   5. BRAND                           -> static fallback
+ * Inserting the theme at #3 means an untouched node follows the theme live,
+ * while any node the fan coloured by hand keeps its own colour (family rule).
  */
 export function accentOf(node) {
-  if (!node) return BRAND;
+  if (!node) return themeAccent() || BRAND;
   const def = getNodeSettings(node.comfyClass);
   const own = node.properties?.[def?.prop || DEFAULT_ACCENT_PROP];
   if (typeof own === "string" && own.trim()) return own.trim();
   const perClass = readSetting(def?.setting || classAccentSetting(node.comfyClass));
   if (perClass) return perClass;
-  return globalAccent() || BRAND;
+  return themeAccent() || globalAccent() || BRAND;
 }
 
 /**
@@ -1010,3 +1033,21 @@ export function openAccentPanel(node) {
   }, 0);
   _panel = panel;
 }
+
+// ── theme preset → repaint every accent (2026-11-17) ────────────────────────
+// When a fan switches colour preset, accentOf() now reads the theme colour for
+// nodes with no manual pick - but the DOM var was painted at node creation and
+// won't update itself. Repaint all registered nodes on that event so their
+// buttons/cards/borders follow the new theme live. Nodes with a manual colour
+// keep it: accentOf() still returns the personal pick first, so repaint is a
+// no-op for them. Deferred a tick so the theme module finishes writing its CSS
+// variables and the canvas title-bar refresh before we repaint accents.
+try {
+  document.addEventListener("xh-theme-preset-change", function () {
+    setTimeout(function () {
+      try {
+        if (typeof repaintAllAccents === "function") repaintAllAccents();
+      } catch (e) {}
+    }, 25);
+  });
+} catch (e) {}

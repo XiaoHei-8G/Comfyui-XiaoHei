@@ -86,6 +86,20 @@ const CATEGORY_ZH = {
 };
 function catZh(name) { return CATEGORY_ZH[name] || name; }
 //  ╔══════════════════════════════════════════════════════════════╗
+//  ║  分类规范化：剥掉前导 emoji / 符号                              ║
+//  ╚══════════════════════════════════════════════════════════════╝
+//  2026-11-19 用户报「帮助里搜不到草图节点」。根因不是搜索，是**收录**：
+//    有一批复刻件沿用了原作者分类 `👑 XiaoHei/🎨 编辑器`（emoji 打头），
+//    而收录判断写的是 `cat.startsWith("XiaoHei")` ⇒ 这 10 个节点整条被跳过，
+//    索引里压根没有它们，搜什么词都搜不到。
+//  同日已把包内所有节点分类统一成 `XiaoHei/*`（后端 CATEGORY），emoji 前缀不再存在；
+//    这个函数作为**防御**保留 —— 以后再有第三方/复刻件带 emoji 分类也不会被漏收。
+//  这里统一剥掉开头的非字母/非数字/非中文符号（emoji、空格、装饰符），
+//    后面所有判断都基于规范化后的分类，不再被 emoji 前缀骗过去。
+function xhCatCore(cat) {
+  return String(cat || "").replace(/^[^\p{L}\p{N}]+/u, "").trim();
+}
+//  ╔══════════════════════════════════════════════════════════════╗
 //  ║  分类 → 图标名（Lucide 1.71，全部经 svg/ 校验存在）            ║
 //  ║  2026-11-12：把原来全空的占位填上，组件卡片左侧从此有图标。   ║
 //  ╚══════════════════════════════════════════════════════════════╝
@@ -173,12 +187,12 @@ function injectCSS() {
 .xhhelp-tool{width:24px;height:24px;border:none;background:transparent;color:var(--xh-sub);cursor:pointer;border-radius:4px;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 .xhhelp-tool:hover{background:var(--xh-overlay);color:var(--xh-text)}
 .xhhelp-close{margin-left:auto}
-/* ⏱ 2026-11-08：顶部条固定午夜蓝 #01386A（与 XiaoHei 节点标题栏同源）， 不随官方浅色主题切灰；
-   白字 11.83:1。只覆盖帮助面板这一处，不动 --xh-title-bg 共享变量 ⇒ 别的浮窗不受牵连。 */
-.xhhelp-title{background:#01386A;border-bottom-color:rgba(255,255,255,.18);color:#fff}
-.xhhelp-title .xhhelp-name{color:#fff}
-.xhhelp-title .xhhelp-tool{color:rgba(255,255,255,.78)}
-.xhhelp-title .xhhelp-tool:hover{background:rgba(255,255,255,.16);color:#fff}
+/* 2026-11-17：顶部条跟随家族主题预设，和节点标题栏同源 --xh-rest / --xh-on-rest；
+   经典预设现在是暖黑 #1A1613 + 金字，只把「写死」换成「读主题」，不动 --xh-title-bg 共享变量。 */
+.xhhelp-title{background:var(--xh-rest,#1A1613);border-bottom-color:var(--xh-rest-bd,rgba(255,255,255,.28));color:var(--xh-on-rest,#fff)}
+.xhhelp-title .xhhelp-name{color:var(--xh-on-rest,#fff)}
+.xhhelp-title .xhhelp-tool{color:var(--xh-on-rest,#fff);opacity:.78}
+.xhhelp-title .xhhelp-tool:hover{background:color-mix(in srgb,var(--xh-on-rest,#fff) 16%,transparent);color:var(--xh-on-rest,#fff);opacity:1}
 
 /* 搜索栏 */
 .xhhelp-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--xh-border);background:var(--xh-bar-bg);flex:none}
@@ -227,8 +241,8 @@ function injectCSS() {
 .xhhelp-detail .xhhelp-detail-empty{padding:20px;border:1px dashed var(--xh-border);border-radius:8px;color:var(--xh-sub);text-align:center;font-size:12px}
 .xhhelp-btn{display:inline-block;height:30px;padding:0 14px;border-radius:6px;border:1px solid var(--xh-border);background:transparent;color:var(--xh-text);cursor:pointer;font-size:12.5px;margin-top:12px;margin-right:8px}
 .xhhelp-btn:hover{background:var(--xh-overlay)}
-/* ⏱ 2026-11-08：常态 = 午夜蓝低彩（不再是常亮实心金），hover 才亮一下琥珀金 */
-.xhhelp-btn-primary{background:var(--xh-rest,#01386A) !important;color:var(--xh-on-rest,#fff) !important;border-color:var(--xh-rest-bd,rgba(255,255,255,.28)) !important}
+/* ⏱ 2026-11-17：常态 = 主题标题色（不再是常亮实心金），hover 才亮一下琥珀金 */
+.xhhelp-btn-primary{background:var(--xh-rest,#1A1613) !important;color:var(--xh-on-rest,#fff) !important;border-color:var(--xh-rest-bd,rgba(255,255,255,.28)) !important}
 .xhhelp-btn-primary:hover{background:var(--xh-primary,#E8A33C) !important;color:var(--xh-on-primary,#1c1c1c) !important;border-color:var(--xh-primary,#E8A33C) !important;filter:none}
 
 /* ★ 2026-11-12：首页顶部「我们的初心」横幅 */
@@ -241,8 +255,8 @@ function injectCSS() {
 .xhhelp-detail{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
 .xhhelp-detail-text{flex:1 1 320px;min-width:0}
 .xhhelp-detail-prev{flex:0 0 auto;align-self:flex-start}
-.xhnp{width:258px;background:var(--xhnp-body,rgba(1,56,106,.12));border:1px solid rgba(0,0,0,.5);border-radius:7px;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.35);font-family:inherit;font-size:11.5px;color:#e6e6e6}
-.xhnp-title{background:var(--xhnp-title,#01386A);color:var(--xhnp-fg,#fff);font-weight:700;padding:7px 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xhnp{width:258px;background:var(--xhnp-body,rgba(26,22,19,.14));border:1px solid rgba(0,0,0,.5);border-radius:7px;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.35);font-family:inherit;font-size:11.5px;color:#e6e6e6}
+.xhnp-title{background:var(--xhnp-title,#1A1613);color:var(--xhnp-fg,#fff);font-weight:700;padding:7px 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .xhnp-body{padding:6px 0}
 .xhnp-row{position:relative;display:flex;align-items:center;gap:6px;padding:3px 12px}
 .xhnp-row .xhnp-dot{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:9px;height:9px;border-radius:50%;background:#cfd6dd;border:1.5px solid #1c1c1c;flex:none}
@@ -529,10 +543,10 @@ function nodeTitleColor(entry) {
       const c = nc[entry.groupLabel] || nc[entry.cat] || nc[last];
       if (c) return (typeof c === "string")
         ? { title: c, body: c }
-        : { title: c.color || c.title || "#01386A", body: c.bgcolor || c.body || "rgba(1,56,106,.14)" };
+        : { title: c.color || c.title || "#1A1613", body: c.bgcolor || c.body || "rgba(26,22,19,.16)" };
     }
   } catch (e) { /* 忽略 */ }
-  return XH_NODE_COLORS[entry.groupLabel] || { title: "#01386A", body: "rgba(1,56,106,.12)" };
+  return XH_NODE_COLORS[entry.groupLabel] || { title: "#1A1613", body: "rgba(26,22,19,.14)" };
 }
 
 /** 画出一张「节点样子」示意卡（HTML 字符串）。 */
@@ -591,9 +605,45 @@ const XH_NODE_COLORS = {
   "XiaoHei/音频工具":     { title: "#2f8f6f", body: "#0f2b22" },
   "XiaoHei/导演台":      { title: "#b0772c", body: "#2a1c0e" },
   "XiaoHei/Character":  { title: "#9a4fb0", body: "#231433" },
-  "XiaoHei/指南":        { title: "#01386A", body: "#11283f" },
+  "XiaoHei/指南":        { title: "#1A1613", body: "#241E18" },
   "小黑家族":            { title: "#9a4fb0", body: "#231433" }
 };
+
+//  ╔══════════════════════════════════════════════════════════════╗
+//  ║  搜索关键词（kw）：显示名 ≠ 用户嘴里的叫法                      ║
+//  ╚══════════════════════════════════════════════════════════════╝
+//  2026-11-19 用户报「打字打草图搜不到」。两层原因：
+//    ① 收录 bug（见 xhCatCore）——已修；
+//    ② 就算收录了，title 是「标注 XiaoHei」，搜索只比 title/cls/tagline/分类，
+//       正文里即便写了「画框、圈选」也没人比 ⇒ 用户按自己的说法永远搜不到。
+//  现在给每条索引生成一个 kw：显示名 + 分类 + 摘要 + **说明正文的纯文本** + 口语别名，
+//    搜索统一比这一个字段。kw 随索引进 localStorage 缓存，旧缓存没有 kw 就回落旧字段。
+const NODE_ALIAS = {
+  //  只参与搜索，不改任何显示名。键 = class_type。
+  XHSketch:        "草图 画图 画笔 框选 圈选 涂抹 标记 批注 sketch draw",
+  XHInfo:          "便签 便条 注释 备注 说明 note memo",
+  XHNumberPick:    "选数 数字 数值 取值 挑数字 number pick",
+  XHLoadImage:     "读图 载入图片 打开图片 看图片 load image",
+  XHLoadImageMini: "读图 载入图片 打开图片 看图片 load image",
+  XHSaveImage:     "存图 保存图片 导出图片 出图 save image",
+  XHInpaintCrop:   "重绘 局部重绘 涂抹重绘 裁剪 inpaint crop",
+  XHInpaintStitch: "重绘 缝合 拼回 拼接 inpaint stitch",
+  XH_AudioStudio:  "音频 律动 节奏 反应 蹦迪 audio react",
+};
+/** HTML → 纯文本（说明正文参与搜索；标签和实体一律变空格，不制造假匹配）。 */
+function plainText(html) {
+  return String(html || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&[a-zA-Z#0-9]+;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+/** 拼一条索引的搜索关键词。正文截断，避免缓存被撑大。 */
+function buildKw(parts) {
+  return [parts.title, parts.catName, parts.groupLabel, parts.tagline,
+          NODE_ALIAS[parts.cls] || "", plainText(parts.help).slice(0, 1500)]
+    .filter(Boolean).join(" ").toLowerCase();
+}
 
 async function buildIndex() {
   try {
@@ -604,16 +654,23 @@ async function buildIndex() {
     for (const type in d) {
       const def = d[type] || {};
       const cat = def.category || "";
+      //  ⚠️ 必须用规范化后的分类做判断：`👑 XiaoHei/🎨 编辑器` 这类带 emoji 前缀的分类
+      //    若直接 startsWith("XiaoHei") 会 false ⇒ 节点被漏收（草图/便签/修复/加载图…）。
+      const catCore = xhCatCore(cat);
       const replica = isWNReplica(type);
       //  2026-11-14：1:1 复刻的角色表节点 CATEGORY 是「小黑家族」而不是 XiaoHei/*，
       //    原先这里会把它整个过滤掉 ⇒ 帮助里搜「小黑」只剩一条「交流反馈」。
       //    按分类精确放行（不放宽到任意中文分类，避免把别人的节点收进来）。
-      if (!cat.startsWith("XiaoHei") && cat !== "小黑家族" && !replica) continue;
-      if (cat === "_internal") continue;             // 内部快照节点不进帮助侧栏
+      if (!catCore.startsWith("XiaoHei") && !catCore.startsWith("小黑") && !replica) continue;
+      if (catCore === "_internal") continue;         // 内部快照节点不进帮助侧栏
       const helpDef = HELP_DEFS.find((h) => h.cls === type) || {};
       // 复刻节点 CATEGORY 已是 XiaoHei/Video·XiaoHei/Image·XiaoHei/工具 ⇒ 直接按真实分类归组（不再堆「复刻」分组）
-      const catName = cat.startsWith("XiaoHei/") ? cat.replace(/^XiaoHei\//, "") : (cat.replace(/^XiaoHei\//, "") || "其他");
-      const groupLabel = cat;
+      const catName = (() => {
+        if (catCore === "小黑家族") return "小黑家族";
+        const n = catCore.replace(/^(XiaoHei|小黑)\/?/, "");
+        return n || "其他";                          // 分类只写了个光秃秃的 XiaoHei 时归「其他」
+      })();
+      const groupLabel = catCore;
       const title = helpDef.title || (def.display_name && def.display_name !== type ? def.display_name : type.replace(/^XH\s*/, ""));
       //  2026-10-28 用户报「详情页没有内容」⇒ 根因是 HELP_DEFS 为空、且**没用节点的 description**。
       //    后端每个节点的 description 里已经写好了中文说明（【干什么】/【怎么配】…）⇒ 直接拿来用，
@@ -632,10 +689,11 @@ async function buildIndex() {
         : (desc ? `<div style="line-height:1.85;white-space:pre-wrap">${esc(desc)}</div>` : null));
       const tagline = replica ? "同源节点（WepeNerd）· 已中文化" : (helpDef.tagline || desc.split("\n")[0] || "");
       const preview = buildPreview(def);
+      const kw = buildKw({ cls: type, title, catName, groupLabel, tagline, help });
       items.push({ cls: type, title: title, cat: catName, groupLabel: groupLabel,
                    icon: helpDef.icon || catIconHTML(catName, title),
                    tagline: tagline, help: help, kind: "node", key: "node:" + type,
-                   preview });
+                   kw, preview });
     }
     // 专题页（非节点的说明：功能指南 / 使用说明）也进索引，单独归到「XiaoHei 指南」组
     for (const t of TOPICS) {
@@ -644,8 +702,12 @@ async function buildIndex() {
       //  2026-11-12：专题图标原写 color:"current" 在卡片里渲染成空白，这里统一改品牌黄重生成
       const topicIcon = (typeof t.icon === "string" && t.icon.indexOf("xh-icon-mask") >= 0)
         ? t.icon : xhIconHTML("帮助", { size: 22, color: "brand" });
+      const topicHelp = resolveHelp(t);
+      const topicKw = buildKw({ cls: "", title: t.title, catName: t.cat,
+                                groupLabel: "XiaoHei/指南", tagline: t.tagline, help: topicHelp });
       items.push({ cls: "", title: t.title, cat: t.cat, groupLabel: "XiaoHei/指南", icon: topicIcon,
-                   tagline: t.tagline, help: resolveHelp(t), kind: "topic", key: "topic:" + t.key });
+                   tagline: t.tagline, help: topicHelp, kind: "topic", key: "topic:" + t.key,
+                   kw: topicKw });
     }
     return items;
   } catch (e) { console.warn("[XiaoHei.Help] buildIndex fail:", e); return []; }
@@ -898,12 +960,23 @@ function renderSearch(q) {
   const main = S.win.querySelector(".xhhelp-main"); main.innerHTML = "";
   //  2026-11-14：分类名也参与搜索（「小黑家族」「图像」「视频」等），
   //    否则按家族中文名搜时，节点明明在侧栏里却一个都搜不到。
-  const hits = S.index.filter((it) =>
-    it.title.toLowerCase().includes(q) ||
-    it.cls.toLowerCase().includes(q) ||
+  //  2026-11-19：改为统一比 kw（显示名 + 分类 + 摘要 + 说明正文纯文本 + 口语别名）。
+  //    旧缓存里的条目没有 kw ⇒ 回落原来的字段比对，不会因为缓存旧就搜不出来。
+  //    另：用户常整句打「草图节点」，所以去掉尾部「节点/组件/功能」再兜一次。
+  const words = q.split(/\s+/).filter(Boolean);
+  const alt = q.replace(/(节点|组件|功能|插件|的)$/g, "").trim();
+  const hitOld = (it) =>
+    (it.title || "").toLowerCase().includes(q) ||
+    (it.cls || "").toLowerCase().includes(q) ||
     (it.tagline || "").toLowerCase().includes(q) ||
     (it.cat || "").toLowerCase().includes(q) ||
-    (it.groupLabel || "").toLowerCase().includes(q));
+    (it.groupLabel || "").toLowerCase().includes(q);
+  const hits = S.index.filter((it) => {
+    if (!it.kw) return hitOld(it);
+    if (words.length > 1) return words.every((w) => it.kw.includes(w));  // 多词 = 全部命中
+    if (it.kw.includes(q)) return true;
+    return !!alt && alt !== q && it.kw.includes(alt);
+  });
   if (!hits.length) { main.innerHTML = `<div style="padding:20px;opacity:.6;text-align:center;">没有找到匹配 "${esc(q)}" 的组件。</div>`; return; }
   const h = el("p"); h.style.cssText = "font-weight:700;color:var(--xh-text);margin:0 0 10px;font-size:14px";
   h.textContent = `找到 ${hits.length} 个结果`; main.appendChild(h);
@@ -1135,6 +1208,9 @@ function writeIdxCache(items) {
   try {
     localStorage.setItem(IDX_CACHE_KEY, JSON.stringify({
       types: items.map((x) => x.cls),
+      //  2026-11-19：分类也进签名 —— 只比 class_type 列表的话，后端改了 CATEGORY
+      //  缓存不会失效，侧栏会先闪一下旧分组再被替换。
+      cats: items.map((x) => x.cat || "").join("|"),
       items,
       t: Date.now(),
     }));
@@ -1156,9 +1232,11 @@ function warmIndex() {
     try {
       const items = await buildIndex();
       const cached2 = readIdxCache();
-      // 节点集合没变就别写缓存（省 IO）
+      // 节点集合没变就别写缓存（省 IO）；分类变了也要重建（否则侧栏闪旧分组）
+      const catsNow = items.map((x) => x.cat || "").join("|");
       const same = cached2 && cached2.types.length === items.length
-        && items.every((x, i) => cached2.types[i] === x.cls);
+        && items.every((x, i) => cached2.types[i] === x.cls)
+        && cached2.cats === catsNow;   // 旧缓存没有 cats 字段 ⇒ 不相等 ⇒ 顺手重建一次
       if (!same) writeIdxCache(items);
       if (S.win && S.win.style.display === "flex") {
         S.index = items;
@@ -1234,8 +1312,11 @@ window.XHHelp = {
       ensureWindow();
       const t = TOPICS.find((x) => x.key === key);
       if (t) {
+        const tHelp = resolveHelp(t);
         const e = { cls: "", title: t.title, cat: t.cat, groupLabel: "XiaoHei/指南", icon: t.icon,
-                    tagline: t.tagline, help: resolveHelp(t), kind: "topic", key: "topic:" + t.key };
+                    tagline: t.tagline, help: tHelp, kind: "topic", key: "topic:" + t.key,
+                    kw: buildKw({ cls: "", title: t.title, catName: t.cat,
+                                  groupLabel: "XiaoHei/指南", tagline: t.tagline, help: tHelp }) };
         if (!S.index.some((x) => x.key === e.key)) {
           S.index.push(e);
           // 侧栏也要看得见这一项（否则点了专题页却没有高亮，像没导航进去）

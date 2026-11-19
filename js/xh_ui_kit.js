@@ -261,7 +261,9 @@ export function installTitleAutoColor(node) {
         try {
             const o = opts || {};
             if (!o.low_quality && !this.selected) {
-                const want = pickTitleTextColor(this.color);
+                // 🔴 2026-11-17：主题指定了标题字色时（classic = 黑底金字）优先用主题色，
+                //   自动黑白会把金色刷成白字，黑金就白做了。
+                const want = _xhThemeTitleFg(this.color) || pickTitleTextColor(this.color);
                 if (want) {
                     return orig.call(this, ctx, Object.assign({}, o, { default_title_color: want }));
                 }
@@ -327,7 +329,10 @@ function _xhCssToHex(c) {
     const m = /rgba?\(([^)]+)\)/.exec(String(c || ""));
     if (!m) {
         const s = String(c || "").trim();
-        return /^#[0-9a-f]{6}$/i.test(s) ? s : null;
+        // 🔴 2026-11-18：必须统一小写 —— 主题预设存的是 "#F0C070"（大写），
+        //   computed style 转出来是 "#f0c070"（小写）。不归一化 ⇒ ours 判定失败
+        //   ⇒ 切预设时误以为「这是作者自己设的色」⇒ 标题字卡在上一套主题不变。
+        return /^#[0-9a-f]{6}$/i.test(s) ? s.toLowerCase() : null;
     }
     const p = m[1].split(",").map((x) => parseFloat(x));
     if (p.length > 3 && p[3] < 0.5) return null;
@@ -354,29 +359,72 @@ function _xhContrast(aHex, bHex) {
  * 文字仍是官方浅灰、看不清。现下钻到**所有后代**一并落色（header 内的按钮/图标统一成
  * 标题色也合理），确保任意嵌套层级的文字都能被正确黑白化。
  */
-export function paintVueHeader(el) {
+/** 主题指定的标题字色（classic 预设 = 黑底金字）；没有 / 对比度不够 ⇒ 返回 null 走自动黑白。 */
+function _xhThemeTitleFg(bgHex) {
+    try {
+        const t = (typeof window !== "undefined" ? window.XH_THEME : null);
+        if (!t || typeof t.titleFg !== "function") return null;
+        const fg = t.titleFg();
+        if (!fg) return null;
+        // 铁律：看得清优先 —— 主题字色对比度不足 4.5 就丢弃，回退自动黑白。
+        if (bgHex && _xhContrast(bgHex, fg) < 4.5) return null;
+        return fg;
+    } catch (e) { return null; }
+}
+
+/**
+ * 给单个标题栏元素上色。**最小干预**：原生字色对底色本来就看得清（≥4.5）就不碰它 ——
+ * 没上过色的节点保持 ComfyUI 自己的观感，只有真看不清的才改成纯黑/纯白。
+ * 幂等：值没变不写（避免 MutationObserver 自激）。
+ *
+ * ⚠️ 2026-11-12 修复：早期只给 `.lg-node-header` 本身设 color，但标题文字往往嵌在
+ *   更深的子节点里、且子节点自带 color（如 slot-text 类），父级设色盖不过去 ⇒ 浅底时
+ *   文字仍是官方浅灰、看不清。现下钻到**所有后代**一并落色（header 内的按钮/图标统一成
+ *   标题色也合理），确保任意嵌套层级的文字都能被正确黑白化。
+ *
+ * 🔴 2026-11-17：主题指定了标题字色时（classic 预设 = 黑底金字 #F0C070），
+ *   **必须用主题色而不是自动黑白** —— 自动黑白会把金色标题刷成白字，黑金就白做了。
+ *   主题色仍受「对比度 ≥4.5」约束，不合格就回退自动黑白（看得清是底线）。
+ *
+ * @param el       标题栏元素
+ * @param isFamily 是不是家族节点 —— 主题字色**只给家族节点**，
+ *                 官方节点必须保持 ComfyUI 原生观感（⛔ 别把官方节点刷成金字）。
+ */
+export function paintVueHeader(el, isFamily) {
     if (!el || !el.style) return false;
     // 背景色探测容错：直接从 el 起，逐级向上（最多 8 层），仍失败再试父/祖父一层
     const bg = _xhOpaqueBg(el)
         || _xhOpaqueBg(el.parentElement)
         || _xhOpaqueBg(el.parentElement && el.parentElement.parentElement);
     if (!bg) return false;
-    const want = pickTitleTextColor(bg);
+    // 主题字色只对家族节点生效（官方节点不碰）
+    const themed = isFamily ? _xhThemeTitleFg(bg) : null;
+    const want = themed || pickTitleTextColor(bg);
     if (!want) return false;
 
     let changed = false;
     const apply = (t) => {
         if (!t || !t.style) return;
-        if (t.dataset && t.dataset.xhTitleFg === want) return;
+        //  统一小写再比（主题 hex 是大写，computed 是小写 —— 2026-11-18 踩过）
+        if (t.dataset && String(t.dataset.xhTitleFg || "").toLowerCase() === String(want || "").toLowerCase()) return;
         // 已经看得清（≥4.5）的，不插手（保护非家族节点的原生观感）
-        try {
-            const cur = getComputedStyle(t).color || "";
-            const curHex = _xhCssToHex(cur);
-            if (curHex && _xhContrast(bg, curHex) >= 4.5) {
-                if (t.dataset) t.dataset.xhTitleFg = curHex;
-                return;
-            }
-        } catch (e) { /* 忽略，走落色兜底 */ }
+        //  ⚠️ 主题字色是例外：它就是「标题该长什么样」的答案，不再走「看得清就别碰」
+        //     （否则 classic 的黑底金字会被自动黑白刷成白字，黑金就白做了）。
+        if (!themed) {
+            try {
+                const cur = getComputedStyle(t).color || "";
+                const curHex = _xhCssToHex(cur);
+                // 🔴 2026-11-17：当前字色是**上一次主题刷上去的**（标记与实际色一致）
+                //   ⇒ 说明这是我们自己写的，可以放心覆盖成新的 want（切预设时回退）。
+                //   官方原生色没有标记 ⇒ 看得清就别碰（保护原版观感）。
+                const ours = !!(t.dataset && t.dataset.xhTitleFg && curHex
+                    && _xhCssToHex(t.dataset.xhTitleFg) === curHex);
+                if (!ours && curHex && _xhContrast(bg, curHex) >= 4.5) {
+                    if (t.dataset) t.dataset.xhTitleFg = curHex;
+                    return;
+                }
+            } catch (e) { /* 忽略，走落色兜底 */ }
+        }
         try { t.style.color = want; if (t.dataset) t.dataset.xhTitleFg = want; changed = true; } catch (e) {}
     };
 
@@ -402,12 +450,13 @@ export function refreshVueTitles() {
         let list = [];
         try { list = document.querySelectorAll(XH_VUE_HEADER_SEL); } catch (e) { return; }
         for (const el of list) {
-            try { paintVueHeader(el); } catch (e) { /* 单个失败不带翻整轮 */ }
+            //  🔴 2026-11-17：**先判家族再刷色** —— paintVueHeader 现在要知道
+            //    「是不是家族节点」才能决定用不用主题字色（官方节点绝不能被刷成金字）。
+            let isXiaoHei = false, cat = null;
             //  2026-10-29「统一石墨」：Nodes 2.0 也要金线 + 分类色小方块
             //    （旧画布由 installUnifiedTitleBar 负责；两模式表现必须一致）
             //  2026-11-06：判据 = 「是不是家族节点」，不是「有没有分类色」
             //    （配色「关闭」时 __xhCatHex=null，按色判断会整片失效）。
-            let isXiaoHei = false, cat = null;
             try {
                 const info = _xhCatHexOfDom(el);
                 isXiaoHei = !!info.isXH;
@@ -434,6 +483,8 @@ export function refreshVueTitles() {
                 } catch (e) {}
             }
             if (isXiaoHei) {
+                //  🔴 2026-11-17：判定完成后再刷字色 —— 家族节点才吃主题字色。
+                try { paintVueHeader(el, true); } catch (e) { /* 单个失败不带翻整轮 */ }
                 // 身份写到**节点根**：Vue 只 patch 自己绑定的 class，不会擦掉自定义 data-*。
                 // 这样即便 header 被重建、class 丢了，加粗 CSS 依然命中。
                 try {
@@ -441,6 +492,10 @@ export function refreshVueTitles() {
                     if (root && root.dataset) root.dataset.xhFamily = "1";
                 } catch (e) { /* noop */ }
                 try { paintVueUnifiedTitle(el, cat); } catch (e) { /* 装饰失败不影响节点 */ }
+            } else {
+                // 官方节点：仍做「看得清」修复（官方标题字色对比度不足时的兜底），
+                // 但**不吃主题字色**（isFamily=false ⇒ 只走自动黑白）。
+                try { paintVueHeader(el, false); } catch (e) { /* 单个失败不带翻整轮 */ }
             }
         }
     };
@@ -871,23 +926,23 @@ try {
 //      ⇒ 品牌色与分类色不会互相冒充。
 //   浅底必须配深字 —— 所以 MAIN 配 BRAND_TX(深墨 #1c1c1c)，这是家族铁律。
 // ════════════════════════════════════════════════════════════════════════════
+//  2026-11-17 主题预设化：品牌色不再写死，改成 getter 读 window.XH_THEME。
+//    · 没装/未加载主题模块 ⇒ 回退到经典黑金原值（老工作流观感不变）。
+//    · 契约不变：变量名、字段名字一个不改，只换取值来源。
+//    · syncXhCssVars() 每秒无条件写 --xh-brand/--xh-rest ⇒ 这里动态取值才会跟主题走。
+const _xhTheme = () => (typeof window !== "undefined" ? window.XH_THEME : null);
 export const XH_BRAND = {
-    MAIN:       "#E8A33C",   // 琥珀金：⏱ 瞬时信号色（hover / 打开 / 运行 / 成功 / 聚焦）—— 2026-11-08 起  不再做常态按钮底
-    TX:         "#1c1c1c",   // 品牌色上的字（深墨）—— 浅底配深字铁律
-    BORDER:     "rgba(0,0,0,.22)",  // 品牌色按钮的描边（深色半透，浅底上才看得见边）
-    // 小字用：深底上要够亮 ⇒ 用 MAIN 本身；浅底上要够深 ⇒ 用 LIGHT 版
-    TEXT_DARK:  "#E8A33C",   // 深底上的品牌色小字
-    TEXT_LIGHT: "#9A6412",   // 浅底上的品牌色小字（够深才读得清）
-    ON_LIGHT:   "#B5761D",   // 浅底上的主操作按钮底（比 MAIN 深一档才压得住白字）
-    ON_LIGHT_TX:"#ffffff",
-    // ── 2026-11-08 新增：常态主操作底 ────────────────────────────────
-    // 节点标题栏已定案午夜蓝 #01386A（用户明确「非常的好」）。琥珀金当年是
-    // 按石墨／中性灰底挑的，深蓝旁边一颗常亮暖点很扎眼 ⇒ 常态实心主按钮
-    // 改低彩午夜蓝，金只留给**瞬时**状态。
-    //  这不是新品牌色：直接复用节点标题栏那个值，一家人不两张皮。
-    REST:       "#01386A",   // 常态主操作按钮底（午夜蓝，白字 11.83:1）
-    REST_TX:    "#ffffff",   // 常态主操作按钮上的字
-    REST_BD:    "rgba(255,255,255,.28)",  // 深蓝底上的淡描边，把按钮从面板里拎出来
+    get MAIN()      { const t = _xhTheme(); return t ? t.main() : "#E8A33C"; },   // 瞬时信号色，随预设
+    TX:             "#1c1c1c",   // 品牌色上的字（深墨）—— WCAG 由 --xh-on-primary 覆盖，此处为静态兜底
+    BORDER:         "rgba(0,0,0,.22)",
+    get TEXT_DARK() { const t = _xhTheme(); return t ? t.textDark() : "#E8A33C"; },
+    get TEXT_LIGHT(){ const t = _xhTheme(); return t ? t.textLight() : "#9A6412"; },
+    get ON_LIGHT()  { const t = _xhTheme(); return t ? t.lightMain() : "#B5761D"; },
+    ON_LIGHT_TX:    "#ffffff",
+    // 常态主操作底 = 节点标题栏色，随预设切换（classic = 暖黑 #1A1613）
+    get REST()      { const t = _xhTheme(); return t ? t.title() : "#1A1613"; },
+    REST_TX:        "#ffffff",
+    REST_BD:        "rgba(255,255,255,.28)",
 };
 
 /** 把任意 CSS 颜色串转成 canvas 能用的 rgb()（官方变量可能是 oklch/color() 形式）。 */
@@ -985,7 +1040,7 @@ export function isLightTheme() {
  *    --xh-second      次要字
  *    --xh-primary     瞬时信号色（= 琥珀金：hover / 打开 / 运行 / 成功 / 聚焦）
  *    --xh-on-primary  瞬时信号上的字（深墨）
- *    --xh-rest        ⏱ 常态主操作底（= 午夜蓝，2026-11-08 新增）
+ *    --xh-rest        ⏱ 常态主操作底（= 主题标题色，2026-11-17）
  *    --xh-on-rest     常态主操作上的字（白）
  *    --xh-rest-bd     常态主操作的淡描边
  */
@@ -1061,7 +1116,7 @@ export const BAR_COLORS = {
     get PRIMARY()    { return brandButtonBg(); },             // ⏱ 瞬时信号色（琥珀金）， 不是常态按钮底
     //  浅底**必须配深字**：品牌色上留白字等于看不见 ⇒ 深墨。
     get PRIMARY_TX() { return brandButtonTx(); },
-    // ── ⏱ 常态主操作（2026-11-08）：午夜蓝低彩 + 白字 ──────────────
+    // ── ⏱ 常态主操作（2026-11-17）：主题标题色 + 白字 ──────────────
     get REST()       { return XH_BRAND.REST; },
     get REST_TX()    { return XH_BRAND.REST_TX; },
     get REST_BD()    { return XH_BRAND.REST_BD; },
@@ -1165,7 +1220,7 @@ export function paintBarBtn(btn, role = "neutral") {
             + "color:" + C.DANGER_TX + ";font-weight:700;";
         btn.classList.add("xh-bar-btn-danger");   //  排除：按键色不改语义红键（铁律：语义色禁止中性化）
     } else if (role === "primary") {
-        // ⏱ 2026-11-08：常态 = 午夜蓝低彩 + 白字（与节点标题栏同源）；
+        // ⏱ 2026-11-17：常态 = 主题标题色 + 白字（与节点标题栏同源）；
         //    hover / 打开态由 CSS 走 --xh-primary 琥珀金 ⇒ 金只亮一下，不再常亮。
         //  齿轮「按键颜色」：背景/文字走 --xh-acc 变量，用户选色即跟随（仅本节点生效）
         if (btn.classList) btn.classList.add("xh-bar-btn-primary");
@@ -1191,7 +1246,7 @@ export function paintBarBtn(btn, role = "neutral") {
     return btn;
 }
 
-/** hover 亮度系数：primary 现在也是暗底（午夜蓝）⇒ 全部一律提亮。
+/** hover 亮度系数：primary 现在也是暗底（主题标题色）⇒ 全部一律提亮。
  *   primary 的 hover 变色（琥珀金瞬时信号）由 CSS `.xh-bar-btn-primary:hover` 负责，这里只管亮度。 */
 export function barBtnHoverFilter(role) {
     return "brightness(1.28)";
@@ -1551,7 +1606,7 @@ export function ensureToolbarButtonCSS() {
 /* 图案色不写死白：用官方 --foreground 上色，深浅主题由官方决定；
    currentColor 让图案跟随按钮文字，开态 / 门面又自动翻成深墨。 */
 body .comfyui-button.xh-tb .xh-icon-mask{vertical-align:middle;}
-/* ⏱ 2026-11-08：常态主按钮 = 午夜蓝低彩；hover 才亮一下琥珀金（瞬时信号）。
+/* ⏱ 2026-11-17：常态主按钮 = 主题标题色；hover 才亮一下琥珀金（瞬时信号）。
    用 !important 盖过 paintBarBtn 写的内联背景；--xh-acc 用户自定义按键色仍优先于常态。 */
 .xh-bar-btn.xh-bar-btn-primary:hover:not(:disabled){
   background-color:var(--xh-primary,#E8A33C) !important;
@@ -3499,7 +3554,7 @@ export function makeGearBtn(opts = {}) {
 //         标题文字前 6px 分类色小方块，旧画布（canvas 覆写）与 Nodes 2.0（DOM）各做一套。
 //   现状：金线 2026-11-06 撤、小方块 2026-11-08 撤 ⇒  标题栏不再叠加任何自绘装饰，
 //         排版完全交回官方；标题栏**颜色**由 xh_brand.js 的 GRAPHITE_TITLE_HEX 决定
-//         （现为午夜蓝 #01386A，固定不随主题切换）。
+//         （现由主题预设决定，classic = 暖黑 #1A1613 + 金色标题字）。
 //   保留：家族身份标记（__xhCatHex / __xhUnifiedTitle / xh-family-header class /
 //         data-xh-family），标题字加粗仍靠这套，别顺手删。
 // ════════════════════════════════════════════════════════════════════════════

@@ -4,7 +4,9 @@
 // ╚═══════════════════════════════════════════════════════════════╝
 
 import { installFocusTrap } from "../shared/utils.mjs";
+import { fl } from "./i18n.mjs";
 import { pixAsset } from "../shared/api_url.mjs";
+import { makeXhLogo } from "../shared/brand_logo.mjs";
 import { injectFrameworkStyles, _uiIcon } from "./theme.mjs";
 import { createButton } from "./components.mjs";
 
@@ -62,14 +64,17 @@ export function createEditorLayout(config) {
 
   const title = document.createElement("span");
   title.className = "pxf-title";
-  const logo = document.createElement("img");
-  logo.className = "pxf-title-logo";
-  logo.src = pixAsset("xh_logo.svg");
+  // 2026-11-19：原来是 <img src="xh_logo.svg">，而那个 svg 里底色写死成旧品牌橙
+  // #E8A33C —— 换主题预设（松绿/藏青…）时左上角永远挂着一块橙，用户看到就是
+  // 「颜色残留」。改走 shared/brand_logo.mjs 的内联 svg，底色跟 --pxf-accent。
+  const logo = makeXhLogo("pxf-title-logo", 20);
   title.appendChild(logo);
-  title.append(` ${editorName} `);
+  const titleTextNode = document.createTextNode(` ${editorName} `);
+  title.appendChild(titleTextNode);
   const brandSpan = document.createElement("span");
   brandSpan.className = "pxf-title-brand";
-  brandSpan.textContent = "XH";
+  // 🔴 可见署名一律 XiaoHei（家族铁律），不许再写 "XH"。
+  brandSpan.textContent = "XiaoHei";
   title.appendChild(brandSpan);
   titlebar.appendChild(title);
 
@@ -90,15 +95,15 @@ export function createEditorLayout(config) {
     zoomWrap.className = "pxf-titlebar-zoom";
     const zoomOut = createButton("", {
       variant: "sm",
-      title: "缩小",
+      title: fl("缩小"),
       iconSrc: pixAsset("icons/ui/minus.svg"),
       onClick: () => {
         if (onZoomOut) onZoomOut();
       },
     });
-    const zoomFit = createButton("适应", {
+    const zoomFit = createButton(fl("适应"), {
       variant: "accent",
-      title: "适应视图",
+      title: fl("适应视图"),
       onClick: () => {
         if (onZoomFit) onZoomFit();
       },
@@ -108,7 +113,7 @@ export function createEditorLayout(config) {
     zoomLabelEl.textContent = "100%";
     const zoomIn = createButton("", {
       variant: "sm",
-      title: "放大",
+      title: fl("放大"),
       iconSrc: pixAsset("icons/ui/plus.svg"),
       onClick: () => {
         if (onZoomIn) onZoomIn();
@@ -129,16 +134,16 @@ export function createEditorLayout(config) {
   let undoBtn = null,
     redoBtn = null;
   if (showUndoRedo) {
-    undoBtn = createButton("撤销", {
+    undoBtn = createButton(fl("撤销"), {
       variant: "accent",
       iconSrc: pixAsset("icons/ui/undo.svg"),
-      title: "撤销 (Ctrl+Z)",
+      title: fl("撤销 (Ctrl+Z)"),
       onClick: onUndo,
     });
-    redoBtn = createButton("重做", {
+    redoBtn = createButton(fl("重做"), {
       variant: "accent",
       iconSrc: pixAsset("icons/ui/redo.svg"),
-      title: "重做 (Ctrl+Shift+Z)",
+      title: fl("重做 (Ctrl+Shift+Z)"),
       onClick: onRedo,
     });
     undoBtn.style.cssText = "padding:5px 14px;font-size:12px;";
@@ -192,9 +197,6 @@ export function createEditorLayout(config) {
         <button class="pxf-btn-sm" style="flex-shrink:0;">✕</button>
       </div>
       <div class="pxf-help-content">${helpContent}</div>
-      <div class="pxf-help-footer">
-        XiaoHei 画板 · 复刻自开源 Pixaroma Paint Studio（MIT 许可）<br>
-      </div>
     `;
     helpPanel
       .querySelector(".pxf-help-header button")
@@ -228,7 +230,7 @@ export function createEditorLayout(config) {
   const sidebarFooter = document.createElement("div");
   sidebarFooter.className = "pxf-sidebar-footer";
 
-  const helpBtn = createButton("帮助", {
+  const helpBtn = createButton(fl("帮助"), {
     variant: "standard",
     iconSrc: pixAsset("icons/ui/help.svg"),
     onClick: () => toggleHelp(),
@@ -238,16 +240,16 @@ export function createEditorLayout(config) {
   const footerBtnRow = document.createElement("div");
   footerBtnRow.className = "pxf-btn-row";
 
-  const saveBtn = createButton("保存", {
+  const saveBtn = createButton(fl("保存"), {
     variant: "accent",
     iconSrc: pixAsset("icons/ui/save.svg"),
     onClick: onSave,
   });
   saveBtn.style.flex = "1";
-  const closeBtn = createButton("保存到磁盘", {
+  const closeBtn = createButton(fl("保存到磁盘"), {
     variant: "standard",
     iconSrc: pixAsset("icons/ui/download.svg"),
-    title: "保存图片到磁盘",
+    title: fl("保存图片到磁盘"),
     onClick: () => {
       if (layout.onSaveToDisk) layout.onSaveToDisk();
     },
@@ -266,6 +268,8 @@ export function createEditorLayout(config) {
 
   const layout = {
     overlay,
+    //  2026-11-19：切语言时只重写标题文字，logo / brand 不动。
+    setTitle(name) { titleTextNode.nodeValue = ` ${name} `; },
     titlebar,
     titlebarCenter,
     topOptionsBar,
@@ -336,18 +340,18 @@ export function createEditorLayout(config) {
         saveBtn.disabled = true;
         saveBtn.textContent = "";
         saveBtn.appendChild(_uiIcon("save.svg"));
-        saveBtn.appendChild(document.createTextNode("保存中……"));
+        saveBtn.appendChild(document.createTextNode(fl("保存中……")));
       }
-      layout.setStatus("保存中……");
+      layout.setStatus(fl("保存中……"));
     },
     setSaved(autoClose = true) {
       if (saveBtn) {
         saveBtn.disabled = false;
         saveBtn.textContent = "";
         saveBtn.appendChild(_uiIcon("save.svg"));
-        saveBtn.appendChild(document.createTextNode("已保存！"));
+        saveBtn.appendChild(document.createTextNode(fl("已保存！")));
       }
-      layout.setStatus("已保存！");
+      layout.setStatus(fl("已保存！"));
       if (autoClose) setTimeout(() => layout.unmount(), 500);
     },
     setSaveError(msg) {
@@ -355,9 +359,9 @@ export function createEditorLayout(config) {
         saveBtn.disabled = false;
         saveBtn.textContent = "";
         saveBtn.appendChild(_uiIcon("save.svg"));
-        saveBtn.appendChild(document.createTextNode("保存"));
+        saveBtn.appendChild(document.createTextNode(fl("保存")));
       }
-      layout.setStatus(msg || "保存失败", "error");
+      layout.setStatus(msg || fl("保存失败"), "error");
     },
   };
 

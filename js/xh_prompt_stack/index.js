@@ -8,6 +8,7 @@ import { app } from "../../../scripts/app.js";
 import { isSizeLike } from "../xh_ui_kit.js";
 import { applyAdaptiveCanvasOnly, isVueNodes } from "../shared/nodes2.mjs";
 import { installResizeFloor } from "../shared/resize_floor.mjs";
+import { exposePromptWidget } from "../shared/prompt_assistant_compat.mjs";
 import { registerNodeSettings } from "../shared/node_settings.mjs";
 import {
   readState, writeState, addRow, deleteRow, toggleEnabled,
@@ -140,6 +141,9 @@ export function setupNode(node) {
   });
   // canvasOnly 随渲染器动态求值（家族 shared/nodes2.mjs），两种前端都能撑满。
   applyAdaptiveCanvasOnly(w);
+  // 让第三方「提示词小助手」认出第一行的文本框。行列表每次交互都会整块重建，
+  // 所以 inputEl 用 getter 取当前 textarea，并监听 ui.root 让第三方重扫重建实例。
+  exposePromptWidget(node, w, () => ui.list.querySelector("textarea"), { watch: ui.root });
   // 🔴 拖动下限也必须是常量。measureFn 一旦读「当前 DOM 高度」，用户把节点
   //    拉到 700px 后下限就变成 698px，官方 resize 读到它 = 最小尺寸等于当前
   //    尺寸，节点再也缩不回去（2026-11-12 真机实测）。内容多了由列表滚动。
@@ -170,6 +174,8 @@ export function setupNode(node) {
     closeStackSettingsFor(node);
     try { uninstallFloor?.(); } catch {}
     ro.disconnect();
+    node._xhPaBridge?.dispose?.();
+    node._xhPaBridge = null;
     node._xhStackRoot = null;
     node._xhStackGrow = null;
     node._xhStackRefresh = null;

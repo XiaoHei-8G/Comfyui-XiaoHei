@@ -25,3 +25,31 @@ XiaoHei 设置面板「关于」徽章 —— 资源来源与声明
     （依次对应 shields 默认 label #555、labelColor=%23FFFFFF、-green、color=%2307A3D7）
   #1EBAFC / #00A1D6 / #07C160 / #181717 = 四枚 Simple Icons SVG 自带的品牌官方色
   面板底 / 边框 / 文字 = ComfyUI 官方 CSS 变量 --background / --border / --foreground
+
+五、复刻自 Pixaroma 的代码 —— MIT 许可声明
+  本包内画板（Paint Studio）、编辑器 framework / shared 公共件、以及音频反应
+  等节点的部分代码 1:1 复刻自开源项目 ComfyUI-Pixaroma，遵循其 MIT 许可。
+  为保持界面整洁，来源声明不再显示于编辑器帮助面板，统一在此留存。
+  原许可全文如下（Copyright (c) 2026 pixaroma，与上游 LICENSE 逐字一致）：
+
+MIT License
+
+Copyright (c) 2026 pixaroma
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

@@ -5,6 +5,12 @@ import { PaintStudio } from "./core.mjs";
 
 const proto = PaintStudio.prototype;
 
+// 2026-11-17 主题预设化：变换手柄/选框取当前主题高亮色（未加载时回退经典金）。
+const _accent = () => {
+  try { return (window.XH_THEME && window.XH_THEME.colors() && window.XH_THEME.colors().light) || "#E8A33C"; }
+  catch (e) { return "#E8A33C"; }
+};
+
 // ─── Transform Handles ────────────────────────────────────
 
 proto._getLayerCorners = function (ly) {
@@ -44,7 +50,7 @@ proto._drawTransformHandles = function (ctx, ly) {
 
   // Dashed bounding box
   ctx.save();
-  ctx.strokeStyle = "#E8A33C";
+  ctx.strokeStyle = _accent();
   ctx.lineWidth = 2;
   ctx.setLineDash([6, 4]);
   ctx.beginPath();
@@ -61,7 +67,7 @@ proto._drawTransformHandles = function (ctx, ly) {
     ctx.arc(c.x, c.y, HR, 0, Math.PI * 2);
     ctx.fillStyle = "#fff";
     ctx.fill();
-    ctx.strokeStyle = "#E8A33C";
+    ctx.strokeStyle = _accent();
     ctx.lineWidth = 2;
     ctx.stroke();
   });
@@ -79,12 +85,12 @@ proto._drawTransformHandles = function (ctx, ly) {
   ctx.beginPath();
   ctx.moveTo(topMid.x, topMid.y);
   ctx.lineTo(rotH.x, rotH.y);
-  ctx.strokeStyle = "#E8A33C";
+  ctx.strokeStyle = _accent();
   ctx.lineWidth = 1.5;
   ctx.stroke();
   ctx.beginPath();
   ctx.arc(rotH.x, rotH.y, HR, 0, Math.PI * 2);
-  ctx.fillStyle = "#E8A33C";
+  ctx.fillStyle = _accent();
   ctx.fill();
   ctx.strokeStyle = "#fff";
   ctx.lineWidth = 2;
@@ -100,7 +106,7 @@ proto._drawTransformHandles = function (ctx, ly) {
   ctx.arc(pivot.x, pivot.y, 5, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(255,255,255,0.9)";
   ctx.fill();
-  ctx.strokeStyle = "#E8A33C";
+  ctx.strokeStyle = _accent();
   ctx.lineWidth = 1.5;
   ctx.stroke();
   // Crosshair lines on pivot
@@ -109,7 +115,7 @@ proto._drawTransformHandles = function (ctx, ly) {
   ctx.lineTo(pivot.x + 8, pivot.y);
   ctx.moveTo(pivot.x, pivot.y - 8);
   ctx.lineTo(pivot.x, pivot.y + 8);
-  ctx.strokeStyle = "#E8A33C";
+  ctx.strokeStyle = _accent();
   ctx.lineWidth = 1;
   ctx.stroke();
 

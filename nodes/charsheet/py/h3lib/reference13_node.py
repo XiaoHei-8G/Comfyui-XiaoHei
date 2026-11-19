@@ -12,7 +12,7 @@ from .multi_reference_node import validate_reference_image
 
 
 class H3CharacterSheetDesignerReference13:
-    CATEGORY = 'H3/Character Sheet'
+    CATEGORY = '小黑家族'
     DEPRECATED = True
     DESCRIPTION = ('v1.2.2. 13-view H3 sheet with one required character image and three optional same-character references. '
                    'Wire character_image, layout_image, reference_image_1, reference_image_2 and reference_image_3 '

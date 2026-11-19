@@ -62,6 +62,11 @@ const state = {
 // 给这颗按钮单独一个 .xh-align-on，用 body 前缀把特异性抬到 hover 之上；
 // 只给对齐线这一颗开态上色，另外三颗的开态由 xh_ui_kit.js 的 .xh-tb-open 统一管。
 // 图案用 currentColor：关态跟按钮文字变白、开态跟按钮文字变深墨，自动翻转。
+//  2026-11-18：开态色从写死的 BRAND（琥珀金）改成引用主题变量 var(--xh-primary)。
+//    根因：之前这里和下面的内联双保险都钉死 #E8A33C，用户切「松绿」后
+//    --xh-primary 明明变成 #2E7D5B、别的按钮都绿了，就这颗还是黄 ⇒ 被投诉。
+//    CSS 变量写进内联 style 浏览器会自动解析，主题一变立即跟，无需额外事件。
+//    字色走 --xh-on-primary（主题按 WCAG 算好的对比色），金底深墨、绿底白字都看得清。
 function injectAlignButtonCSS() {
   if (document.getElementById("xh-align-btn-css")) return;
   const st = document.createElement("style");
@@ -69,9 +74,9 @@ function injectAlignButtonCSS() {
   st.textContent = `
 body .comfyui-button.xh-tb.xh-align-on,
 body .comfyui-button.xh-tb.xh-align-on:hover:not(:disabled){
-  background-color:${BRAND} !important;
-  color:#1c1c1c !important;
-  border-color:${BRAND} !important;
+  background-color:var(--xh-primary, #E8A33C) !important;
+  color:var(--xh-on-primary, #1c1c1c) !important;
+  border-color:var(--xh-primary, #E8A33C) !important;
   filter:none !important;
 }
 body .comfyui-button.xh-tb .xh-icon-mask{vertical-align:middle;}
@@ -90,12 +95,12 @@ function updateToolbarTint() {
   // ① 专属常驻类（CSS 特异性压过 hover / .xh-tb-open）
   try { btn.classList.toggle("xh-align-on", on); } catch (_e) {}
   try { btn.classList.toggle("xh-tb-open", on); } catch (_e) {}
-  // ② 内联 !important 双保险：就算 CSS 没注入、主题变量被改，也一定常驻
+  // ② 内联 !important 双保险：跟 CSS 一样读主题变量（⛔ 别再写死 BRAND，切主题会卡死旧色）
   try {
     if (on) {
-      btn.style.setProperty("background-color", BRAND, "important");
-      btn.style.setProperty("color", "#1c1c1c", "important");
-      btn.style.setProperty("border-color", BRAND, "important");
+      btn.style.setProperty("background-color", "var(--xh-primary, #E8A33C)", "important");
+      btn.style.setProperty("color", "var(--xh-on-primary, #1c1c1c)", "important");
+      btn.style.setProperty("border-color", "var(--xh-primary, #E8A33C)", "important");
       btn.style.setProperty("filter", "none", "important");
     } else {
       btn.style.removeProperty("background-color");
@@ -132,19 +137,6 @@ function toggleEnabled() {
   // 同步官方设置（设置面板复选框 + 刷新后保持）；写失败也不影响按钮常驻。
   try { app.ui?.settings?.setSettingValue?.(SETTING_ENABLED, next); } catch (_e) {}
   try { localStorage.setItem("XH.Align.Enabled", next ? "1" : "0"); } catch (_e) {}
-}
-
-// ── 同装保护（唯一一处非 1:1 代码）──────────────────────────────────────
-// 本机同时装了正版 Pixaroma 时，两个 align 会各自注册 pointermove /
-// drawFrontCanvas 钩子；两个开关都开着就会算两遍吸附、画两遍辅助线。
-// 检测到正版就把它自己的开关关掉（正版 hook 首行 return，等于空转），
-// XiaoHei 版独占。分发包不含正版 ⇒ 检测不命中，一行都不执行。
-function disablePixaromaAlignIfPresent() {
-  if (!document.getElementById("pixaroma-align-css")) return;
-  try {
-    app.ui?.settings?.setSettingValue("Pixaroma.Align.Enabled", false);
-    console.info("[XiaoHei.Align] 检测到同装的正版 Pixaroma 对齐线，已关闭正版开关，避免两套吸附钩子重复执行。");
-  } catch (_e) {}
 }
 
 //  顶栏图标：2026-11-11 用户要求把「齐」字换成自家图标库里的图案。
@@ -266,8 +258,6 @@ app.registerExtension({
     }
     console.info("[XiaoHei.Align] 扩展已加载，开始挂载顶栏「对齐线」图标与吸附钩子");
     // 每一步单独兜底：任何一步出错都不许拖垮后面的按钮和钩子（2026-11-11 教训）。
-    try { disablePixaromaAlignIfPresent(); } catch (e) { console.error("[XiaoHei.Align] 同装保护异常", e); }
-    setTimeout(() => { try { disablePixaromaAlignIfPresent(); } catch (_e) {} }, 800);  // 复查：两包加载顺序可能反过来
     try { mountToolbarButton(); } catch (e) { console.error("[XiaoHei.Align] 顶栏按钮挂载异常", e); }
     try { installPointerHook(); } catch (e) { console.error("[XiaoHei.Align] 拖拽钩子异常", e); }
     try { installDrawHook(); } catch (e) { console.error("[XiaoHei.Align] 辅助线钩子异常", e); }
@@ -338,7 +328,14 @@ function installDrawHook() {
     const toScreenX = (gx) => (gx + offset[0]) * scale;
     const toScreenY = (gy) => (gy + offset[1]) * scale;
     ctx.save();
-    ctx.strokeStyle = BRAND;
+    //  2026-11-18：对齐线描边也跟主题（canvas 不认 CSS 变量，getComputedStyle 读真实值）。
+    //    读不到退回 BRAND 常量金，绝不因为取色失败就不画线。
+    let guideColor = BRAND;
+    try {
+      const v = getComputedStyle(document.documentElement).getPropertyValue("--xh-primary").trim();
+      if (v) guideColor = v;
+    } catch (_e) {}
+    ctx.strokeStyle = guideColor;
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (const g of state.activeGuides.slice(0, 8)) {

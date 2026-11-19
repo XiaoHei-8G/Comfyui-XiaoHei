@@ -21,7 +21,10 @@
   3. 所有参数补中文 tooltip（保留 English 原词，方便对照官方文档）
   4. 4 个下拉列表 → 「① 中文 (english)」；后端 _xh_norm 收敛回英文原值，旧存档/API 完全兼容
   5. DESCRIPTION 改中文（原文附在 README）
-没有改：任何计算逻辑、默认值、参数顺序、返回值顺序。
+没有改：任何计算逻辑、返回值顺序。
+例外（2026-11-16 用户拍板）：XHImageBatchMulti 去掉 inputcount 控件与
+「更新输入口」按钮，改为「最后一个图像口接上线即自动追加下一个」；拼接
+算法逐字节不变，后端按实际接入的 image_N 编号决定张数，旧工作流照常能读。
 """
 from __future__ import annotations
 
@@ -117,11 +120,18 @@ def string_to_color(color_string: str) -> List[int]:
 
 
 class XHImageBatchMulti:
+    """动态输入口：不再有 inputcount / 「更新输入口」按钮。
+
+    前端最后一个 image_N 口接上线即自动追加 image_(N+1)；后端按实际传进来的
+    image_N 编号决定合并张数。未接线的中间口仍按原版补黑图（保持帧数），
+    拼接算法与原版 KJNodes Image Batch Multi 逐字节一致。
+    """
+    MAX_IMAGES = 1000  # 与原 inputcount 上限一致，防止端口无限增长
+
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
-                "inputcount": ("INT", {"default": 2, "min": 2, "max": 1000, "step": 1, "tooltip": "【 输入口数量】想合并几张图就填几。改完点下面的「 更新输入口」按钮，输入槽才会增减。 | English: inputcount"}),
                 "image_1": ("IMAGE", {"tooltip": "【 第 1 张图】必填。输出尺寸以它为基准。 | English: image_1"}),
             },
             "optional": {
@@ -134,20 +144,34 @@ class XHImageBatchMulti:
     FUNCTION = "combine"
     CATEGORY = "XiaoHei/Image"
     DESCRIPTION = """【 图像批量合并】把多张图按顺序拼成一个 batch（批次）。
-想接几张就先改 inputcount，再点「 更新输入口」按钮。
+输入口自动增长：最后一个图像口接上线，就自动多出一个空口，不用填数量、不用点按钮。
 尺寸不一致的图会自动缩放到和第 1 张一样大，会补成全画幅。
  这是「批次」不是「拼版」—— 每张图仍独立存在，不会被拼进同一画面。
-（算法与原版 KJNodes Image Batch Multi 逐字节一致）"""
+（拼接算法与原版 KJNodes Image Batch Multi 逐字节一致）"""
 
-    def combine(self, inputcount, **kwargs):
-        first = kwargs["image_1"]
+    def combine(self, **kwargs):
+        first = kwargs.get("image_1")
+        if first is None:
+            raise ValueError("XHImageBatchMulti: 必须接上 image_1（第 1 张图）")
+
+        # 收集真正接了线的 image_N，按编号排序；N 即合并张数（替代旧 inputcount）
+        wired = {}
+        for key, val in kwargs.items():
+            if val is None or not key.startswith("image_"):
+                continue
+            suffix = key[len("image_"):]
+            if suffix.isdigit():
+                idx = int(suffix)
+                if 1 <= idx <= self.MAX_IMAGES:
+                    wired[idx] = val
+        count = max(wired.keys(), default=1)
         h, w = first.shape[1], first.shape[2]
 
         # determine output shape
         max_ch = first.shape[-1]
         total_frames = first.shape[0]
-        for c in range(1, inputcount):
-            img = kwargs.get(f"image_{c + 1}")
+        for c in range(2, count + 1):
+            img = wired.get(c)
             if img is not None:
                 max_ch = max(max_ch, img.shape[-1])
                 total_frames += img.shape[0]
@@ -158,8 +182,8 @@ class XHImageBatchMulti:
         out = torch.empty((total_frames, h, w, max_ch), dtype=first.dtype)
         offset = 0
 
-        for c in range(inputcount):
-            img = kwargs.get(f"image_{c + 1}", torch.zeros((first.shape[0], h, w, max_ch), dtype=first.dtype))
+        for c in range(1, count + 1):
+            img = wired.get(c, torch.zeros((first.shape[0], h, w, max_ch), dtype=first.dtype))
 
             if img.shape[1:3] != (h, w):
                 img = common_upscale(img.movedim(-1, 1), w, h, "bilinear", "center").movedim(1, -1)

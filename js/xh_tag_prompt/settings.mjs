@@ -8,6 +8,7 @@
 //    改一下不该让整张图重跑；order / sep 才是真执行数据。
 import { app } from "../../../scripts/app.js";
 import { getNodeScreenRect, placeBeside, followNode, makeDraggable } from "../shared/node_panel.mjs";
+import { xhIconHTML } from "../xh_ui_kit.js";
 
 export const STATE_KEY = "tagPromptState";
 export const DEFAULT_ORDER_SETTING = "XH.Tag.DefaultOrder";
@@ -138,7 +139,7 @@ export function openTagSettings(node, onChange) {
   const panel = el("div", "xh-tags");
   const head = el("div", "xh-tags-h");
   head.append(el("span", null, "⚙ 标签提示词 · 设置"));
-  const x = el("span", "x", "✕"); x.title = "关闭";
+  const x = el("span", "x"); x.dataset.xhIconDone = "1"; x.innerHTML = xhIconHTML("x", { size: 14, color: "current" }); x.title = "关闭";
   x.addEventListener("click", closeTagSettings);
   head.appendChild(x);
   panel.appendChild(head);

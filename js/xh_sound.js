@@ -387,7 +387,7 @@ function openSoundPanel(node) {
     const zh = (window.XH_LANG || "zh") === "zh";
     const panel = document.createElement("div");
     panel.className = "xh-sound-set";
-    panel.style.setProperty("--xh-acc", "#E8A33C");
+    panel.style.setProperty("--xh-acc", "var(--xh-primary,#E8A33C)");
 
     const head = document.createElement("div");
     head.className = "xh-sound-set-t";

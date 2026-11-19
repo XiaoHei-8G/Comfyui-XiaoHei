@@ -55,4 +55,4 @@ class XH_PromptPack:
 
 
 NODE_CLASS_MAPPINGS = {"XH_PromptPack": XH_PromptPack}
-NODE_DISPLAY_NAME_MAPPINGS = {"XH_PromptPack": "XiaoHei-提示词批量"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XH_PromptPack": "提示词批量 小黑"}

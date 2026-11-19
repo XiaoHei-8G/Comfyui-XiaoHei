@@ -8,6 +8,7 @@ import { app } from "../../../scripts/app.js";
 import { xhIconHTML, isSizeLike } from "../xh_ui_kit.js";
 import { applyAdaptiveCanvasOnly, isVueNodes } from "../shared/nodes2.mjs";
 import { installResizeFloor } from "../shared/resize_floor.mjs";
+import { exposePromptWidget } from "../shared/prompt_assistant_compat.mjs";
 import { registerNodeSettings } from "../shared/node_settings.mjs";
 import { createTagField } from "./field.mjs";
 import { openTagEditor } from "./editor.mjs";
@@ -133,6 +134,8 @@ export function setupNode(node) {
   });
   // canvasOnly 随渲染器切换动态求值（家族 shared/nodes2.mjs），两种前端都能撑满。
   applyAdaptiveCanvasOnly(w);
+  // 让第三方「提示词小助手」认出主文本框：只补 widget 外观属性，不增删 widget。
+  exposePromptWidget(node, w, () => field.ta);
   // 🔴 拖动下限必须是常量。旧版用 measureRootContent 量「当前 DOM 高度」，
   //    而输入框 / 展开预览都是 flex:1 会被节点拉高的元素：拉到 700px 时下限
   //    跟着变成 698px，官方 resize 一读就等于「最小尺寸=当前尺寸」，节点再也
@@ -153,6 +156,8 @@ export function setupNode(node) {
     unsub?.(); flushLibrary(); closeTagSettingsFor(node);
     uninstallFloor?.();
     field.destroy();
+    node._xhPaBridge?.dispose?.();
+    node._xhPaBridge = null;
     try { return prevRemoved?.apply(this, a); } catch { return undefined; }
   };
 

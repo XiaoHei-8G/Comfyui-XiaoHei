@@ -10,7 +10,7 @@ from .reference_compiler import DEFAULT_REFERENCE_STATE_JSON, STYLE_PROMPTS, com
 
 
 class H3CharacterSheetDesignerReference:
-    CATEGORY = "H3/Character Sheet"
+    CATEGORY = "小黑家族"
     DESCRIPTION = (
         "Connect the character image FIRST (ref_image_0 / Picture 1), and layout_image "
         "SECOND (ref_image_1 / Picture 2) to MiniMaxH3ReferenceToVideo. "

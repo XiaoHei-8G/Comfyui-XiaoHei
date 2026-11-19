@@ -1,0 +1,1323 @@
+{
+ "version": 1,
+ "note": "资源库：只存链接与归属，不依赖本地磁盘。整包条目一个链接覆盖多个文件。",
+ "groups": [
+  {
+   "id": "qwen2511",
+   "name": "Qwen 2511 / 2512",
+   "entries": [
+    {
+     "id": "p_qwen_s",
+     "name": "Qwen-2511+2512 整包",
+     "group": "qwen2511",
+     "kind": "pack",
+     "url": "https://pan.quark.cn/s/1182a3eac147",
+     "code": "",
+     "note": "Qwen 2511 与 2512 合集",
+     "files": [
+      "diffusion_models/Qwen2.1/qwen_image_2512_fp8_e4m3fn.safetensors",
+      "loras/2511/QWEN_EDIT_ACTION_V1.safetensors",
+      "loras/2511/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+      "loras/2511/SYSTMS_INFL8_LoRA_Qwen_Image_Edit_2511.safetensors",
+      "loras/2511/qwen-image-edit-2511-multiple-angles-lora.safetensors",
+      "loras/2512/Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors",
+      "loras/2512/Wuli-Qwen-Image-2512-Turbo-LoRA-2steps-V1.0-bf16.safetensors",
+      "loras/2512/凡人/meining-fanren-Qwen-Image-2512-v1.0_20.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "qwen",
+   "name": "Qwen 图片系列 2.1",
+   "entries": [
+    {
+     "id": "p_qwen_pack",
+     "name": "Qwen-image-2.1 整包",
+     "group": "qwen",
+     "kind": "pack",
+     "url": "https://pan.quark.cn/s/f9bc1ca85549",
+     "code": "",
+     "note": "整包下载，含 24 个未单独发链接的文件",
+     "files": [
+      "diffusion_models/Qwen2.1/qwen_image_2.1_bf16.safetensors",
+      "diffusion_models/Qwen2.1/qwen_image_2.1_int8_convrot.safetensors",
+      "loras/Qwen2.1/2anime-QwenImage2.1.safetensors",
+      "loras/Qwen2.1/Qwen-Image-2.1-Char_MeiNing_Realistic_FanRenXiuXian-Ultra_c1-st10000.safetensors",
+      "loras/Qwen2.1/Qwen-Image-2.1_A2R_Mugi_v2.5_c1-st5000.safetensors",
+      "loras/Qwen2.1/Qwen2.1_Anything2RealCharacters.safetensors",
+      "loras/Qwen2.1/qwen-image-2.1-outfit-swap-1250.safetensors",
+      "loras/Qwen2.1/qwen-image-2.1-outpaint-v2.safetensors",
+      "loras/Qwen2.1/qwen-image-2.1-restore.safetensors",
+      "loras/Qwen2.1/zzz_v1.4_step3000.safetensors",
+      "loras/Qwen2.1/凡人/yuanyao-Qwen-Image-2.1-v1.0_c1-st7000.safetensors",
+      "loras/Qwen2.1/加速/p_q_image_2.1_5_steps_v0.1_comfyui_bf16.safetensors",
+      "loras/Qwen2.1/加速/p_q_image_2.1_6_steps_upsampled_v0.2_comfyui_bf16.safetensors",
+      "loras/Qwen2.1/加速/p_q_image_2.1_6_steps_v0.2_comfyui_bf16.safetensors",
+      "loras/Qwen2.1/加速/p_q_image_2.1_8_steps_v0.1_comfyui_bf16.safetensors",
+      "loras/Qwen2.1/物体无缝融入场景rh-qwen-image-2.1-lora.safetensors",
+      "text_encoders/qwen3-vl-4b-heretic_int8_dynamic_convrot.safetensors",
+      "text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "text_encoders/qwen_3_8b_fp8mixed.safetensors"
+     ]
+    },
+    {
+     "id": "f_f8e3c88bc4",
+     "name": "qwen-image-2.1-consistency-2000",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/ed53a4309071",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/Qwen2.1/蓝/qwen-image-2.1-consistency-2000.safetensors"
+     ]
+    },
+    {
+     "id": "f_4a23e3b21b",
+     "name": "Qwen2.1 一致性无偏移_GH_V1.0",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/480f265a6082",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/Qwen2.1/孤海/Qwen2.1 一致性无偏移_GH_V1.0.safetensors"
+     ]
+    },
+    {
+     "id": "f_12efce8184",
+     "name": "Qwen2.1_万物移除Remove_GH",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/55c7d9caa002",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/Qwen2.1/孤海/Qwen2.1_万物移除Remove_GH.safetensors"
+     ]
+    },
+    {
+     "id": "f_a7503162c5",
+     "name": "Qwen2.1_扩图_GH_3750",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/7aa35c07f5b0",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/Qwen2.1/孤海/Qwen2.1_扩图_GH_3750.safetensors"
+     ]
+    },
+    {
+     "id": "f_88c3f0a876",
+     "name": "qwen3.5_9b_int8_convrot",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/b461b7ab16b6",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/qwen3.5_9b_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_28f1673cb6",
+     "name": "qwen3.5_9b_qwen_image_2.1_pe_i2i.int8_convrot",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/f910183ee3af",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/Qwen2.1/qwen3.5_9b_qwen_image_2.1_pe_i2i.int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_a6c9ceabe2",
+     "name": "qwen3.5_9b_qwen_image_2.1_pe_i2i_w4a8",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/08fa525db187",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/Qwen2.1/qwen3.5_9b_qwen_image_2.1_pe_i2i_w4a8.safetensors"
+     ]
+    },
+    {
+     "id": "f_c9522598db",
+     "name": "qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/54c00978bc5c",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/Qwen2.1/qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_c83fa2b43b",
+     "name": "qwen3.5_9b_qwen_image_2.1_pe_t2i_w4a8",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/01184c2fc9ca",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/Qwen2.1/qwen3.5_9b_qwen_image_2.1_pe_t2i_w4a8.safetensors"
+     ]
+    },
+    {
+     "id": "f_2c8e96aa7c",
+     "name": "qwen3vl_4b_fp8_scaled",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/c4e466f6647e",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/qwen3vl_4b_fp8_scaled.safetensors"
+     ]
+    },
+    {
+     "id": "f_47b9d88af5",
+     "name": "qwen3vl_8b_int8_convrot",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/dc179646f375",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/Qwen2.1/qwen3vl_8b_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_39371ef7a7",
+     "name": "qwen_image_2.1_fun_controlnet_union_bf16",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/c1c925f650ef",
+     "code": "",
+     "note": "",
+     "files": [
+      "model_patches/qwen_image_2.1_fun_controlnet_union_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_e5e71be7a0",
+     "name": "qwen_image_2.1_fun_controlnet_union_int8_convrot",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/d5ceb20c30a5",
+     "code": "",
+     "note": "",
+     "files": [
+      "model_patches/qwen_image_2.1_fun_controlnet_union_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_5c335b7a4e",
+     "name": "qwen_image_2.1_turbo_bf16",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/2da07cc0e67b",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/Qwen2.1/qwen_image_2.1_turbo_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_5bd89b723f",
+     "name": "qwen_image_2.1_turbo_int8_convrot",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/16a449a83ccd",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/Qwen2.1/qwen_image_2.1_turbo_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_c592265ba8",
+     "name": "qwen_image_2.1_turbo_lora_avg_rank_178_bf16",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/4fded717a246",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/Qwen2.1/加速/qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_bc9d9af796",
+     "name": "qwen_image_2.1_vae_bf16",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/cd2ddd559afb",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/Qwen2.1/qwen_image_2.1_vae_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_2773dea9db",
+     "name": "qwen_image_vae",
+     "group": "qwen",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/c0a3867d3b08",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/qwen_image_vae.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "h3",
+   "name": "MiniMax H3",
+   "entries": [
+    {
+     "id": "p_h3_pack",
+     "name": "MinimaxH3 整包",
+     "group": "h3",
+     "kind": "pack",
+     "url": "https://pan.quark.cn/s/f0fe70af06c8",
+     "code": "",
+     "note": "整包下载，含 12 个未单独发链接的文件",
+     "files": [
+      "loras/H3/better_motion_h3_lora_v1_500.safetensors",
+      "loras/H3/h3-realism-people-t2v-i2v-r2v.safetensors",
+      "loras/H3/minimax-h3-facial-realism-closeup-cp2000.safetensors",
+      "loras/H3/minimax_h3_head_swap_v1.0_r32.safetensors",
+      "loras/H3/open_h3_regenerate_2k_lora.safetensors",
+      "loras/H3/功能/minimax_h3_live_wallpaper_v1.0_ref2va_r32.safetensors",
+      "loras/H3/功能/minimax_h3_live_wallpaper_v1.0_ref2va_r64.safetensors",
+      "loras/H3/功能/minimax_h3_lms_v1.0_r64.safetensors",
+      "loras/H3/功能/minimax_h3_vfx_edit_v1.0_r128.safetensors",
+      "loras/H3/功能/minimax_h3_vfx_edit_v1.0_r128_ffp.safetensors",
+      "vae/H3/Kijai/minimax_h3_lightvae_lite_vae_int8_convrot.safetensors",
+      "vae/LightVAE/lightvae-lite-h3-decoder-int8-convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_0ba35d085c",
+     "name": "h3_character_swap_pro4500_1000",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/512ed50e9119",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/人物替换/h3_character_swap_pro4500_1000.safetensors"
+     ]
+    },
+    {
+     "id": "f_bccac437b3",
+     "name": "h3_character_swap_v1.5",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/a075bd8c1730",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/人物替换/h3_character_swap_v1.5.safetensors"
+     ]
+    },
+    {
+     "id": "f_6694c29c83",
+     "name": "lightvae-lite-h3-decoder-comfy",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/bb105a11c245",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/LightVAE/lightvae-lite-h3-decoder-comfy.safetensors"
+     ]
+    },
+    {
+     "id": "f_38d6ac6acd",
+     "name": "lightvae-lite-h3-encoder-comfy",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/04e7d35a328a",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/LightVAE/lightvae-lite-h3-encoder-comfy.safetensors"
+     ]
+    },
+    {
+     "id": "f_f1508a470e",
+     "name": "minimax_h3_4step_lora_flashgen_v1.0_768p_fl2va_pruned_avg_rank_13_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/524912487e6d",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/Kijai/minimax_h3_4step_lora_flashgen_v1.0_768p_fl2va_pruned_avg_rank_13_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_102ceb72a5",
+     "name": "minimax_h3_audio_vae_fp32",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/5df6cbb54585",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/H3/minimax_h3_audio_vae_fp32.safetensors"
+     ]
+    },
+    {
+     "id": "f_9dc52aa473",
+     "name": "minimax_h3_DMAD_4step_full_lora_avg_rank_39_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/b2033e3da9df",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/Kijai/minimax_h3_DMAD_4step_full_lora_avg_rank_39_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_5164f9480a",
+     "name": "minimax_h3_DMAD_8step_full_lora_avg_rank_58_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/93826645c6e8",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/Kijai/minimax_h3_DMAD_8step_full_lora_avg_rank_58_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_5951f26676",
+     "name": "minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/1ecff0303a67",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/Kijai/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_bd2ff42ce5",
+     "name": "minimax_h3_fl2va_pruned_int8_convrot",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/3a00f285c105",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/H3/minimax_h3_fl2va_pruned_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_d0b3adc820",
+     "name": "minimax_h3_fun_controlnet_union_pruned_int8_convrot",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/04af4a553620",
+     "code": "",
+     "note": "",
+     "files": [
+      "model_patches/minimax_h3_fun_controlnet_union_pruned_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_48e44158a7",
+     "name": "minimax_h3_image_pruned_int8_convrot",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/a7f3b9f24194",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/H3/minimax_h3_image_pruned_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_81898894da",
+     "name": "minimax_h3_image_vae_fp16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/aabd0b23d44b",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/H3/minimax_h3_image_vae_fp16.safetensors"
+     ]
+    },
+    {
+     "id": "f_e06fe858d9",
+     "name": "minimax_h3_lynnreal_light_vae_int8_convrot",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/600c5ad65937",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/H3/Kijai/minimax_h3_lynnreal_light_vae_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_64f2c3964e",
+     "name": "minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/0df59cd7f634",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/Kijai/minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_6d1c3cdf3c",
+     "name": "minimax_h3_open_regenerate_2k_refiner_rank_16_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/9b784d0b95fd",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/Kijai/minimax_h3_open_regenerate_2k_refiner_rank_16_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_feac441b26",
+     "name": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/1adf2cdd349d",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_95695e30e7",
+     "name": "minimax_h3_ref2va_pruned_int8_convrot",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/0f8083f5506a",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/H3/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_f669e34e04",
+     "name": "minimax_h3_ref_lora_rank_256_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/220f5c3bbb97",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/功能/minimax_h3_ref_lora_rank_256_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_5634d6ebe4",
+     "name": "minimax_H3_Ripple-v1",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/be4607e478bd",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/功能/minimax_H3_Ripple-v1.safetensors"
+     ]
+    },
+    {
+     "id": "f_fb1f3ec6cf",
+     "name": "minimax_h3_taomate_3step_lora_avg_rank_19_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/15a36c59a908",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/Kijai/minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_8465402c32",
+     "name": "minimax_h3_temporal_expansion_step375_r16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/645584f31a53",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/功能/minimax_h3_temporal_expansion_step375_r16.safetensors"
+     ]
+    },
+    {
+     "id": "f_55c5aa687b",
+     "name": "minimax_h3_video_vae_int8_convrot",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/e4a983f087e0",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/H3/minimax_h3_video_vae_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_c811e47051",
+     "name": "model",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/1b8d8724e31a",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/人物/宋玉/model.safetensors"
+     ]
+    },
+    {
+     "id": "f_50004d9b4b",
+     "name": "pika_h3_flex_fl2va_v1_avg_rank_56_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/66b231f5e6a5",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/Kijai/pika_h3_flex_fl2va_v1_avg_rank_56_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_fdcd2ed425",
+     "name": "pika_h3_flex_ref2va_v1_avg_rank_55_bf16",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/cfedc7383400",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/H3/Kijai/pika_h3_flex_ref2va_v1_avg_rank_55_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_e876e32829",
+     "name": "qwen3.5_9b_w4a8_gptq 等 2 个",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/20a76f0a5dc2",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/H3/qwen3.5_9b_w4a8_gptq.safetensors",
+      "text_encoders/qwen3.5_9b_w4a8_gptq.safetensors"
+     ]
+    },
+    {
+     "id": "f_64e0bb3524",
+     "name": "qwen3vl_32b_minimax_h3_int8_convrot",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/4a756a7b9ff4",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/H3/qwen3vl_32b_minimax_h3_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_aa66520be5",
+     "name": "qwen3vl_32b_minimax_h3_nvfp4_awq",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/5429ae784fac",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/H3/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+     ]
+    },
+    {
+     "id": "f_e68518d707",
+     "name": "taeh3_decoder",
+     "group": "h3",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/2c9474395383",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae_approx/taeh3_decoder.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ltx",
+   "name": "LTX 2.5",
+   "entries": [
+    {
+     "id": "p_ltx_pack",
+     "name": "LTX2.5 整包",
+     "group": "ltx",
+     "kind": "pack",
+     "url": "https://pan.quark.cn/s/57c09bc64939",
+     "code": "",
+     "note": "整包下载，含 14 个未单独发链接的文件",
+     "files": [
+      "loras/ltx2.5/LTX-2.3-OmniNFT-RL-Lora_bf16.safetensors",
+      "loras/ltx2.5/LTX25_Ripple_v11.safetensors",
+      "loras/ltx2.5/ltx-2-19b-ic-lora-detailer.safetensors",
+      "loras/ltx2.5/ltx-2.5-22b-ic-lora-restore-1.0.safetensors",
+      "loras/ltx2.5/ltx2.3-transition.safetensors",
+      "loras/ltx2.5/凡人角色/LTX2.3-宋玉/ltx2.3宋玉触发词songyu.safetensors",
+      "loras/ltx2.5/凡人角色/LTX2.3-梅凝/ltx2.3梅凝触发词meining.safetensors",
+      "loras/ltx2.5/凡人角色/LTX2.3-紫灵/ltx2.3紫灵触发词ziling.safetensors",
+      "loras/ltx2.5/凡人角色/LTX2.3-银月/LTX2.3银月.safetensors",
+      "loras/ltx2.5/凡人角色/LTX2.3_如嫣/ltx2.3燕如嫣触发词ruyan.safetensors",
+      "loras/ltx2.5/凡人角色/LTX2.3慕沛灵/ltx2.3慕沛灵触发词peiling.safetensors",
+      "loras/ltx2.5/凡人角色/LTX2.3韩立、南宫婉/ltx2.3韩立南宫婉双人lora.safetensors",
+      "loras/ltx2.5/凡人角色/ltx2.3韩立触发词hanli.safetensors",
+      "model_patches/ltx-2.5-duration-head-bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_3a4e4c451d",
+     "name": "Best_FaceID_CharacterSheet_v1.0_LoRA",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/fb53d4abf9b9",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/Best_FaceID_CharacterSheet_v1.0_LoRA.safetensors"
+     ]
+    },
+    {
+     "id": "f_a740b95d3a",
+     "name": "Best_FaceID_v1.0_LoRA",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/4e91897ea286",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/Best_FaceID_v1.0_LoRA.safetensors"
+     ]
+    },
+    {
+     "id": "f_8078df490d",
+     "name": "gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/8de228e4b472",
+     "code": "",
+     "note": "",
+     "files": [
+      "text_encoders/LTX2.5/gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_1bb0e35a4f",
+     "name": "head_swap_ltx25_r128_v1",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/635f80918675",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/head_swap_ltx25_r128_v1.safetensors"
+     ]
+    },
+    {
+     "id": "f_830948bff6",
+     "name": "head_swap_ltx25_r128_v1.1",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/634ec6140514",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/head_swap_ltx25_r128_v1.1.safetensors"
+     ]
+    },
+    {
+     "id": "f_fc9c6911aa",
+     "name": "head_swap_ltx25_r64_v1",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/4b64728b66c8",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/head_swap_ltx25_r64_v1.safetensors"
+     ]
+    },
+    {
+     "id": "f_5dd9401ee4",
+     "name": "head_swap_ltx25_r64_v1.1",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/8264d9068339",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/head_swap_ltx25_r64_v1.1.safetensors"
+     ]
+    },
+    {
+     "id": "f_36494ff8b1",
+     "name": "ltx-2.3-22b-ic-lora-motion-track-control-ref0.5",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/33f641e10a71",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/ltx-2.3-22b-ic-lora-motion-track-control-ref0.5.safetensors"
+     ]
+    },
+    {
+     "id": "f_914f54c4ff",
+     "name": "ltx-2.3-22b-ic-lora-union-control-ref0.5",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/62f98dcf94c4",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors"
+     ]
+    },
+    {
+     "id": "f_e0742e4970",
+     "name": "ltx-2.5-22b-distilled-transformer-comfy-int8-convrot",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/479284fac913",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/LTX2.5/ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_a79e62b6f2",
+     "name": "ltx-2.5-22b-ic-lora-clean-plate-1.0",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/548372ba6833",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/ltx-2.5-22b-ic-lora-clean-plate-1.0.safetensors"
+     ]
+    },
+    {
+     "id": "f_48986d61c5",
+     "name": "ltx-2.5-22b-ic-lora-deblur-0.9",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/b5a554a69aed",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/ltx-2.5-22b-ic-lora-deblur-0.9.safetensors"
+     ]
+    },
+    {
+     "id": "f_336770cbb0",
+     "name": "ltx-2.5-22b-ic-lora-decompression-0.9",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/6bb00e064eee",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/ltx-2.5-22b-ic-lora-decompression-0.9.safetensors"
+     ]
+    },
+    {
+     "id": "f_301d953901",
+     "name": "ltx-2.5-22b-ic-lora-ingredients-0.9",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/018250fe6eda",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/ltx-2.5-22b-ic-lora-ingredients-0.9.safetensors"
+     ]
+    },
+    {
+     "id": "f_b1c4b7aa79",
+     "name": "ltx-2.5-22b-lora-cinemagraph-0.9",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/041c00aaf6b4",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/ltx-2.5-22b-lora-cinemagraph-0.9.safetensors"
+     ]
+    },
+    {
+     "id": "f_67d1ec1633",
+     "name": "ltx-2.5-audio-vae-bf16",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/1acbd6870dc3",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/LTX2.5/ltx-2.5-audio-vae-bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_e8d78a0ffc",
+     "name": "LTX-2.5-Licon-MSR-V2",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/f1fa793dde40",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/LTX-2.5-Licon-MSR-V2.safetensors"
+     ]
+    },
+    {
+     "id": "f_4f19f27e14",
+     "name": "ltx-2.5-video-vae-bf16",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/9b83550981d9",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/LTX2.5/ltx-2.5-video-vae-bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_b6739e9880",
+     "name": "ltx-2.5-video-vae-conv-bf16",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/86b7f411a513",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/LTX2.5/ltx-2.5-video-vae-conv-bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_79ae1df745",
+     "name": "taeltx2_3",
+     "group": "ltx",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/92d8c2e9017f",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/LTX2.5/taeltx2_3.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "krea",
+   "name": "Krea",
+   "entries": [
+    {
+     "id": "f_a966a80067",
+     "name": "krea2_turbo_int8_convrot",
+     "group": "krea",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/6c1c5fed7bb1",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/krea2_turbo_int8_convrot.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flux",
+   "name": "Flux",
+   "entries": [
+    {
+     "id": "f_5431bb6ead",
+     "name": "flux2-vae",
+     "group": "flux",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/a0f76d36e656",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/flux2-vae.safetensors"
+     ]
+    },
+    {
+     "id": "f_d7bfc7df38",
+     "name": "flux2-vae_small",
+     "group": "flux",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/6b5438631424",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/flux2-vae_small.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "moss",
+   "name": "Moss Image",
+   "entries": [
+    {
+     "id": "f_93a6588d20",
+     "name": "moss_image_color_depth_control",
+     "group": "moss",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/8b5ee2e8dcbb",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/Moss/moss_image_color_depth_control.safetensors"
+     ]
+    },
+    {
+     "id": "f_ad9f847efd",
+     "name": "moss_image_edit_lora_rank_64_bf16",
+     "group": "moss",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/4e5ff7306c68",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/Moss/moss_image_edit_lora_rank_64_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_d198ae7e22",
+     "name": "moss_image_sft_bf16",
+     "group": "moss",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/b8f8869328b7",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/moss_image_sft_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_1b52c7806f",
+     "name": "moss_image_sft_int8_convrot",
+     "group": "moss",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/37d7a9219c53",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/moss_image_sft_int8_convrot.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "upscale",
+   "name": "放大与超分",
+   "entries": [
+    {
+     "id": "f_9187d1869a",
+     "name": "h3_upscaler_lms_v0.1",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/8548f46334e6",
+     "code": "",
+     "note": "",
+     "files": [
+      "latent_upscale_models/h3_upscaler_lms_v0.1.safetensors"
+     ]
+    },
+    {
+     "id": "f_1803edc347",
+     "name": "ltx-2.5-22b-ic-lora-pixel-spatial-upscaler-x2-1.0",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/1b75f38e197d",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/ltx2.5/ltx-2.5-22b-ic-lora-pixel-spatial-upscaler-x2-1.0.safetensors"
+     ]
+    },
+    {
+     "id": "f_a7ad861199",
+     "name": "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/8610ea97a857",
+     "code": "",
+     "note": "",
+     "files": [
+      "latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors"
+     ]
+    },
+    {
+     "id": "f_450332c559",
+     "name": "ltx-2.5-latent-temporal-upscaler-x2-bf16-1.0",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/496c787eda30",
+     "code": "",
+     "note": "",
+     "files": [
+      "latent_upscale_models/ltx-2.5-latent-temporal-upscaler-x2-bf16-1.0.safetensors"
+     ]
+    },
+    {
+     "id": "f_03b97cf5f9",
+     "name": "minimax_h3_latent_upscaler_3d_bf16",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/966ee2ac8379",
+     "code": "",
+     "note": "",
+     "files": [
+      "latent_upscale_models/minimax_h3_latent_upscaler_3d_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_b0a4130383",
+     "name": "minimax_h3_latent_upscaler_3d_conv_v1_bf16 等 2 个",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/06322672ca5b",
+     "code": "",
+     "note": "",
+     "files": [
+      "latent_upscale_models/2k/minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors",
+      "latent_upscale_models/minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_3bf309b5d1",
+     "name": "minimax_h3_latent_upscaler_3d_conv_v1_fp16",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/c0c6433eb694",
+     "code": "",
+     "note": "",
+     "files": [
+      "latent_upscale_models/minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors"
+     ]
+    },
+    {
+     "id": "f_2e9698b302",
+     "name": "minimax_h3_latent_upscaler_3d_fp16",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/17c80fa259db",
+     "code": "",
+     "note": "",
+     "files": [
+      "latent_upscale_models/minimax_h3_latent_upscaler_3d_fp16.safetensors"
+     ]
+    },
+    {
+     "id": "f_7c41e8afe1",
+     "name": "relayvsr_flash_vae_x2_fp32",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/f39240e8b9d1",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/放大/relayvsr_flash_vae_x2_fp32.safetensors"
+     ]
+    },
+    {
+     "id": "f_f35bbfecd0",
+     "name": "relayvsr_flash_vae_x4_fp32",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/ecca250d446b",
+     "code": "",
+     "note": "",
+     "files": [
+      "vae/放大/relayvsr_flash_vae_x4_fp32.safetensors"
+     ]
+    },
+    {
+     "id": "f_ceb5f20122",
+     "name": "relayvsr_x2_lightx2v_int8_convrot",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/7ba5723bfac6",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/放大/relayvsr_x2_lightx2v_int8_convrot.safetensors"
+     ]
+    },
+    {
+     "id": "f_fcae25c642",
+     "name": "relayvsr_x4_int8_convrot",
+     "group": "upscale",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/b74004ea932c",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/放大/relayvsr_x4_int8_convrot.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "audio",
+   "name": "音频编码器",
+   "entries": [
+    {
+     "id": "f_fa43a64f18",
+     "name": "sheetsage2_bf16",
+     "group": "audio",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/fcbd64b696b5",
+     "code": "",
+     "note": "",
+     "files": [
+      "audio_encoders/sheetsage2_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_41092f33a2",
+     "name": "whisper_large_v3_fp16",
+     "group": "audio",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/78e528ab994f",
+     "code": "",
+     "note": "",
+     "files": [
+      "audio_encoders/whisper_large_v3_fp16.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ckpt",
+   "name": "检查点",
+   "entries": [
+    {
+     "id": "f_159d601177",
+     "name": "sam3.1_multiplex_int8_convrot_selective_fp16clip_fp32source",
+     "group": "ckpt",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/97694ae0f582",
+     "code": "",
+     "note": "",
+     "files": [
+      "checkpoints/sam3.1_multiplex_int8_convrot_selective_fp16clip_fp32source.safetensors"
+     ]
+    },
+    {
+     "id": "f_4bfe9021ab",
+     "name": "sdpose_wholebody_fp16",
+     "group": "ckpt",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/bcaf507fb53c",
+     "code": "",
+     "note": "",
+     "files": [
+      "checkpoints/sdpose_wholebody_fp16.safetensors"
+     ]
+    },
+    {
+     "id": "f_082cb03afe",
+     "name": "yue2_3b_bf16",
+     "group": "ckpt",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/ae1ec97206bd",
+     "code": "",
+     "note": "",
+     "files": [
+      "checkpoints/yue2_3b_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "f_e735855cc2",
+     "name": "yue2_3b_int8_convrot",
+     "group": "ckpt",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/d383cd9898e3",
+     "code": "",
+     "note": "",
+     "files": [
+      "checkpoints/yue2_3b_int8_convrot.safetensors"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "misc",
+   "name": "其它",
+   "entries": [
+    {
+     "id": "p_sam31",
+     "name": "sam3.1 模型包",
+     "group": "misc",
+     "kind": "pack",
+     "url": "https://pan.quark.cn/s/97694ae0f582",
+     "code": "",
+     "note": "sam3.1 独立包",
+     "files": [
+      "checkpoints/sam3.1_multiplex_fp16.safetensors"
+     ]
+    },
+    {
+     "id": "f_479f00b5d9",
+     "name": "MelBandRoformer_fp16",
+     "group": "misc",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/fcaa9dc57902",
+     "code": "",
+     "note": "",
+     "files": [
+      "diffusion_models/MelBandRoformer_fp16.safetensors"
+     ]
+    },
+    {
+     "id": "f_8ec84202f3",
+     "name": "sharp_curve_branches",
+     "group": "misc",
+     "kind": "file",
+     "url": "https://pan.quark.cn/s/60bb5861d32d",
+     "code": "",
+     "note": "",
+     "files": [
+      "loras/sharp_curve_branches.safetensors"
+     ]
+    }
+   ]
+  }
+ ]
+}
