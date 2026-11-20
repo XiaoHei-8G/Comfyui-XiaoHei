@@ -57,7 +57,7 @@ const XH_I18N = {
             //  音乐卡点表（2026-10-14，纯 numpy 节拍分析，零第三方依赖）
             XHBeatCueTable: "音乐卡点表",
             // 去背景（2026-10-18 登记，补家族语言机制）
-            XHBackgroundRemove: "去背景",
+            XHBackgroundRemove: "移除背景 XiaoHei",
             // XiaoHei-H3 latent接续（2026-10-23 家族模式化：从 widgets 挪进 nodes）
             XHH3LatentContinuation: "H3 latent接续",
             // XiaoHei-H3 动作校正（2026-10-23，TST 推理时校正，零第三方依赖）
@@ -425,7 +425,7 @@ const XH_I18N = {
                 XHBBoxRegion: "BBox Region",
                 XHSmartFaceMask: "Universal Mask",
                 XHBeatCueTable: "Beat Cue Table",
-                XHBackgroundRemove: "Background Remove",
+                XHBackgroundRemove: "Remove Background XiaoHei",
                 XHH3LatentContinuation: "H3 latent continuation",
                 // XiaoHei-H3 action correction (TST, 2026-10-23)
                 XHH3TemporalCorrection: "H3 action correction",

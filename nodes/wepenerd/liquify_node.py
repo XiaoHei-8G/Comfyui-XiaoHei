@@ -25,7 +25,7 @@ def parse_document(value):
         return {"v": 2, "source": value, "strokes": [], "redo": []}
     document = json.loads(value)
     if document.get("v") != 2:
-        raise ValueError("Unsupported Liquify document version. Update ComfyUI-WepeNerd.")
+        raise ValueError("Unsupported Liquify document version. Update XiaoHei's Liquify node.")
     total = 0
     for key in ("strokes", "redo"):
         strokes = document.get(key, [])

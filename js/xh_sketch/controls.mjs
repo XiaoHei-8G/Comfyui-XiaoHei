@@ -109,6 +109,26 @@ export function buildActions(node, host, { vertical = false, onExpand = null, on
 
 const WIDTH_TITLE = { S: "widthS", M: "widthM", L: "widthL", XL: "widthXL" };
 
+/** Just Expand and Gear, for the face's floating top-right corner (2026-11-20,
+ *  方案 A: they no longer sit in the tool row). Returns sync(). */
+export function buildMiniActions(node, host, { onExpand = null, onGear = null } = {}) {
+  let x = null, g = null;
+  if (onExpand) {
+    x = btn("pix-sketch-btn", t("expand"), ico(ICON_EXPAND));
+    x.addEventListener("click", (e) => { e.stopPropagation(); onExpand(); });
+    host.appendChild(x);
+  }
+  if (onGear) {
+    g = btn("pix-sketch-btn pix-sketch-gear", t("settings"), "");
+    g.addEventListener("click", (e) => { e.stopPropagation(); onGear(); });
+    host.appendChild(g);
+  }
+  return () => {
+    if (x) x.title = t("expand");
+    if (g) g.title = t("settings");
+  };
+}
+
 /** Colour swatches then the line width. Returns sync(). */
 export function buildColors(node, host, { label = true } = {}) {
   const swatches = SWATCHES.map((name) => {
@@ -221,8 +241,10 @@ export function focusLastNote(host) {
   try { inp.focus({ preventScroll: true }); } catch {}
 }
 
-/** The prompt preview (read-only, raised) with the remove-the-marks switch. */
-export function buildPromptBox(node, host) {
+/** The prompt preview (read-only, raised) with the remove-the-marks switch.
+ *  `collapsible` (node face, 2026-11-20): starts folded to its header so the
+ *  picture gets the height; the caret opens it. The big view keeps it open. */
+export function buildPromptBox(node, host, { collapsible = false } = {}) {
   const head = document.createElement("div");
   head.className = "pix-sketch-phead";
   const label = document.createElement("span");
@@ -243,6 +265,20 @@ export function buildPromptBox(node, host) {
     setRemoveMarks(node, !readState(node).removeMarks);
   });
   head.append(label, sw);
+  let caret = null;
+  if (collapsible) {
+    // Folded by default; the caret is the only thing that opens it.
+    host.classList.add("collapsed");
+    caret = btn("pix-sketch-caret", t("promptTip"), "");
+    caret.textContent = "▾";
+    caret.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = host.classList.toggle("collapsed");
+      caret.textContent = open ? "▾" : "▴";
+      host.dispatchEvent(new CustomEvent("pix-sketch-resize", { bubbles: true }));
+    });
+    head.appendChild(caret);
+  }
   const text = document.createElement("div");
   text.className = "pix-sketch-ptext";
   host.append(head, text);

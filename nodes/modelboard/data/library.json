@@ -1282,18 +1282,6 @@
    "name": "其它",
    "entries": [
     {
-     "id": "p_sam31",
-     "name": "sam3.1 模型包",
-     "group": "misc",
-     "kind": "pack",
-     "url": "https://pan.quark.cn/s/97694ae0f582",
-     "code": "",
-     "note": "sam3.1 独立包",
-     "files": [
-      "checkpoints/sam3.1_multiplex_fp16.safetensors"
-     ]
-    },
-    {
      "id": "f_479f00b5d9",
      "name": "MelBandRoformer_fp16",
      "group": "misc",

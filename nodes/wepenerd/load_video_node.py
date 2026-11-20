@@ -533,4 +533,4 @@ def register_load_video_routes():
 
 
 NODE_CLASS_MAPPINGS = {"XH_WN_LoadVideo": WN_LoadVideo}
-NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_LoadVideo": "Load Video (Upload) (WepeNerd)"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_LoadVideo": "Load Video (Upload)"}

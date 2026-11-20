@@ -17,6 +17,7 @@ import { installResizeFloor } from "../shared/resize_floor.mjs";
 import { exposePromptWidget } from "../shared/prompt_assistant_compat.mjs";
 import { installCanvasZoomPassthrough } from "../shared/canvas_zoom.mjs";
 import { installNativeTextMenu } from "../shared/native_text_menu.mjs";
+import { installFamilyButtonPress } from "../shared/button_press.mjs";
 import { registerNodeAccent, installNodeAccent } from "../shared/node_settings.mjs";
 import { isQueueLoopActive, beginQueueLoop, endQueueLoop } from "../shared/queue_drivers.mjs";
 import {
@@ -47,6 +48,7 @@ export function setupNode(node) {
   node._xhPpRoot = root;
   installCanvasZoomPassthrough(root);
   installNativeTextMenu(root);
+  installFamilyButtonPress();
   installNodeAccent(node, root);
 
   const w = node.addDOMWidget("xh_pack_ui", "custom", root, {

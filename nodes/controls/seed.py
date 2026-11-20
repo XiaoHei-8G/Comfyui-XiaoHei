@@ -120,6 +120,12 @@ class XHSeed:
                         props = n.get("properties")
                         if isinstance(props, dict):
                             props["last_seed"] = seed
+                            # 历史列表（最新在前、同值去重、最多 10 条），与前端 seed_history 同名同义。
+                            # 过滤掉 -1/-2/-3 三个特殊值，保留合法负数种子（min 是 -MAX_SEED）。
+                            hist = props.get("seed_history")
+                            hist = [h for h in hist if isinstance(h, int) and h not in (-1, -2, -3)] if isinstance(hist, list) else []
+                            hist = [seed] + [h for h in hist if h != seed]
+                            props["seed_history"] = hist[:10]
 
         return (seed,)
 

@@ -63,4 +63,4 @@ class WN_FrameSlicer:
 
 
 NODE_CLASS_MAPPINGS = {"XH_WN_FrameSlicer": WN_FrameSlicer}
-NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_FrameSlicer": "Frame Slicer (WepeNerd)"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_FrameSlicer": "Frame Slicer"}

@@ -96,7 +96,7 @@ const PLAIN = {
 
     XHBackgroundRemove: {
         zh: {
-            title: "去背景",
+            title: "移除背景 XiaoHei",
             widgets: {
                 image: "输入图像", model: "模型", mask_feather: "掩码羽化",
                 mask_offset: "掩码偏移", invert: "反转",
@@ -104,7 +104,7 @@ const PLAIN = {
             slots: { image: "图像", mask: "遮罩" },
         },
         en: {
-            title: "Remove Background",
+            title: "Remove Background XiaoHei",
             widgets: {
                 image: "Image", model: "Model", mask_feather: "Mask Feather",
                 mask_offset: "Mask Offset", invert: "Invert",

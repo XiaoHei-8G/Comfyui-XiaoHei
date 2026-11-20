@@ -4,6 +4,7 @@
 import { app } from "../../../scripts/app.js";
 import { api } from "../../../scripts/api.js";
 import { pixApiUrl } from "../shared/api_url.mjs";
+import { loaderImagePart } from "../shared/loader_source.mjs";
 import { isGraphLoading } from "../shared/graph_loading.mjs";
 import { runTab, eachRestoredOutput } from "../shared/run_tab.mjs";
 import { growToCoreMinHeight, capComputeSizeInNodes2 } from "../shared/core_min_size.mjs";
@@ -223,10 +224,14 @@ function resolveImageSource(node) {
 /** The picture THIS node is holding, or null if it holds none. */
 function nodeImageURL(src, slot) {
   if (!src) return null;
-  if (src.comfyClass === "LoadImage" || src.type === "LoadImage") {
-    const w = (src.widgets || []).find((x) => x.name === "image");
-    if (w && w.value) return buildSourceURL(parseAnnotatedImageValue(w.value), true);
-  }
+  // A loader that names its file is the ONLY trustworthy source. Its cached
+  // picture is keyed by node id, and ids repeat across workflows, so `src.imgs`
+  // can still hold ANOTHER workflow's picture while the picker names this one
+  // (reported 2026-11-20: the crop preview showed a picture from the other
+  // workflow). Read the widget value and refetch by filename instead.
+  // Shared loader test lives in shared/loader_source.mjs - keep in step with sketch.
+  const part = loaderImagePart(src);
+  if (part) return buildSourceURL(part, true);
   if (src.imgs && src.imgs.length > 0) {
     const img = src.imgs[slot] || src.imgs[0];
     if (typeof img === "string") return img;

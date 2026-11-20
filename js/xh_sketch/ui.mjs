@@ -23,14 +23,17 @@ import { injectCSS } from "./css.mjs";
 import { ensureSketchFont, renderStage } from "./draw.mjs";
 import { attachDrawing } from "./input.mjs";
 import { uiState } from "./actions.mjs";
-import { buildActions, buildColors, buildPromptBox, buildTools, focusLastNote, renderList } from "./controls.mjs";
+import { buildActions, buildColors, buildMiniActions, buildPromptBox, buildTools, focusLastNote, renderList } from "./controls.mjs";
 import { imageWired } from "./source.mjs";
 import { t } from "./i18n.mjs";
 
 export const WIDGET_NAME = "sketch_ui";
 export const WIDGET_TYPE = "xh_sketch";   // unique: a registered Vue type would swallow the DOM
-export const STAGE_MIN = 140;
-export const FLOOR = 330;                        // the body with the picture at STAGE_MIN, one list row
+// The picture is the point of this node: the tool bar, the corner buttons and
+// the colour strip all float ON it, so the floor has to hold the tallest of
+// them (nine 20 px buttons + 8 gaps + divider + padding = 211).
+export const STAGE_MIN = 212;
+export const FLOOR = 320;                        // rows + the picture at STAGE_MIN + one list row
 export const MIN_W = 360;                        // the widest control row still fits (both renderers)
 
 const el = (tag, cls) => {
@@ -43,8 +46,6 @@ export function buildFace(node, { onExpand }) {
   injectCSS();
   const root = el("div", "pix-sketch-root");
   const inner = el("div", "pix-sketch-inner");
-  const row1 = el("div", "pix-sketch-row1");
-  const row2 = el("div", "pix-sketch-row2");
   const stage = el("div", "pix-sketch-stage");
   const canvas = el("canvas", "pix-sketch-cv");
   // INLINE absolute on purpose: the snapshot helper's FILL mode reads it.
@@ -54,17 +55,34 @@ export function buildFace(node, { onExpand }) {
   // One short line: the banner sits over the picture, on top of the very marks it asks you to check.
   warn.textContent = t("warnShape");
   warn.hidden = true;
-  stage.append(canvas, empty, warn);
+  // Layout 2026-11-20 (方案 A): the picture takes the whole body, and every
+  // control floats on it - tools down the left edge, Expand + Gear in the top
+  // right corner, colours and line width along the bottom edge. The notes list
+  // and the prompt keep the strip under the picture.
+  const tools = el("div", "pix-sketch-vtools");
+  const acts = el("div", "pix-sketch-hact");
+  const colors = el("div", "pix-sketch-hcolor");
+  stage.append(canvas, empty, warn, tools, acts, colors);
   const list = el("div", "pix-sketch-list");
   const prompt = el("div", "pix-sketch-prompt");
-  inner.append(row1, row2, stage, list, prompt);
+  inner.append(stage, list, prompt);
   root.appendChild(inner);
 
-  const syncTools = buildTools(node, row1);
-  row1.appendChild(el("span", "pix-sketch-grow"));
-  const syncActions = buildActions(node, row1, { onExpand, onGear: () => openNodeSettings(node) });
-  const syncColors = buildColors(node, row2);
-  const syncPrompt = buildPromptBox(node, prompt);
+  // A press on any overlay must never reach the picture under it: the drawing
+  // listener sits on the stage, and these are its children now.
+  for (const o of [tools, acts, colors]) o.addEventListener("pointerdown", (e) => e.stopPropagation());
+
+  const syncTools = buildTools(node, tools, { vertical: true });
+  const syncActions = buildActions(node, tools, { vertical: true });
+  const syncMini = buildMiniActions(node, acts, { onExpand, onGear: () => openNodeSettings(node) });
+  const syncColors = buildColors(node, colors);
+  const syncPrompt = buildPromptBox(node, prompt, { collapsible: true });
+  // Opening the prompt needs room: grow to the measured minimum, never shrink
+  // the node under the user's hands.
+  prompt.addEventListener("pix-sketch-resize", () => {
+    const want = contentMin(node);
+    if (node?.size && node.size[1] < want) node.setSize?.([node.size[0], Math.ceil(want)]);
+  });
 
   const widget = node.addDOMWidget(WIDGET_NAME, WIDGET_TYPE, root, {
     serialize: false,
@@ -83,7 +101,7 @@ export function buildFace(node, { onExpand }) {
 
   const face = {
     root, inner, stage, canvas, empty, warn, list, prompt, widget,
-    rect: null, draft: null, syncTools, syncActions, syncColors, syncPrompt,
+    rect: null, draft: null, syncTools, syncActions, syncMini, syncColors, syncPrompt,
   };
   node._pixSkFace = face;
   face.floorOff = installResizeFloor(root, () => contentMin(node));
@@ -213,6 +231,7 @@ export function renderFace(node, structural = true, userAction = false) {
   if (structural) renderList(node, f.list);
   f.syncTools();
   f.syncActions();
+  f.syncMini?.();
   f.syncColors();
   f.syncPrompt();
   if (structural && userAction) {

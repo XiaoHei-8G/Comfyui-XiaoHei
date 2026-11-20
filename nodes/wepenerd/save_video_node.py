@@ -381,4 +381,4 @@ class WN_SaveVideo:
 
 
 NODE_CLASS_MAPPINGS = {"XH_WN_SaveVideo": WN_SaveVideo}
-NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_SaveVideo": "Save Video (WepeNerd)"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_SaveVideo": "Save Video"}

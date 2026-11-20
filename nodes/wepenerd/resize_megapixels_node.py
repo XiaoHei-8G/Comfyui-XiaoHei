@@ -65,4 +65,4 @@ class WN_ResizeMegapixels:
 
 
 NODE_CLASS_MAPPINGS = {"XH_WN_ResizeMegapixels": WN_ResizeMegapixels}
-NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_ResizeMegapixels": "Resize Image Megapixels (WepeNerd)"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_ResizeMegapixels": "Resize Image Megapixels"}

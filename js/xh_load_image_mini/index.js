@@ -29,9 +29,9 @@ import { isLiveNode } from "../shared/live_node.mjs";
 import { labelFromNodeTitle } from "../shared/widget_label.mjs";
 import { xhIconHTML, XH_GEAR_SVG } from "../xh_ui_kit.js";
 import {
-  setSelectedImage, updateNativePreview, previewMatches, pickAndUploadFile,
+  setSelectedImage, updateNativePreview, pickAndUploadFile,
   pasteFromClipboard, installLoaderPaste, uploadImageToInput, splitFilenameSubfolder,
-  splitTypeAnnotation, schedulePreviewRepair,
+  splitTypeAnnotation, schedulePreviewRepair, syncCoreImageStore,
 } from "../xh_load_image/api.mjs";
 import { openImageDropdown, injectCSS as injectLiCSS } from "../xh_load_image/ui.mjs";
 import { previewResize } from "../xh_load_image/resize_modes.mjs";
@@ -500,6 +500,13 @@ function renderPreviewCanvas(node) {
 // Ensure an image is loaded for the preview (fetch /view on restore), then draw.
 function updatePreview(node) {
   if (!isVueNodes()) return;
+  // ONLY draw here - never decide the source here. On restore, onConfigure's
+  // settle() has already called updateNativePreview (forced fetch, fresh t=)
+  // and pointed core's replay at the same file; that is the single truth.
+  // A previous version dropped node.imgs when previewMatches disagreed, but
+  // previewMatches only reads the filename in the URL - a cached /view with a
+  // matching name but stale PIXELS slipped through, so the two halves fought
+  // and produced "hanfu name over beanie-girl picture" after tab switches.
   const im = node.imgs?.[0];
   if (!(im?.complete && im.naturalWidth)) {
     const fn = node._pixLiImageWidget?.value;
@@ -813,8 +820,12 @@ function setupNode(node) {
     // Architecture.png. Not merely cosmetic - node.imgs also feeds the INPUT
     // size card, so the node reported 1024x1024 for an image that is 1376x768,
     // and Mask Editor / Clipspace read node.imgs too.
+    // Force one fetch from the widget name on a fresh node. Same single-truth
+    // rule as onConfigure: previewMatches only reads the URL filename, so a
+    // cached /view can look "matched" while showing stale pixels. The req-id
+    // in updateNativePreview makes a redundant second fetch harmless.
     const want = node._pixLiImageWidget?.value;
-    if (want && !previewMatches(node, want)) updateNativePreview(node, want);
+    if (want) updateNativePreview(node, want);
     // Nodes 2.0 fresh node: grow to fit the clipped content once (never on the
     // load path - Vue Compat #18).
     if (isVueNodes()) {
@@ -887,17 +898,29 @@ app.registerExtension({
     nodeType.prototype.onConfigure = function () {
       const r = _origConfigure?.apply(this, arguments);
       stripInputs(this);
-      queueMicrotask(() => {
-        refreshDropdown(this);
+      // ONE truth on restore: the widget value, which ComfyUI loads from THIS
+      // workflow's JSON. node.imgs / app.nodeOutputs are keyed by node id, and
+      // ids repeat across workflows, so the picture is the half that can be
+      // stale. Never rename the widget to match a cached picture (that was the
+      // 2026-11-20 regression: a hanfu name stuck on a beanie-girl picture).
+      // Instead force the picture to follow the name, every restore, with a
+      // FRESH cache-buster so a cached /view with a matching filename cannot
+      // be mistaken for a valid preview by previewMatches.
+      const settle = () => {
         const w = this._pixLiImageWidget;
-        if (w?.value) {
-          this._pixLiSelectedFilename = w.value;
-          if (!/clipspace/i.test(w.value)) this._pixLiOrigName = w.value;
-        }
+        if (!w?.value) return;
+        this._pixLiSelectedFilename = w.value;
+        if (!/clipspace/i.test(w.value)) this._pixLiOrigName = w.value;
+        syncCoreImageStore(this, w.value);   // core replay now names THIS file too
+        refreshDropdown(this);
         renderCards(this);
         applyAccent(this);
-      });
-      setTimeout(() => { renderCards(this); if (isVueNodes()) updatePreview(this); }, 600);
+        updateNativePreview(this, w.value);  // unconditional; req-id drops stale loads
+        if (isVueNodes()) updatePreview(this);
+      };
+      queueMicrotask(settle);
+      // Core's same-id replay can land a few ms late; settle once more after it.
+      setTimeout(settle, 600);
       return r;
     };
 

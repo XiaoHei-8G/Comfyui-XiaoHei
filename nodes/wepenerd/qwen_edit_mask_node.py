@@ -175,4 +175,4 @@ class WN_QwenEditMask:
 
 
 NODE_CLASS_MAPPINGS = {"XH_WN_QwenEditMask": WN_QwenEditMask}
-NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_QwenEditMask": "Qwen Edit Mask (WepeNerd)"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_QwenEditMask": "Qwen Edit Mask"}

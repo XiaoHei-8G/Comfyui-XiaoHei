@@ -84,17 +84,19 @@ const store = {
   },
 };
 
-// 2026-11-19 一次性布局迁移：旧默认窗口 1040×720、左栏 204、右栏 208 太窄，
-// 用户本地存着的旧值会盖掉新默认（1240×780 / 296 / 336）⇒ 首次加载清掉这 3 个键，
-// 让 _wfbReadRect / _wfbApplyCols 回落到新默认。打版本标只迁移一次；
-// 之后用户自己拖的窗口/栏宽照常记忆，不再被清。
+// 一次性布局迁移（版本 3 / 2026-11-20）：用户截图实测左栏只有 ~150px、右栏 ~180px，
+// 而代码默认是 320 / 300 —— 浏览器 localStorage 里存着的旧栏宽把默认值盖掉了。
+// 🔴 上次的版本 2 迁移只跑一次、早就结束，所以改默认值对他完全无效（他一遍遍说「没修好」）。
+//    这次升到 3，无条件清掉 sideW/detW，让 _wfbApplyCols 回落到新默认。
+//    ⚠️ win（窗口位置/大小）**不清** —— 用户可能自己调过窗口，别顺手重置。
+// 打版本标只迁移一次；之后用户自己拖的栏宽照常记忆，不再被清。
 (function _wfbMigrateWideLayout() {
   try {
-    if (store.get("layoutV", 0) >= 2) return;
-    store.set("win", null);
-    store.set("sideW", null);
-    store.set("detW", null);
-    store.set("layoutV", 2);
+    if (store.get("layoutV", 0) >= 3) return;
+    // 用 removeItem 真正删键（store.set(k,null) 只会写进字符串 "null"，不算清掉）。
+    localStorage.removeItem("xh.wfb.sideW");
+    localStorage.removeItem("xh.wfb.detW");
+    store.set("layoutV", 3);
   } catch (e) { /* localStorage 挂了也不许崩 */ }
 })();
 
@@ -837,7 +839,7 @@ function injectCSS() {
 
 /* 主体三栏 */
 .xhwb-body { display: flex; flex: 1; min-height: 0; }
-.xhwb-side { width: ${z(296)}; min-width: ${z(130)}; flex: none; background: var(--xh-card); overflow-y: auto; padding: 8px 6px; }
+.xhwb-side { width: ${z(320)}; min-width: ${z(130)}; flex: none; background: var(--xh-card); overflow-y: auto; padding: 8px 6px; }
 .xhwb-sidegrip, .xhwb-detgrip { width: 6px; flex: none; cursor: ew-resize; background: transparent; z-index: 2; }
 .xhwb-sidegrip::after, .xhwb-detgrip::after {
   content: ""; display: block; width: 1px; height: 100%; margin-left: 2px;
@@ -1028,7 +1030,7 @@ function injectCSS() {
 .xhwb-empty { color: var(--xh-sub); font-size: ${z(12)}; padding: 26px 10px; text-align: center; }
 
 /* 详情栏 */
-.xhwb-detail { width: ${z(336)}; min-width: ${z(150)}; flex: none; background: var(--xh-side); overflow-y: auto; padding: 10px; }
+.xhwb-detail { width: ${z(300)}; min-width: ${z(150)}; flex: none; background: var(--xh-side); overflow-y: auto; padding: 10px; }
 .xhwb-detail.hidden { display: none; }
 .xhwb-detcov { width: 100%; height: ${z(104)}; border-radius: 6px; background: var(--xh-surface); display: block; object-fit: contain; }
 .xhwb-detname { color: var(--xh-text); font-size: ${z(12.5)}; font-weight: 600; margin: 8px 0 2px; line-height: 1.35; word-break: break-word; }
@@ -1319,15 +1321,22 @@ let H = null; // 面板 DOM 引用集合
 const WFB = { minW: 620, minH: 340, prefW: 1240, prefH: 780, edge: 24, homeX: 80, homeY: 60 };
 // 三栏宽度：左栏 130~640、右栏 150~640（原来都卡在 420，拖不过去）；
 // 中间列表至少留 MAIN_MIN，两条 grip 各 6px —— 上限还要按面板实际宽度动态收。
-//  2026-11-19：默认加宽（用户嫌窄）左 204→296、右 208→336；窗口见 WFB.prefW。
-const WFB_SIDE_MIN = 130, WFB_SIDE_MAX = 640, WFB_SIDE_DEF = 296;
-const WFB_DET_MIN = 150, WFB_DET_MAX = 640, WFB_DET_DEF = 336;
+//  2026-11-20：左栏再加宽到 320（用户嫌目录太窄、分类名被截成「H3…」），右栏收到 300
+//    —— 面板约 1015px 宽时中间列表仍有 ~380px，不浪费。窗口见 WFB.prefW。
+const WFB_SIDE_MIN = 130, WFB_SIDE_MAX = 640, WFB_SIDE_DEF = 320;
+const WFB_DET_MIN = 150, WFB_DET_MAX = 640, WFB_DET_DEF = 300;
 const WFB_MAIN_MIN = 320, WFB_GRIP_W = 12;
 /** 某一栏当前能拖到的最大宽度：不超过 640，也不把中间列表挤到 320 以下。 */
 function _wfbColMax(which) {
   if (!H) return which === "side" ? WFB_SIDE_MAX : WFB_DET_MAX;
-  const total = H.root.clientWidth || 0;
-  const other = which === "side" ? H.detail.offsetWidth : H.side.offsetWidth;
+  // 🔴 2026-11-20 真凶：buildPanel() 时 root 还是 display:none ⇒ clientWidth/offsetWidth 全是 0
+  //    ⇒ total - other - 12 - 320 是负数 ⇒ clamp 把两栏永远钉死在最小值 130/150，
+  //    用户看到「左栏太窄、中间太宽」，改多少遍默认值都没用。
+  //    用 _wfbApplyRect 已经写好的 H.rect.w 兜底（面板宽在隐藏时也算得出来）。
+  const total = H.root.clientWidth || (H.rect && H.rect.w) || WFB.prefW;
+  // 隐藏时 offsetWidth 同样是 0，退回到默认值参与运算，别让 0 混进去。
+  const other = (which === "side" ? H.detail.offsetWidth : H.side.offsetWidth)
+             || (which === "side" ? WFB_DET_DEF : WFB_SIDE_DEF);
   const ownMin = which === "side" ? WFB_SIDE_MIN : WFB_DET_MIN;
   const ownMax = which === "side" ? WFB_SIDE_MAX : WFB_DET_MAX;
   return Math.max(ownMin, Math.min(ownMax, total - other - WFB_GRIP_W - WFB_MAIN_MIN));
@@ -1343,6 +1352,8 @@ function _wfbApplyCols() {
 /** 窗口被拖小 / 浏览器窗口变化时，把两栏收回到合法范围，保住中间列表。 */
 function _wfbClampCols() {
   if (!H) return;
+  // 面板隐藏时 offsetWidth 全是 0，clamp 会把栏宽压成最小值 ⇒ 隐藏时直接跳过。
+  if (H.root.style.display === "none") return;
   H.side.style.width = Math.max(WFB_SIDE_MIN, Math.min(H.side.offsetWidth, _wfbColMax("side"))) + "px";
   H.detail.style.width = Math.max(WFB_DET_MIN, Math.min(H.detail.offsetWidth, _wfbColMax("det"))) + "px";
 }
@@ -2639,6 +2650,9 @@ function togglePanel(force) {
   if (!H) buildPanel();
   STATE.open = typeof force === "boolean" ? force : !STATE.open;
   H.root.style.display = STATE.open ? "flex" : "none";
+  // 🔴 2026-11-20：buildPanel 时 root 还是 none、clientWidth=0，列宽会被 clamp 到最小值。
+  //    面板这次真的显示了，重新按真实宽度应用一次（读的是 store/默认值，不会覆盖用户拖过的）。
+  if (STATE.open) _wfbApplyCols();
   // 顶栏按钮同步状态：面板开着 = 亮出家族黄，关着 = 回到常态
   // （照 早期版本 index.js L1565: S.btn.classList.toggle("wfb-btn-open", isOpen)）
   try {

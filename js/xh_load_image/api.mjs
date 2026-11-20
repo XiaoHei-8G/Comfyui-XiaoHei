@@ -143,7 +143,7 @@ export function updateNativePreview(node, filename) {
  * a race (verified: with this, core's two loads name the same file, exactly as
  * they do for its own LoadImage).
  */
-function syncCoreImageStore(node, filename) {
+export function syncCoreImageStore(node, filename) {
   try {
     const store = app?.nodeOutputs;
     if (!store || node?.id == null) return;

@@ -41,15 +41,26 @@ const XH_I18N = {
             btnFixed: " 生成固定值",
             btnLast: " 用上次",
             btnLastNone: " 暂无",
+            btnCopy: " 复制",
             tipRandom: "设成 -1：每次出图都换新种子（推荐）",
             tipFixed: "立刻摇一个随机数字当成固定种子（可复现）",
             tipLast: "把上一次实际用过的种子填回来",
+            tipCopy: "复制当前种子（随机模式下复制的是本次/上次真正跑过的种子）",
+            tipUp: "种子 +1（-1/-2/-3 会先按语义解析成具体数字再加）",
+            tipDown: "种子 -1（-1/-2/-3 会先按语义解析成具体数字再减）",
             noLast: "还没有上次种子（先跑一次图）",
             txtRandom: " 每次出图都随机",
             txtInc: " 上次种子 +1",
             txtDec: " 上次种子 -1",
             txtFixed: " 固定种子：{v}",
             used: " 本次出图用：{v}",
+            copied: " 已复制到剪贴板",
+            copyFail: " 复制失败",
+            histTitle: "最近跑过的种子",
+            histEmpty: "还没有记录，跑一次图就会记下（最多留 10 条）",
+            histClear: "清空",
+            histTip: "点这里看最近跑过的种子（最多 10 条）",
+            histCopyTip: "复制这个种子",
             ok: "",
         },
     },
@@ -62,15 +73,26 @@ const XH_I18N = {
             btnFixed: " Roll fixed",
             btnLast: " Reuse last",
             btnLastNone: " None yet",
+            btnCopy: " Copy",
             tipRandom: "Set -1: a fresh seed every run (recommended)",
             tipFixed: "Roll a random number and lock it as a fixed seed",
             tipLast: "Put back the seed actually used last time",
+            tipCopy: "Copy the current seed (in Random mode it copies the seed that really ran)",
+            tipUp: "Seed +1 (-1 / -2 / -3 resolves to a concrete number first)",
+            tipDown: "Seed -1 (-1 / -2 / -3 resolves to a concrete number first)",
             noLast: "No last seed yet (run once first)",
             txtRandom: " Randomize every run",
             txtInc: " Last seed + 1",
             txtDec: " Last seed - 1",
             txtFixed: " Fixed seed: {v}",
             used: " Used this run: {v}",
+            copied: " Copied to clipboard",
+            copyFail: " Copy failed",
+            histTitle: "Recent seeds",
+            histEmpty: "No records yet - run once to start (keeps the last 10)",
+            histClear: "Clear",
+            histTip: "Click to see the recent seeds (last 10)",
+            histCopyTip: "Copy this seed",
             ok: "",
         },
     },
@@ -91,6 +113,41 @@ const SEED_INCREMENT = -2;
 const SEED_DECREMENT = -3;
 const SPECIALS = [SEED_RANDOM, SEED_INCREMENT, SEED_DECREMENT];
 const MAX_SEED = 1125899906842624; // 2^50，与 rgthree / 后端一致
+
+// 跑过的种子记录（第 1 次、第 2 次…），存 node.properties，跟存档一起走。
+const HIST_PROP = "seed_history";
+const HIST_MAX = 10;
+
+/** 清掉历史里的非法项：只认真正的数字（null/""/"abc" 这类一律丢，绝不能被 Number() 变成 0）。 */
+function cleanHist(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .filter((x) => typeof x === "number" && Number.isFinite(x) && !SPECIALS.includes(x))
+        .map((x) => Math.floor(x))
+        .slice(0, HIST_MAX);
+}
+
+/** 合并一条记录进历史：最新的在最前，同值去重，最多 HIST_MAX 条。 */
+function mergeHistory(raw, seed) {
+    const cur = cleanHist(raw);
+    const s = Number(seed);
+    if (typeof seed !== "number" || !Number.isFinite(s) || SPECIALS.includes(s)) return cur;
+    const v = Math.floor(s);
+    if (cur[0] === v) return cur;
+    return [v, ...cur.filter((n) => n !== v)].slice(0, HIST_MAX);
+}
+
+function getHistory(node) {
+    return mergeHistory(node && node.properties ? node.properties[HIST_PROP] : null, NaN);
+}
+
+function pushHistory(node, seed) {
+    if (!node) return;
+    const next = mergeHistory(getHistory(node), seed);
+    if (!next.length) return;
+    if (!node.properties) node.properties = {};
+    node.properties[HIST_PROP] = next;
+}
 
 function randSeed() {
     let s = Math.floor(Math.random() * MAX_SEED);
@@ -123,10 +180,29 @@ function patchPrompt(prompt) {
         const inputs = entry.inputs;
         if (!inputs || inputs.seed === undefined) continue;
         const cur = Number(inputs.seed);
-        if (!SPECIALS.includes(cur)) continue;
 
         const idStr = key.includes(":") ? key.slice(key.lastIndexOf(":") + 1) : key;
         const wfNode = findWfNode(prompt.workflow, idStr);
+
+        // 固定种子：不改 inputs（本来就是真值），只把"这次确实用了这个值"记进历史。
+        // 同值连跑只留一条，所以刷图不会把列表灌满；不打 flash，免得每跑一次就闪一下。
+        if (!SPECIALS.includes(cur)) {
+            if (wfNode) {
+                if (!wfNode.properties) wfNode.properties = {};
+                wfNode.properties.last_seed = cur;
+                wfNode.properties[HIST_PROP] = mergeHistory(wfNode.properties[HIST_PROP], cur);
+            }
+            for (const n of live) {
+                if (String(n.id) !== idStr) continue;
+                if (!n.properties) n.properties = {};
+                n.properties.last_seed = cur;
+                pushHistory(n, cur);
+                updateLastBtn(n);
+                if (_histPanel && _histPanel.style.display !== "none" && _histNode === n) renderHist(n);
+            }
+            continue;
+        }
+
         const last = wfNode && wfNode.properties ? wfNode.properties.last_seed : undefined;
 
         // 照抄 rgthree 的 getSeedToUse：±1 只有在"上次是真种子"时才生效，否则退回随机
@@ -147,6 +223,8 @@ function patchPrompt(prompt) {
             }
             if (!wfNode.properties) wfNode.properties = {};
             wfNode.properties.last_seed = s;
+            // 同一条也记进存档里的历史列表（出图元数据/工作流里都带着第 1、2、3 次）
+            wfNode.properties[HIST_PROP] = mergeHistory(wfNode.properties[HIST_PROP], s);
         }
         // ③ 界面反馈：状态条闪 " 本次出图用：xxx" + 「用上次」按钮点亮
         for (const n of live) {
@@ -207,7 +285,9 @@ function seedValue(node) {
     return Number.isFinite(v) ? v : SEED_RANDOM;
 }
 
-/** 状态条常驻文案：现在到底是什么种子 */
+/** 状态条常驻文案：现在到底是什么种子。
+ *  刻意不在状态条里重复那串长数字 —— 节点 240 宽时装不下 16 位，会被截成
+ *  "112589…"，看着像真值其实不是。数字放在「用上次」按钮和「复制」的 tooltip 上。 */
 function statusText(node) {
     const L = uiText(currentLang());
     const v = seedValue(node);
@@ -217,11 +297,95 @@ function statusText(node) {
     return L.txtFixed.replace("{v}", v);
 }
 
+/** 剪贴板：优先 navigator.clipboard；http://局域网IP 这类非安全上下文回退 execCommand。 */
+function copyText(text, cb) {
+    const legacy = () => {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none;";
+        let ok = false;
+        try {
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            ok = document.execCommand("copy");
+        } catch (e) {
+            ok = false;
+        } finally {
+            ta.remove();
+        }
+        cb(ok);
+    };
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => cb(true)).catch(legacy);
+            return;
+        }
+    } catch (e) {}
+    legacy();
+}
+
+/** 要复制的值：数字态=当前值；随机/-2/-3 态=本次（上次）真种子；两样都没有就原样给 -1。 */
+function seedToCopy(node) {
+    const v = seedValue(node);
+    const last = node.properties ? node.properties.last_seed : undefined;
+    const hasLast = typeof last === "number" && !SPECIALS.includes(last);
+    if (!SPECIALS.includes(v)) return v;
+    if (hasLast) return last;
+    return v;
+}
+
+/** 微调 1：数字态直接 ±1；-1/-2/-3 先按语义解析成具体数字（没有上次就先摇一个），落地成固定值。
+ *  -1 → 上次（无则随机）  -2 → 上次+1  -3 → 上次-1，再各自叠加本次的 ±1。 */
+function stepSeed(node, dir) {
+    const L = uiText(currentLang());
+    const v = seedValue(node);
+    const last = node.properties ? node.properties.last_seed : undefined;
+    const hasLast = typeof last === "number" && !SPECIALS.includes(last);
+    let base;
+    if (v === SEED_INCREMENT) base = hasLast ? last + 1 : null;
+    else if (v === SEED_DECREMENT) base = hasLast ? last - 1 : null;
+    else if (v === SEED_RANDOM) base = hasLast ? last : null;
+    else base = v;
+    if (base == null) base = randSeed();
+    const next = Math.max(-MAX_SEED, Math.min(MAX_SEED, Math.floor(base + dir)));
+    setSeed(node, next);
+    flashStatus(node, " " + L.txtFixed.replace("{v}", next), 1600);
+}
+
+/** 状态条里的小方钮（±1 / 复制）：和状态文本同一行，不额外占一行高度。 */
+function makeMiniBtn(node, key, label, tip, width, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.title = tip || "";
+    b.style.cssText = "flex:0 0 auto;width:" + width + "px;height:20px;padding:0;margin:0;"
+        + "display:flex;align-items:center;justify-content:center;"
+        + "border:1px solid rgba(255,255,255,0.22);border-radius:5px;"
+        + "background:rgba(255,255,255,0.14);color:#ffffff;"
+        + "font-family:inherit;font-size:10px;line-height:1;font-weight:700;cursor:pointer;"
+        + "user-select:none;appearance:none;-webkit-appearance:none;transition:filter .15s,transform .08s;";
+    b.onmouseenter = () => { b.style.filter = "brightness(1.25)"; };
+    b.onmouseleave = () => { if (!b._xhFlashing) b.style.filter = "none"; };
+    b.onclick = (e) => {
+        e.stopPropagation();
+        pressBtn(b);
+        try { onClick(b); } catch (err) { console.warn("[XiaoHei-种子] 小按钮失败:", err); }
+    };
+    node._xhSeedMini = node._xhSeedMini || {};
+    node._xhSeedMini[key] = b;
+    return b;
+}
+
 function refreshStatus(node) {
     const el = node && node._xhSeedStatusEl;
     const tx = node && node._xhSeedStatusTx;
     if (!el || !tx) return;
     try {
+        // 「复制」按钮的 tooltip 跟着种子走 —— 长数字在状态条里会截断，这里给全量。
+        const L = uiText(currentLang());
+        const cp = node._xhSeedMini && node._xhSeedMini.copy;
+        if (cp) cp.title = L.tipCopy + "  ·  " + seedToCopy(node);
         const f = node._xhSeedFlash;
         if (f && Date.now() < f.until) {
             tx.textContent = f.msg;
@@ -276,14 +440,26 @@ function refreshUI(node) {
     const L = uiText(currentLang());
     const bs = node._xhSeedBtns;
     if (bs) {
-        for (const [k, txt] of [["random", L.btnRandom], ["fixed", L.btnFixed]]) {
+        const tips = { random: L.tipRandom, fixed: L.tipFixed, copy: L.tipCopy };
+        for (const [k, txt] of [["random", L.btnRandom], ["fixed", L.btnFixed], ["copy", L.btnCopy]]) {
             const b = bs[k];
             if (!b) continue;
             b._baseText = txt;
             if (!b._xhFlashing) b.textContent = txt;
-            b.title = k === "random" ? L.tipRandom : L.tipFixed;
+            b.title = tips[k] || "";
         }
     }
+    const mb = node._xhSeedMini;
+    if (mb) {
+        if (mb.up) mb.up.title = L.tipUp;
+        if (mb.down) mb.down.title = L.tipDown;
+        if (mb.copy) {
+            mb.copy.title = L.tipCopy;
+            mb.copy._baseText = L.btnCopy;
+            if (!mb.copy._xhFlashing) mb.copy.textContent = L.btnCopy;
+        }
+    }
+    if (node._xhSeedStatusTx) node._xhSeedStatusTx.title = L.histTip;
     updateLastBtn(node);
     refreshStatus(node);
 }
@@ -368,17 +544,204 @@ function makeBtnBar(node) {
     return w;
 }
 
-/** 常驻状态条（照 web/xh_resolution.js 的预览条风格）。 */
+// ── 种子记录浮层（点状态条文本弹出；只读 node.properties.seed_history）──
+// 单例元素挂 document.body —— DOM widget 的容器会裁切溢出，浮层必须跳出节点。
+let _histPanel = null;
+let _histNode = null;
+
+function ensureHistPanel() {
+    if (_histPanel) return _histPanel;
+    const p = document.createElement("div");
+    p.style.cssText = "position:fixed;z-index:2147483000;display:none;box-sizing:border-box;width:270px;"
+        + "background:#1b1c1e;border:1px solid #3a3d40;border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.55);"
+        + "padding:8px;font-family:system-ui,-apple-system,\"Segoe UI\",\"Microsoft YaHei\",sans-serif;color:#ddd;";
+
+    const head = document.createElement("div");
+    head.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:6px;";
+    const title = document.createElement("div");
+    title.className = "xh-hist-title";
+    title.style.cssText = "flex:1 1 auto;min-width:0;font-size:11px;font-weight:700;color:#9be89b;"
+        + "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "xh-hist-clear";
+    clear.style.cssText = "flex:0 0 auto;padding:3px 7px;border:1px solid rgba(255,255,255,.18);border-radius:5px;"
+        + "background:rgba(255,255,255,.06);color:#bbb;font-size:10px;cursor:pointer;"
+        + "font-family:inherit;appearance:none;-webkit-appearance:none;";
+    clear.onclick = (e) => {
+        e.stopPropagation();
+        const n = _histNode;
+        if (n) {
+            if (!n.properties) n.properties = {};
+            n.properties[HIST_PROP] = [];
+        }
+        renderHist(n);
+        refreshStatus(n);
+        flashStatus(n, " " + uiText(currentLang()).histClear, 1200);
+    };
+    head.append(title, clear);
+
+    const body = document.createElement("div");
+    body.className = "xh-hist-body";
+    body.style.cssText = "display:flex;flex-direction:column;gap:3px;max-height:320px;overflow:auto;";
+
+    p.append(head, body);
+    // 浮层内的任何操作都不能漏到画布（否则点一下就把节点拖走了）
+    ["pointerdown", "mousedown", "click", "dblclick", "wheel"].forEach((ev) =>
+        p.addEventListener(ev, (e) => e.stopPropagation())
+    );
+    document.body.appendChild(p);
+    _histPanel = p;
+    return p;
+}
+
+/** 把列表按当前节点重画（每次打开都重画，不必缓存） */
+function renderHist(node) {
+    const p = _histPanel;
+    if (!p) return;
+    const L = uiText(currentLang());
+    p.querySelector(".xh-hist-title").textContent = L.histTitle;
+    const cl = p.querySelector(".xh-hist-clear");
+    cl.textContent = L.histClear;
+
+    const body = p.querySelector(".xh-hist-body");
+    body.innerHTML = "";
+    const hist = getHistory(node);
+    cl.disabled = hist.length === 0;
+    cl.style.opacity = cl.disabled ? "0.45" : "1";
+    cl.style.cursor = cl.disabled ? "not-allowed" : "pointer";
+
+    if (!hist.length) {
+        const empty = document.createElement("div");
+        empty.style.cssText = "font-size:11px;line-height:1.7;color:#8a8a8a;padding:2px;";
+        empty.textContent = L.histEmpty;
+        body.appendChild(empty);
+        return;
+    }
+
+    hist.forEach((s, i) => {
+        const row = document.createElement("div");
+        const restBg = i === 0 ? "rgba(255,255,255,.10)" : "rgba(255,255,255,.04)";
+        row.style.cssText = "display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;"
+            + "background:" + restBg + ";cursor:pointer;";
+        row.onmouseenter = () => { row.style.background = "rgba(76,155,255,.22)"; };
+        row.onmouseleave = () => { row.style.background = restBg; };
+        row.title = L.txtFixed.replace("{v}", s);
+
+        const idx = document.createElement("div");
+        idx.style.cssText = "flex:0 0 auto;width:15px;font-size:10px;color:#7d7d7d;text-align:right;";
+        idx.textContent = String(i + 1);
+
+        const val = document.createElement("div");
+        val.style.cssText = "flex:1 1 auto;min-width:0;font-family:ui-monospace,Consolas,monospace;font-size:11px;"
+            + "color:#f2f2f2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+        val.textContent = String(s);
+        val.title = String(s);
+
+        const cp = document.createElement("button");
+        cp.type = "button";
+        cp.textContent = "⧉";
+        cp.title = L.histCopyTip;
+        cp.style.cssText = "flex:0 0 auto;width:22px;height:18px;display:flex;align-items:center;justify-content:center;"
+            + "border:1px solid rgba(255,255,255,.18);border-radius:4px;background:rgba(255,255,255,.06);"
+            + "color:#bbb;font-size:10px;cursor:pointer;font-family:inherit;appearance:none;-webkit-appearance:none;";
+        cp.onclick = (e) => {
+            e.stopPropagation();
+            copyText(String(s), (ok) => {
+                cp.textContent = ok ? "✓" : "✗";
+                setTimeout(() => { cp.textContent = "⧉"; }, 900);
+            });
+        };
+
+        row.onclick = (e) => {
+            e.stopPropagation();
+            setSeed(node, s);
+            hideHist();
+            flashStatus(node, " " + L.txtFixed.replace("{v}", s), 1800);
+        };
+
+        row.append(idx, val, cp);
+        body.appendChild(row);
+    });
+}
+
+const _histDocDown = (e) => {
+    if (!_histPanel || _histPanel.style.display === "none") return;
+    if (_histPanel.contains(e.target)) return;
+    // 点在"开它的那根状态条"上不算外部 —— 交给状态条自己的 click 去做开/关切换
+    const anchor = _histNode && _histNode._xhSeedStatusEl;
+    if (anchor && anchor.contains(e.target)) return;
+    hideHist();
+};
+const _histDocKey = (e) => { if (e.key === "Escape") hideHist(); };
+
+function showHist(node) {
+    const p = ensureHistPanel();
+    _histNode = node;
+    renderHist(node);
+    p.style.visibility = "hidden";
+    p.style.display = "block";
+    // getBoundingClientRect 是缩放后的屏幕坐标，配 position:fixed 在任何画布缩放下都准
+    const r = node._xhSeedStatusEl ? node._xhSeedStatusEl.getBoundingClientRect()
+        : { left: 200, top: 200, bottom: 226 };
+    const pw = p.offsetWidth, ph = p.offsetHeight;
+    const left = Math.max(6, Math.min(r.left, (window.innerWidth || 1200) - pw - 6));
+    let top = r.bottom + 6;
+    if (top + ph > (window.innerHeight || 800) - 6) top = Math.max(6, r.top - ph - 6);
+    p.style.left = left + "px";
+    p.style.top = top + "px";
+    p.style.visibility = "visible";
+    document.addEventListener("pointerdown", _histDocDown, true);
+    document.addEventListener("keydown", _histDocKey, true);
+}
+
+function hideHist() {
+    if (_histPanel) _histPanel.style.display = "none";
+    _histNode = null;
+    document.removeEventListener("pointerdown", _histDocDown, true);
+    document.removeEventListener("keydown", _histDocKey, true);
+}
+
+function toggleHist(node) {
+    if (_histPanel && _histPanel.style.display !== "none" && _histNode === node) hideHist();
+    else showHist(node);
+}
+
+/** 常驻状态条（照 web/xh_resolution.js 的预览条风格）。左 ▼ / 中 文案 / 右 ▲ 和 复制。 */
 function makeStatusBar(node) {
+    const L = uiText(currentLang());
     const el = document.createElement("div");
-    el.style.cssText = "display:flex;align-items:center;justify-content:center;padding:6px 8px;width:100%;box-sizing:border-box;"
+    el.style.cssText = "display:flex;align-items:center;gap:4px;padding:3px 6px;width:100%;box-sizing:border-box;"
         + "border-radius:6px;background:rgba(255,255,255,0.10);font-family:system-ui,-apple-system,\"Segoe UI\",\"Microsoft YaHei\",sans-serif;"
         + "font-size:12px;font-weight:700;color:#ffffff;text-shadow:0 1px 2px rgba(0,0,0,0.35);"
         + "user-select:none;cursor:default;transition:background .2s,box-shadow .2s;";
     const tx = document.createElement("span");
-    el.appendChild(tx);
+    tx.style.cssText = "flex:1 1 auto;min-width:0;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"
+        + "cursor:pointer;border-radius:4px;transition:background .15s;";
+    tx.title = L.histTip;
+    // 点状态条 = 打开"最近跑过的种子"列表（这块本来就是最多余的空白，不另占宽度）
+    tx.onmouseenter = () => { tx.style.background = "rgba(255,255,255,.10)"; };
+    tx.onmouseleave = () => { tx.style.background = "transparent"; };
+    tx.onclick = (e) => { e.stopPropagation(); toggleHist(node); };
     node._xhSeedStatusEl = el;
     node._xhSeedStatusTx = tx;
+
+    const down = makeMiniBtn(node, "down", "▼", L.tipDown, 24, () => stepSeed(node, -1));
+    const up = makeMiniBtn(node, "up", "▲", L.tipUp, 24, () => stepSeed(node, +1));
+    const copy = makeMiniBtn(node, "copy", L.btnCopy, L.tipCopy, 42, (b) => {
+        const v = seedToCopy(node);
+        copyText(String(v), (ok) => {
+            flashBtn(b, ok ? "✓" : "✗", 1000);
+            flashStatus(node, ok ? L.copied : L.copyFail, 1500);
+        });
+    });
+
+    el.append(down, tx, up, copy);
+
+    //  冒泡阶段拦截（绝不用捕获 —— 捕获会掐死按钮自己的 handler）
+    ["pointerdown", "mousedown", "dblclick", "click", "keydown"].forEach((ev) =>
+        el.addEventListener(ev, (e) => e.stopPropagation())
+    );
 
     let w = null;
     try {
@@ -492,7 +855,10 @@ app.registerExtension({
                 node.__xhSeedGotSeed = (s) => {
                     if (!node.properties) node.properties = {};
                     node.properties.last_seed = s;
+                    pushHistory(node, s);          // 第 1 次、第 2 次…都留档（最多 10 条）
                     updateLastBtn(node);
+                    // 列表正开着就实时补上这一条，不用关掉重开
+                    if (_histPanel && _histPanel.style.display !== "none" && _histNode === node) renderHist(node);
                     flashStatus(node, " " + uiText(currentLang()).used.replace("{v}", s), 2600);
                     try { node.setDirtyCanvas && node.setDirtyCanvas(true, true); } catch (e) {}
                 };
@@ -528,6 +894,7 @@ app.registerExtension({
         nodeType.prototype.onRemoved = function () {
             releaseButtons(this);
             live.delete(this);
+            if (_histNode === this) hideHist();
             return origOnRemoved ? origOnRemoved.apply(this, arguments) : undefined;
         };
     },

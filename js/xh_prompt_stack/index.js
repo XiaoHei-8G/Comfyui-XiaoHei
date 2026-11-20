@@ -8,6 +8,8 @@ import { app } from "../../../scripts/app.js";
 import { isSizeLike } from "../xh_ui_kit.js";
 import { applyAdaptiveCanvasOnly, isVueNodes } from "../shared/nodes2.mjs";
 import { installResizeFloor } from "../shared/resize_floor.mjs";
+import { installNativeTextMenu } from "../shared/native_text_menu.mjs";
+import { installFamilyButtonPress } from "../shared/button_press.mjs";
 import { exposePromptWidget } from "../shared/prompt_assistant_compat.mjs";
 import { registerNodeSettings } from "../shared/node_settings.mjs";
 import {
@@ -129,6 +131,10 @@ export function setupNode(node) {
   // buildRoot 的按钮回调引用同一个 proxy 对象，makeHandlers 之后补齐即可。
   const proxy = {};
   const ui = buildRoot(proxy);
+  // 右键每行的文本框给系统四项菜单（剪切/复制/粘贴/全选），别弹节点菜单。
+  // 行列表会整块重建，但事件是冒泡到 ui.root 的，绑一次即可覆盖所有行。
+  installNativeTextMenu(ui.root);
+  installFamilyButtonPress();
   ui.handlers = makeHandlers(node);
   Object.assign(proxy, ui.handlers);
   node._xhStackRoot = ui;

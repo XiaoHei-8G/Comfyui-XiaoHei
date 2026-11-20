@@ -1,5 +1,9 @@
 //  2026-11-11：顶栏四颗按钮的图案统一走自家图标库（唯一真源、零硬编码路径）。
 import { xhIconUrl } from "./xh_icons/index.mjs";
+//  2026-11-20：家族按钮按压反馈（全家族唯一真源），顶层调一次 ⇒ 页面加载即全局注入，
+//  画布上有没有提示词节点都生效。定义见 shared/button_press.mjs。
+import { installFamilyButtonPress } from "./shared/button_press.mjs";
+try { installFamilyButtonPress(); } catch (e) {}
 
 //  XiaoHei 家族 UI 套件 —— 家族 UI 规范的**唯一实现**，所有 xh_*.js 共用
 //

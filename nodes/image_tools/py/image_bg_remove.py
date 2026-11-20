@@ -133,7 +133,7 @@ class XHBackgroundRemove:
     FUNCTION = "run"
     CATEGORY = "XiaoHei/Image"
     DESCRIPTION = (
-        "【 去背景】用 ComfyUI 官方 BiRefNet 内核抠图，输出①透明背景图（RGBA）②前景遮罩。\n"
+        "【 移除背景（去背景）】用 ComfyUI 官方 BiRefNet 内核抠图，输出①透明背景图（RGBA）②前景遮罩。\n"
         "模型放 models/background_removal/（birefnet.safetensors）。\n"
         "端口对齐第三方 RMBG 节点，可直接顶替它使用。"
     )
@@ -165,4 +165,4 @@ class XHBackgroundRemove:
 
 
 NODE_CLASS_MAPPINGS = {"XHBackgroundRemove": XHBackgroundRemove}
-NODE_DISPLAY_NAME_MAPPINGS = {"XHBackgroundRemove": "去背景"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XHBackgroundRemove": "移除背景"}

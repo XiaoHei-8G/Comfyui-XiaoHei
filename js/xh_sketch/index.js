@@ -71,9 +71,12 @@ function refreshSource(node) {
   const up = upstreamPicture(node);
   const run = node._pixSkRun;
   let want = null;
-  // The run's copy is the exact picture that came in - trust it for as long as
-  // the upstream is the one that produced it.
-  if (run && !run.failed && run.forKey === (up ? up.key : null)) want = run;
+  // The run's copy is the exact picture that came in - trust it only while the
+  // upstream is the very one that produced it. `null` is "no claim", never a
+  // match: when the upstream cannot be resolved yet (a workflow still opening,
+  // a preview not fetched), comparing null to null used to pin the node to the
+  // previous run's temp copy forever, which is the picture "from nowhere".
+  if (run && !run.failed && typeof run.forKey === "string" && up && run.forKey === up.key) want = run;
   else if (up) want = { ...up, kind: "upstream" };
   loadPicture(node, want, () => onPicture(node));
   if (!want) paintFace(node);
@@ -99,7 +102,11 @@ function applySketchRun(node, message) {
   if (!entry) return;
   // Runtime only, never serialized: the temp copy does not outlive the
   // server, so after a reload the node goes back to the upstream picture.
-  node._pixSkRun = runSource(entry, upstreamPicture(node)?.key ?? null);
+  // The key comes from the moment the graph was SUBMITTED (graphToPrompt sets
+  // it), never from here: reading it now would label an already-rendered old
+  // picture with whatever the upstream holds by the time the message arrives -
+  // change the input while the job is queued and the two stay equal forever.
+  node._pixSkRun = runSource(entry, node._pixSkSubmitKey || null);
   refreshSource(node);
 }
 
@@ -337,6 +344,10 @@ app.graphToPrompt = async function (...args) {
         if (!index) index = buildIndex();
         const node = findNode(index, id);
         if (!node) continue;
+        // Stamp the upstream picture THIS submission was built against. The run
+        // message can arrive after the user has already changed the input, so the
+        // validity of the returned preview has to be decided from here, not there.
+        try { node._pixSkSubmitKey = upstreamPicture(node)?.key || null; } catch {}
         entry.inputs = entry.inputs || {};
         entry.inputs[HIDDEN_INPUT] = JSON.stringify(injectedState(node));
       }

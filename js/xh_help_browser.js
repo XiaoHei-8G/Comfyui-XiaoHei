@@ -460,12 +460,12 @@ const TOPICS = [
 //    工具条的「?」调 XHHelp.openNode 找不到条目（用户报「点了不跳」）。
 //    2026-11-08 后续：已把这些节点的 CATEGORY 统一改成 XiaoHei/Video·XiaoHei/Image·XiaoHei/工具（按功能归组，
 //    不再堆「复刻」分组），因此 cat.startsWith("XiaoHei") 已为真、索引自然收录；replica 仅用于标记
-//    「同源节点 · 已中文化」的说明文案，不再单独成组。口径与 web/xh_wepenerd/xh_wn_i18n.mjs 的 isWNNode 一致。
+//    「复刻件 · 已中文化」的说明文案，不再单独成组。口径与 web/xh_wepenerd/xh_wn_i18n.mjs 的 isWNNode 一致。
 function isWNReplica(type) {
   return typeof type === "string" &&
     (type.startsWith("XH_WN_") || type.startsWith("XH_WepeNerd") || type.startsWith("XH_QwenEdit"));
 }
-// 旧：const WN_REPLICA_CAT = "复刻·WepeNerd"; —— 已弃用：复刻节点不再单独成组，改按 XiaoHei/Video·XiaoHei/Image·XiaoHei/工具 归位。
+// 旧：const WN_REPLICA_CAT = "复刻件"; —— 已弃用：复刻节点不再单独成组，改按 XiaoHei/Video·XiaoHei/Image·XiaoHei/工具 归位。
 
 // ══════════════════════════════════════════════════════════════════════
 // 节点示意卡：点击节点说明时在右侧实时画出「节点样子」（数据来自 /object_info）
@@ -681,13 +681,13 @@ async function buildIndex() {
       const wnLang = currentLang();
       const wnIsZh = (wnLang || "zh") === "zh";
       const wnBanner = wnIsZh
-        ? `<b>XiaoHei 同源节点（WepeNerd）· 已中文化</b><br>节点本体、端口、控件、悬浮说明已全部中文化；悬浮工具条的「中 / EN」可随时切回英文。`
-        : `<b>XiaoHei · WepeNerd replica · localized</b><br>Node body, ports, widgets and tooltips are localized; the canvas "中 / EN" switch restores English anytime.`;
+        ? `<b>XiaoHei 复刻件 · 已中文化</b><br>节点本体、端口、控件、悬浮说明已全部中文化；悬浮工具条的「中 / EN」可随时切回英文。`
+        : `<b>XiaoHei · replica · localized</b><br>Node body, ports, widgets and tooltips are localized; the canvas "中 / EN" switch restores English anytime.`;
       const wnBody = `<div style="line-height:1.85;white-space:pre-wrap">${esc(wnDesc(type, wnLang, desc))}</div>`;
       const help = helpDef.help || (replica
         ? `<div style="line-height:1.85">${wnBanner}<br><br>${wnBody}</div>`
         : (desc ? `<div style="line-height:1.85;white-space:pre-wrap">${esc(desc)}</div>` : null));
-      const tagline = replica ? "同源节点（WepeNerd）· 已中文化" : (helpDef.tagline || desc.split("\n")[0] || "");
+      const tagline = replica ? "复刻件 · 已中文化" : (helpDef.tagline || desc.split("\n")[0] || "");
       const preview = buildPreview(def);
       const kw = buildKw({ cls: type, title, catName, groupLabel, tagline, help });
       items.push({ cls: type, title: title, cat: catName, groupLabel: groupLabel,

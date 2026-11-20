@@ -33,7 +33,7 @@ export function injectCSS() {
   -webkit-mask:url("${gear}") center/contain no-repeat;mask:url("${gear}") center/contain no-repeat;}
 .pix-sketch-sep{width:1px;height:18px;background:#444;margin:0 2px;flex:0 0 auto;}
 .pix-sketch-hsep{width:22px;height:1px;background:#444;margin:3px 0;flex:0 0 auto;}
-.pix-sketch-sw{width:18px;height:18px;padding:0;border-radius:50%;border:2px solid #1d1d1d;box-shadow:0 0 0 1px #555;
+.pix-sketch-sw{width:18px;height:18px;padding:0;border-radius:2px;border:2px solid #1d1d1d;box-shadow:0 0 0 1px #555;
   cursor:pointer;flex:0 0 auto;box-sizing:border-box;margin:0 1px;}
 .pix-sketch-sw:hover{box-shadow:0 0 0 1px ${ACC};}
 .pix-sketch-sw.on{box-shadow:0 0 0 2px ${ACC};}
@@ -79,6 +79,26 @@ export function injectCSS() {
   background:#ddd;transition:left .12s;}
 .pix-sketch-tog.on{background:${ACC};}
 .pix-sketch-tog.on::after{left:14px;background:#fff;}
+
+/* ---- the floating overlays on the picture (方案 A, 2026-11-20) ----
+   The picture owns the whole body; tools run down its left edge, Expand and
+   Gear sit in the top right corner, colours and line width along the bottom.
+   Every panel has the same smoked glass look so it reads as one system and
+   never fights the picture under it. */
+.pix-sketch-vtools,.pix-sketch-hact,.pix-sketch-hcolor{position:absolute;z-index:3;display:flex;
+  background:rgba(18,18,18,.74);border:1px solid rgba(255,255,255,.10);border-radius:7px;
+  box-shadow:0 2px 10px rgba(0,0,0,.35);}
+.pix-sketch-vtools{left:6px;top:6px;flex-direction:column;align-items:center;gap:2px;padding:4px;}
+.pix-sketch-vtools .pix-sketch-btn{width:26px;height:20px;}
+.pix-sketch-vtools .pix-sketch-hsep{width:22px;height:1px;background:#4a4a4a;margin:2px 0;}
+.pix-sketch-hact{right:6px;top:6px;gap:4px;padding:4px;}
+.pix-sketch-hcolor{left:6px;right:6px;bottom:6px;align-items:center;gap:4px;padding:4px 6px;min-width:0;}
+.pix-sketch-hcolor .pix-sketch-grow{min-width:2px;}
+.pix-sketch-caret{width:20px;height:16px;padding:0;border:none;background:none;color:#bbb;cursor:pointer;
+  font-size:11px;line-height:1;flex:0 0 auto;}
+.pix-sketch-caret:hover{color:${ACC};}
+.pix-sketch-prompt.collapsed .pix-sketch-ptext{display:none;}
+.pix-sketch-prompt.collapsed{padding:4px 8px;}
 
 /* ---- the big view ---- */
 .pix-sketch-big{position:fixed;inset:0;z-index:10000;background:rgba(8,8,8,.88);display:flex;align-items:stretch;

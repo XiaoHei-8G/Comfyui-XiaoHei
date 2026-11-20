@@ -458,7 +458,7 @@ class WN_RippleFromFrames(io.ComfyNode):
     @classmethod
     def define_schema(cls):
         return io.Schema(
-            node_id="XH_WN_RippleFromFrames", display_name="H3 Ripple From Frames (WepeNerd)",
+            node_id="XH_WN_RippleFromFrames", display_name="H3 Ripple From Frames",
             category="XiaoHei/Video",
             description="Prepare frames from any video loader for Ripple, keeping the source framing and audio.",
             inputs=[
@@ -793,8 +793,8 @@ NODE_CLASS_MAPPINGS = {
     "XH_WN_RippleOutput": WN_RippleOutput,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "XH_WN_RippleClip": "H3 Ripple Clip (WepeNerd)",
-    "XH_WN_RippleFromFrames": "H3 Ripple From Frames (WepeNerd)",
-    "XH_WN_RippleApply": "H3 Ripple Apply (WepeNerd)",
-    "XH_WN_RippleOutput": "H3 Ripple Output (WepeNerd)",
+    "XH_WN_RippleClip": "H3 Ripple Clip",
+    "XH_WN_RippleFromFrames": "H3 Ripple From Frames",
+    "XH_WN_RippleApply": "H3 Ripple Apply",
+    "XH_WN_RippleOutput": "H3 Ripple Output",
 }

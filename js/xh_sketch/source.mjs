@@ -3,9 +3,12 @@
 // Two sources, in this order of trust:
 //  1. RUN: after a run, Python saves a small copy of the picture that ACTUALLY
 //     came in (node_sketch.py _save_preview). Exact, whatever made it - but only
-//     valid while the upstream is still the one that produced it.
+//     valid while the upstream is still the one that produced it, and only when
+//     that upstream was known at SUBMIT time (see index.js _pixSkSubmitKey).
 //  2. UPSTREAM: before any run, walk the wire back to the node that holds the
-//     pixels (a Load Image, or any node already showing a picture).
+//     pixels - first any node whose own `image` widget names the file (the
+//     component Load Image, 加载图片 Mini, 加载图片 XiaoHei), then any node
+//     already showing a picture.
 //
 // The walk MIRRORS resolveImageSource in js/inpaint_crop/index.js (inpaint.md
 // #18) - keep the two in step. Its one rule matters more than any other: when
@@ -17,6 +20,7 @@
 // polls it and must reload only when the picture really changed.
 
 import { pixApiUrl } from "../shared/api_url.mjs";
+import { loaderImagePart } from "../shared/loader_source.mjs";
 
 const MAX_SOURCE_HOPS = 12;
 
@@ -72,17 +76,59 @@ function viewUrl(part) {
     `&type=${encodeURIComponent(part.type || "input")}`);
 }
 
+// Cache-busting query parameters a preview URL may carry. Load Image Mini stamps
+// `t=Date.now()` on every fetch (js/xh_load_image/api.mjs updateNativePreview),
+// so a key built from the raw url said "new picture" each time that loader
+// refreshed the SAME file - and, on nodes that reuse one fixed preview name,
+// said "same picture" after the file really changed. Strip them (2026-11-19).
+const VOLATILE_PARAMS = ["t", "_", "ts", "timestamp", "v", "cache", "rnd", "rand"];
+
+/** The part of a url that names a file, without anything that changes per fetch. */
+function stableUrl(url) {
+  const raw = String(url || "");
+  if (!raw) return "";
+  try {
+    const u = new URL(raw, window.location.href);
+    for (const k of VOLATILE_PARAMS) u.searchParams.delete(k);
+    return u.pathname + "?" + u.searchParams.toString();
+  } catch {
+    return raw;
+  }
+}
+
+/** Any node that SOURCES a file through its own `image` widget: the component
+ *  Load Image, 加载图片 Mini (XHLoadImageMini), 加载图片 XiaoHei. The widget is
+ *  the truth and the preview merely follows it - so read it first, never guess
+ *  from the preview. Nodes that transform rather than source (anything with a
+ *  wired input) are left to the walk below. */
+function widgetPicture(src) {
+  // A loader that NAMES its file is the only trustworthy source: bypass the
+  // node.imgs preview cache entirely (keyed by node id -> crosses workflows).
+  // Recognise it by class, and do NOT bail just because it has a wired input
+  // (a loader may sit behind a resize/switch chain). Shared with inpaint.
+  const loaderPart = loaderImagePart(src);
+  if (loaderPart) {
+    return { key: `file:${loaderPart.type}:${loaderPart.subfolder || ""}/${loaderPart.filename}`, url: viewUrl(loaderPart) };
+  }
+  // Conservative fallback for non-loader nodes that expose an image widget and
+  // have no wired input at all (third-party loaders we don't name explicitly).
+  if ((src.inputs || []).some((i) => i.link != null)) return null;
+  const w = (src.widgets || []).find((x) => x && x.name === "image");
+  if (!w || typeof w.value !== "string" || !w.value.trim()) return null;
+  const part = parseAnnotatedImageValue(w.value);
+  // The file - not its preview cache key - is what the run will read.
+  return { key: `file:${part.type}:${part.subfolder || ""}/${part.filename}`, url: viewUrl(part) };
+}
+
 /** The picture THIS node holds, as {key, url}, or null. */
 function heldPicture(src, slot) {
   if (!src) return null;
-  if (src.comfyClass === "LoadImage" || src.type === "LoadImage") {
-    const w = (src.widgets || []).find((x) => x.name === "image");
-    if (w && w.value) return { key: "load:" + w.value, url: viewUrl(parseAnnotatedImageValue(w.value)) };
-  }
+  const byWidget = widgetPicture(src);
+  if (byWidget) return byWidget;
   if (src.imgs && src.imgs.length > 0) {
     const img = src.imgs[slot] || src.imgs[0];
     const url = typeof img === "string" ? img : img?.src;
-    if (url) return { key: "imgs:" + url, url };
+    if (url) return { key: "imgs:" + stableUrl(url), url };
   }
   return null;
 }

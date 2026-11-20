@@ -32,16 +32,16 @@ NODE_CLASS_MAPPINGS = {
     "XH_WN_SigmaCurve": WN_SigmaCurve,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "XH_WN_ResolutionSuggest": "Resolution Suggest (WepeNerd)",
-    "XH_WN_DragResolution": "Drag Resolution (WepeNerd)",
+    "XH_WN_ResolutionSuggest": "Resolution Suggest",
+    "XH_WN_DragResolution": "Drag Resolution",
     "XH_WN_Slider": "Slider",
-    "XH_WN_ResizeMegapixels": "Resize Image Megapixels (WepeNerd)",
-    "XH_WN_ZoomCrop": "Zoom Crop (WepeNerd)",
-    "XH_WN_LoadVideo": "Load Video (Upload) (WepeNerd)",
-    "XH_WN_SaveVideo": "Save Video (WepeNerd)",
+    "XH_WN_ResizeMegapixels": "Resize Image Megapixels",
+    "XH_WN_ZoomCrop": "Zoom Crop",
+    "XH_WN_LoadVideo": "Load Video (Upload)",
+    "XH_WN_SaveVideo": "Save Video",
     "XH_WN_Speedpaint": "Speedpaint",
-    "XH_WN_LiquifyImage": "Liquify Image (WepeNerd)",
-    "XH_WN_SigmaCurve": "Sigma Curve (WepeNerd)",
+    "XH_WN_LiquifyImage": "Liquify Image",
+    "XH_WN_SigmaCurve": "Sigma Curve",
 }
 
 # 依赖 scipy 的 Qwen 对齐 / 遮罩组单独 try：没装 scipy 只少这几个节点，
@@ -50,7 +50,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 _EXTRA_CLASSES = {
     "masked_lora_node": (("WepeNerdLoadLoraMasked", "Load LoRA Masked"),
                          ("WN_MaskedLoraSnapshot", "Masked LoRA Image Snapshot (internal)")),
-    "paint_mask_node": (("WN_PaintMask", "Paint Mask (WepeNerd)"),),
+    "paint_mask_node": (("WN_PaintMask", "Paint Mask"),),
 }
 _QWEN_PARTS = ("masked_lora_node", "paint_mask_node",
                "qwen_edit_align", "qwen_edit_mask_node")

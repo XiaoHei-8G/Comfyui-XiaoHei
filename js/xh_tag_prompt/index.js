@@ -8,6 +8,8 @@ import { app } from "../../../scripts/app.js";
 import { xhIconHTML, isSizeLike } from "../xh_ui_kit.js";
 import { applyAdaptiveCanvasOnly, isVueNodes } from "../shared/nodes2.mjs";
 import { installResizeFloor } from "../shared/resize_floor.mjs";
+import { installNativeTextMenu } from "../shared/native_text_menu.mjs";
+import { installFamilyButtonPress } from "../shared/button_press.mjs";
 import { exposePromptWidget } from "../shared/prompt_assistant_compat.mjs";
 import { registerNodeSettings } from "../shared/node_settings.mjs";
 import { createTagField } from "./field.mjs";
@@ -93,6 +95,9 @@ export function setupNode(node) {
   reloadLibrary();
 
   const root = document.createElement("div"); root.className = "xh-tp";
+  // 右键文本框给系统四项菜单（剪切/复制/粘贴/全选），别弹节点菜单。
+  installNativeTextMenu(root);
+  installFamilyButtonPress();
   const field = createTagField((text) => { writeState(node, { text }); renderPreview(node); });
   const prev = document.createElement("div"); prev.className = "xh-tp-prev";
 

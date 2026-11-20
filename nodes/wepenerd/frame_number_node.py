@@ -167,4 +167,4 @@ def register_frame_number_routes():
 
 
 NODE_CLASS_MAPPINGS = {"XH_WN_FrameNumberSelector": WN_FrameNumberSelector}
-NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_FrameNumberSelector": "Duration Selector (WepeNerd)"}
+NODE_DISPLAY_NAME_MAPPINGS = {"XH_WN_FrameNumberSelector": "Duration Selector"}
