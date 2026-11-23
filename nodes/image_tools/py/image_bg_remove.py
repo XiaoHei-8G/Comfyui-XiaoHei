@@ -33,7 +33,7 @@ import folder_paths
 _MODEL_CACHE = {}
 
 _MODEL_DIR_HINT = "ComfyUI/models/background_removal/"
-_MODEL_DOWNLOAD_HINT = "https://huggingface.co/Comfy-Org/BiRefNet"
+# 家族铁律：不给任何外部下载链接，模型获取地址由发布者自行告知粉丝。
 
 
 def _list_bg_models():
@@ -60,8 +60,7 @@ def _load_bg_model(name):
         raise RuntimeError(
             f"[XiaoHei-去背景] 这个文件不是有效的背景移除模型：{name}\n"
             f"只认 BiRefNet 格式（birefnet.safetensors）。\n"
-            f"下载：{_MODEL_DOWNLOAD_HINT}\n"
-            f"放置：{_MODEL_DIR_HINT}"
+            f"请自行获取模型后放到：{_MODEL_DIR_HINT}"
         )
     _MODEL_CACHE[name] = model
     return model

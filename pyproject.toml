@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-xiaohei"
-version = "1.0.6"
+version = "1.0.7"
 description = "小黑工具箱：ComfyUI 自定义节点合集，126 个节点 / 24 个模块，覆盖视频、图像、音频、提示词与低显存优化。"
 dependencies = [
     "opencv-python",

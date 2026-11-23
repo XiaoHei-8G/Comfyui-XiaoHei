@@ -145,51 +145,42 @@ export function buildBgRemovalDropdown({ container, info, value, onChange }) {
     "font-size:10px;color:#888;line-height:1.4;display:none;";
 
   const rembgById = (id) => rembgModels.find((x) => x.id === id);
-  // One canonical doc page covering BOTH BiRefNet downloads and rembg
-  // install steps, so the user lands somewhere maintained instead of
-  // bouncing to whichever upstream repo we happened to link.
-  const HELP_DOCS_URL = "https://gitlab.com/pixaroma/comfyui-pixaroma#2-optional-ai-background-removal";
+  // 家族铁律：不引到任何外部网址。模型获取地址由发布者自行告知粉丝，
+  // 这里只给出本地放置目录与安装命令，不放「了解更多」之类的外链。
 
   function refreshHelpRow() {
     const id = select.value;
     const v = variants.find((x) => x.id === id);
     const m = rembgById(id);
 
-    // BiRefNet variant, not installed -> show download link + Read more.
+    // BiRefNet 变体未安装 -> 只提示手动放置，不给任何外部下载链接。
     if (v && !v.installed) {
       helpRow.style.display = "";
       helpRow.innerHTML =
-        `<a href="${v.downloadUrl}" target="_blank" rel="noopener" ` +
-        `style="color:var(--xh-primary,#E8A33C);text-decoration:underline;cursor:pointer;">下载 ${v.filename}</a>` +
-        ` 并放入 <code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">${info.birefnet?.modelDir || "ComfyUI/models/background_removal"}</code>。 ` +
-        `<a href="${HELP_DOCS_URL}" target="_blank" rel="noopener" ` +
-        `style="color:var(--xh-primary,#E8A33C);text-decoration:underline;cursor:pointer;">了解更多</a>`;
+        `请自行获取模型 ${v.filename}，并放入 ` +
+        `<code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">${info.birefnet?.modelDir || "ComfyUI/models/background_removal"}</code>。`;
       return;
     }
 
-    // rembg entry, rembg missing entirely -> pip install help + Read more.
+    // rembg 未安装 -> 给出本地安装命令，不跳外部文档。
     if (m && !rembgOk) {
       helpRow.style.display = "";
       helpRow.innerHTML =
         `<span style="color:#e57">rembg 未安装。</span> ` +
         `在文件资源管理器中打开 <code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">ComfyUI/python_embeded</code>，` +
         `在地址栏输入 <code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">cmd</code>，然后运行 ` +
-        `<code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">python.exe -m pip install rembg</code>。 ` +
-        `重启 ComfyUI。 ` +
-        `<a href="${HELP_DOCS_URL}" target="_blank" rel="noopener" ` +
-        `style="color:var(--xh-primary,#E8A33C);text-decoration:underline;cursor:pointer;">了解更多</a>`;
+        `<code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">python.exe -m pip install rembg</code>。` +
+        ` 然后重启 ComfyUI。`;
       return;
     }
 
-    // rembg entry, rembg installed but THIS specific model needs newer rembg.
+    // rembg 已装但该模型需要更新版本 -> 给出本地升级命令，不跳外部文档。
     if (m && rembgOk && !m.available) {
       helpRow.style.display = "";
       helpRow.innerHTML =
         `<span style="color:#e57">需要 rembg ${m.minRembg}+（你当前为 ${info.rembgVersion || "unknown"}）。</span> ` +
-        `在 ComfyUI/python_embeded 中执行 <code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">python.exe -m pip install --upgrade rembg</code> ` +
-        `，然后重启。 ` +
-        `<a href="${HELP_DOCS_URL}" target="_blank" rel="noopener" ` +
-        `style="color:var(--xh-primary,#E8A33C);text-decoration:underline;cursor:pointer;">了解更多</a>`;
+        `在 ComfyUI/python_embeded 中执行 <code style="background:#1c1c1c;padding:1px 4px;border-radius:2px;">python.exe -m pip install --upgrade rembg</code>，` +
+        `然后重启。`;
       return;
     }
 
