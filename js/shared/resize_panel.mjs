@@ -1191,7 +1191,7 @@ function buildPadPanel(node, state, writeState, onChange, stateKey, extra = {}) 
   const resetBtn = document.createElement("button");
   resetBtn.type = "button";
   resetBtn.className = "pix-li-pad-reset";
-  resetBtn.title = "Reset padding to 0";
+  resetBtn.title = "把留白重置为 0";
   const resetIc = document.createElement("span");
   resetIc.className = "pix-li-pad-reset-ic";
   resetBtn.append(resetIc, document.createTextNode("Reset"));
@@ -1199,7 +1199,7 @@ function buildPadPanel(node, state, writeState, onChange, stateKey, extra = {}) 
 
   const colorCell = document.createElement("div");
   colorCell.className = "pix-li-pad-colorcell";
-  colorCell.title = "Pad fill color";
+  colorCell.title = "留白填充色";
   const swatch = document.createElement("div");
   swatch.className = "pix-li-pad-swatch";
   swatch.style.background = state.pad_color || "#000000";

@@ -17,6 +17,8 @@ import time
 
 from aiohttp import web
 
+import folder_paths
+
 from . import scanner, store
 
 ROUTE_PREFIX = "/xh_mb"
@@ -643,6 +645,124 @@ def _open_and_focus(folder, select=None):
         print(f"[XiaoHei-ModelBoard] 资源管理器置前失败（不影响打开）: {e}")
 
 
+def _default_staging():
+    """系统「下载」文件夹，作为「下载暂存夹」的默认建议值。
+
+    Windows 中文系统叫「下载」、英文叫 Downloads；两边都试，再退回用户主目录。
+    这只是建议值，用户能在面板里改成夸克实际下载到哪。
+    """
+    home = os.path.expanduser("~")
+    for name in ("Downloads", "下载"):
+        p = os.path.join(home, name)
+        if os.path.isdir(p):
+            return p
+    return home
+
+
+def _dest_for_key(key):
+    """把资源库 files 里的相对 key 解析成磁盘上的目标绝对路径。
+
+    key 形如 diffusion_models/Qwen2.1/xxx.safetensors：第一段是官方类型，
+    后面是子目录 + 文件名。取该类型 folder_paths 的第一个根目录作落点，
+    和 scanner 的 key 口径保持一致（归位后重扫就能认出是「已装」）。
+    返回 (目标绝对路径, 该类型根目录) 或 (None, None)。
+    """
+    parts = str(key or "").replace("\\", "/").split("/")
+    if len(parts) < 2 or any(p in ("", ".", "..") for p in parts):
+        return None, None
+    type_key = parts[0]
+    try:
+        bases = list(folder_paths.get_folder_paths(type_key))
+    except Exception:
+        bases = []
+    if not bases:
+        return None, None
+    root = os.path.normpath(bases[0])
+    dest = os.path.normpath(os.path.join(root, *parts[1:]))
+    root_real = os.path.normcase(os.path.realpath(root))
+    dest_real = os.path.normcase(os.path.realpath(dest))
+    if not (dest_real == root_real or dest_real.startswith(root_real + os.sep)):
+        return None, None                       # 越界，拒绝
+    return dest, root
+
+
+def _import_entry(entry_id, staging):
+    """一键归位：把暂存夹里下好的文件，按条目 files 清单移进 models 对应位置。
+
+    安全约束：
+      · 只认清单里的文件名（basename 精确匹配，大小写不敏感）—— 不乱搬暂存夹里的其他东西
+      · 目标已存在就跳过 —— 绝不覆盖已装模型
+      · 目标越界 / 解析失败就跳过 —— 不写 models 之外
+    返回 {id, name, moved, results:[...]}，results 逐文件给前端展示。
+    """
+    lib = store.library()
+    entry = None
+    for g in (lib.get("groups") or []):
+        for e in (g.get("entries") or []):
+            if (e.get("id") or "") == entry_id:
+                entry = e
+                break
+        if entry:
+            break
+    if not entry:
+        return {"ok": False, "error": "找不到这个资源条目，刷新资源库再试"}
+
+    staging = os.path.normpath(str(staging or "").strip().strip('"'))
+    if not staging or not os.path.isdir(staging):
+        return {"ok": False, "error": "暂存夹不存在，先在「下载暂存夹」里填一个真实文件夹"}
+    stage_real = os.path.normcase(os.path.realpath(staging))
+
+    # 暂存夹里所有模型文件按文件名建索引；网盘下载常是平铺的，也可能带一层子目录
+    pool = {}
+    for base, _dirs, files in os.walk(staging):
+        for fn in files:
+            ext = os.path.splitext(fn)[1].lower()
+            if ext not in scanner.MODEL_EXTS:
+                continue
+            full = os.path.normpath(os.path.join(base, fn))
+            if os.path.normcase(os.path.realpath(full)).startswith(stage_real):
+                pool.setdefault(fn.lower(), full)
+
+    results = []
+    moved = 0
+    for key in (entry.get("files") or []):
+        dest, _root = _dest_for_key(key)
+        name = str(key).rsplit("/", 1)[-1]
+        if not dest:
+            results.append({"name": name, "status": "skip", "why": "目标目录无法解析"})
+            continue
+        if os.path.exists(dest):
+            results.append({"name": name, "status": "exists", "dest": dest})
+            continue
+        src = pool.get(name.lower())
+        if not src:
+            results.append({"name": name, "status": "missing", "dest": dest})
+            continue
+        try:
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            os.replace(src, dest)               # 同盘先试原子移动
+            moved += 1
+            results.append({"name": name, "status": "moved", "dest": dest})
+        except OSError:
+            try:
+                import shutil
+                shutil.move(src, dest)          # 跨盘回退
+                moved += 1
+                results.append({"name": name, "status": "moved", "dest": dest})
+            except Exception as e:              # noqa: BLE001
+                results.append({"name": name, "status": "skip", "why": str(e)})
+
+    return {
+        "ok": True,
+        "id": entry_id,
+        "name": entry.get("name") or "",
+        "total": len(entry.get("files") or []),
+        "moved": moved,
+        "results": results,
+        "need_rescan": moved > 0,
+    }
+
+
 async def _preview_file(key):
     """返回该模型当前可用的预览图绝对路径，没有就返回空串。"""
     if key not in _snapshot:
@@ -905,8 +1025,51 @@ def register():
             return web.json_response({"error": str(e)}, status=500)
         return web.json_response({"ok": True, "path": full})
 
+    @routes.get(f"{ROUTE_PREFIX}/staging")
+    async def api_staging(request):
+        """返回「下载暂存夹」的默认建议值（系统下载目录）。"""
+        return web.json_response({"staging": _default_staging()})
+
+    @routes.post(f"{ROUTE_PREFIX}/import")
+    async def api_import(request):
+        """一键归位：把暂存夹里下好的模型按资源库清单移进 models 对应目录。"""
+        try:
+            body = await request.json()
+        except Exception:                                    # noqa: BLE001
+            return web.json_response({"error": "bad body"}, status=400)
+        entry_id = str((body or {}).get("id") or "")
+        staging = str((body or {}).get("staging") or "")
+        if not entry_id:
+            return web.json_response({"ok": False, "error": "没有指定资源条目"}, status=400)
+        if not staging:
+            staging = _default_staging()
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(None, _import_entry, entry_id, staging)
+        if not result.get("ok"):
+            return web.json_response(result, status=400)
+        if result.get("need_rescan"):
+            await _ensure(force=True)                        # 让「已装」标记立刻刷新
+        return web.json_response(result)
+
+    @routes.post(f"{ROUTE_PREFIX}/openstaging")
+    async def api_openstaging(request):
+        """在资源管理器里打开暂存夹，方便用户看下载到哪了。"""
+        try:
+            body = await request.json()
+        except Exception:                                    # noqa: BLE001
+            body = {}
+        staging = os.path.normpath(str((body or {}).get("staging") or "").strip().strip('"'))
+        if not staging or not os.path.isdir(staging):
+            return web.json_response({"error": "暂存夹不存在"}, status=404)
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, _open_and_focus, staging, None)
+        except Exception as e:                               # noqa: BLE001
+            return web.json_response({"error": str(e)}, status=500)
+        return web.json_response({"ok": True, "folder": staging})
+
     _registered = True
-    print("[XiaoHei-ModelBoard] 路由已注册：/xh_mb/types /list /library /meta /image /rescan /openfolder /reveal /renamefolder")
+    print("[XiaoHei-ModelBoard] 路由已注册：/xh_mb/types /list /library /meta /image /rescan /openfolder /reveal /renamefolder /staging /import /openstaging")
 
 
 def _mime(path):

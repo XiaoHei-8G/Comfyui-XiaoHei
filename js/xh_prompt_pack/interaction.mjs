@@ -58,7 +58,7 @@ export function wireEvents(node, root) {
       if (!txt) { toast("info", "剪贴板里没有文字，框里的东西没动"); return; }
       setText(node, txt);
       applyState(root, readState(node));
-      flashBtnText(els.replaceBtn, "已替换");
+      flashBtnText(els.replaceBtn, (window.XH_LANG === "en" ? "Pasted" : "已粘贴"));
       node.setDirtyCanvas(true, true);
     } catch (err) {
       console.warn("[XiaoHei.PromptPack] 粘贴失败", err);

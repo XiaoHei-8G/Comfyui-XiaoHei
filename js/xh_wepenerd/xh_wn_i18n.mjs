@@ -8,7 +8,7 @@ export const WN_NODES_ZH = {
     "XH_WN_Slider": "数值滑杆",
     "XH_WN_ResizeMegapixels": "按百万像素缩放",
     "XH_WN_ZoomCrop": "缩放裁切",
-    "XH_WN_LoadVideo": "加载视频（上传）",
+    "XH_WN_LoadVideo": "加载视频·上传 XiaoHei",
     "XH_WN_SaveVideo": "保存视频",
     "XH_WN_Speedpaint": "速涂画板",
     "XH_WN_LiquifyImage": "图像液化",
@@ -35,7 +35,7 @@ export const WN_NODES_EN = {
     "XH_WN_Slider": "Slider",
     "XH_WN_ResizeMegapixels": "Resize Image Megapixels",
     "XH_WN_ZoomCrop": "Zoom Crop",
-    "XH_WN_LoadVideo": "Load Video (Upload)",
+    "XH_WN_LoadVideo": "Load Video (Upload) XiaoHei",
     "XH_WN_SaveVideo": "Save Video",
     "XH_WN_Speedpaint": "Speedpaint",
     "XH_WN_LiquifyImage": "Liquify Image",
@@ -130,6 +130,7 @@ export const WN_WIDGETS_ZH = {
     "show_anchor_markers": "显示锚点标记",
     "sigma_max": "最大 Sigma",
     "sigma_min": "最小 Sigma",
+    "skip_comparison": "跳过对比图",
     "skip_first_frames": "跳过开头帧数",
     "skip_when_clean": "干净时跳过",
     "snap_mode": "取整方式",
@@ -257,6 +258,7 @@ export const WN_SLOTS_ZH = {
     "show_anchor_markers": "显示锚点标记",
     "sigma_max": "最大 Sigma",
     "sigma_min": "最小 Sigma",
+    "skip_comparison": "跳过对比图",
     "skip_first_frames": "跳过开头帧数",
     "skip_when_clean": "干净时跳过",
     "snap_mode": "取整方式",
@@ -423,7 +425,7 @@ export const WN_UI_ZH = {
     "Couldn't reach ComfyUI.": "连不上 ComfyUI。",
     "Start with a short video": "先传一段短视频",
     "Load a video": "载入一段视频",
-    "Load Video (Upload)": "加载视频（上传）",
+    "Load Video (Upload)": "加载视频·上传",
     "Upload a clip above, choose a shot, then edit a frame.": "先在上面上传片段、选好镜头，再改一帧。",
     "1. Choose your shot": "1. 选镜头",
     "2. Edit your frame": "2. 改这一帧",
@@ -778,7 +780,7 @@ export const WN_TOOLTIP_ZH = {
   "On the canvas: ← / → step a frame · Shift + arrows move the shot · Tab switches markers · Ctrl+V pastes an edit onto the selected frame. You can also drop an image onto a card.": "画布上：← / → 翻一帧 · Shift+方向键移动片段 · Tab 切换标记 · Ctrl+V 把改图贴到当前帧。也可以把图片拖到卡片上。",
   "That isn't an image. Drop or paste a PNG, JPEG or WebP edit.": "那不是图片。拖入或粘贴 PNG、JPEG 或 WebP 改图。",
   // ──  XiaoHei 自研长镜头分块节点的 widget 悬浮说明 ──────────────────────────
-  "Keep WepeNerd's default propagation prompt.": "框里这段英文是送进模型的改帧传播提示词（与收费节点逐字一致），不要翻译、不要清空；所有鼠标悬浮说明已中文化。",
+  "Keep the default propagation prompt.": "框里这段英文是送进模型的改帧传播提示词（与来源流程逐字一致），不要翻译、不要清空；所有鼠标悬浮说明已中文化。",
   "Seconds per chunk, snapped to H3's 17k+5 frame grid.": "每段的秒数，会吸附到 H3 的 17k+5 合法帧网格。",
   "Requested overlap; rounded DOWN to a legal 17k+5 count.": "想要的重叠帧数，会向下取整到合法的 17k+5 帧数。",
   "enable = split into chunks; disable = one single pass.": "启用＝切成分段渲染；关闭＝整段一次生成。",
@@ -788,9 +790,9 @@ export const WN_TOOLTIP_ZH = {
   //  2026-11-10：三档内存模式（与 long_ripple_node.py 的 tooltip 逐字一致）
   "How each rendered chunk is held: cpu moves it to RAM, lowmem writes into one preallocated RAM buffer, disk streams chunks to a temp folder first.": "每段生成帧怎么存放：cpu 每段搬到内存条；lowmem（默认）直接写进预先开好的一整块内存；disk 先逐段写临时文件、最后读回拼好。三档吐出的帧数与画面完全一样，只是内存路径不同。",
   //  2026-11-10 三层父子模型（与 long_ripple_node.py 的 tooltip 逐字一致）
-  "L1 segment mode: average = equal-length segments, cuts = your own shot boundaries in the segment panel, single = one segment for the whole video, manual = legacy text syntax (compatibility only).": "L1 第一层「怎么分段」：平均＝等长分几段；按镜头切点＝在节点上的分段计划面板里自己加切点；整片一段＝整条片算 1 段；旧版手动＝兼容老文本框语法。这一层定完，面板才展开下一层的选项。面板启用后本参数由面板接管、自动收起。",
+  "Segment mode: average = equal-length segments, cuts = your own shot boundaries in the segment panel, single = one segment for the whole video, manual = legacy text syntax (compatibility only).": "分段方式（第一步：整片怎么切）：平均＝等长分几段；按镜头切点＝在节点上的分段计划面板里自己加切点；整片一段＝整条片算 1 段；旧版手动＝兼容老文本框语法。这步定完，下面才按这个方式展开对应按键。面板启用后本参数由面板接管、自动收起。",
   "Legacy cut text, superseded by the on-node segment plan panel. The panel writes a structured JSON plan here; leave the old 8.5H, 19.2C:20 syntax untouched to keep legacy behaviour.": "这个文本框已经被节点上的「分段计划」面板取代：面板会把结构化计划写在这里，你不用手打、也不用背语法。老工作流里原有的 8.5H, 19.2C:20 别动就保持老行为；一旦点一下面板任意格子，才会升级成新的分层计划。",
-  "L1 segment count for average mode; 0 = auto from the H3 frame cap. Ignored when the segment plan panel supplies its own count.": "平均分段时分成几段；0＝按 H3 单块帧数上限自动算。面板启用后由面板里的「段数」接管，本参数自动收起。",
+  "Segment count for average mode; 0 = auto from the H3 frame cap. Ignored when the segment plan panel supplies its own count.": "平均切时分成几段；0＝按 H3 单块帧数上限自动算。面板启用后由面板里的「段数」接管，本参数自动收起。",
   "Edited frames in marker time order. Overrides the edits attached on Ripple Clip.": "按标记时间顺序排列的改图，会覆盖「选片段」节点上上传的改图。",
   // ── 长镜头分块节点：输出端口 / 种子 --------------------------------------------
   "One continuous edited shot, trimmed back to the source frame count.": "一整条连续的改后镜头，已裁回源窗口的帧数。",
@@ -986,7 +988,7 @@ export const WN_DESC_ZH = {
   "XH_WN_Speedpaint": "\u5728\u7a7a\u767d\u753b\u5e03\u6216\u8f7d\u5165\u7684\u56fe\u50cf\u4e0a\u901f\u6d82\u3002Load \u4f1a\u8fd0\u884c\u63a5\u7ebf\u7684\u4e0a\u6e38 IMAGE\uff0c\u6216\u6253\u5f00\u6587\u4ef6\u9009\u62e9\u5668\u3002",
   "XH_WN_VAEDeGrid": "\u53bb\u9664 Qwen Image\u3001Qwen Image 2.1\u3001Wan 2.1 \u7b49 VAE\uff08\u4ee5\u53ca\u57fa\u4e8e\u5b83\u4eec\u7684 Krea2\u3001Anima \u7b49\uff09\u5728\u89e3\u7801\u56fe\u50cf\u548c\u89c6\u9891\u5e27\u4e2d\u7559\u4e0b\u7684\u5fae\u5f31 2px \u50cf\u7d20\u7f51\u683c\u3002\u76f4\u63a5\u63a5\u5728 VAE Decode \u4e4b\u540e\uff0c\u653e\u5728\u4efb\u4f55\u7f29\u653e\u3001\u9510\u5316\u3001\u653e\u5927\u6216\u5176\u4ed6\u5904\u7406\u4e4b\u524d\u3002",
   "XH_WN_ZoomCrop": "\u4ece\u5bbd\u5ea6\u548c\u9ad8\u5ea6\u4e0a\u5171\u79fb\u9664\u82e5\u5e72\u50cf\u7d20\u3002\u5728 5\u00d75 \u7f51\u683c\u4e0a\u9009\u62e9\u4fdd\u7559\u88c1\u526a\u7684\u4f4d\u7f6e\u3002\u4e0d\u7f29\u653e\uff1b\u6bcf\u6761\u8f74\u81f3\u5c11\u4fdd\u7559 1 \u50cf\u7d20\u3002",
-  "XH_WN_H3AutoLongRipple": "XiaoHei 自研的长镜头改帧传播：把整段时间窗按 24fps 的 17k+5 合法帧网格切成若干段（默认 10.13 秒＝243 帧），重叠帧向下对齐到合法网格，每段复用原作者 WN_RippleApply 的 conditioning 与空 AV latent 单独采样，上一段末帧作为下一段第 0 帧的引导图，拼接时裁掉重叠帧（可选线性羽化），末段冻结最后一帧补齐再裁回源时长，因此输出帧数与源窗口一帧不差。音频整段透传。「分段方式」切到「手动分段」后按镜头切点分段：标 H 的硬切接缝零重叠、不羽化、不续接上段尾帧；标 C:N 的连续接缝按 N 帧重叠（真实生效，不再压成 5 帧）；镜头太长时节点在段内自动补切，状态行会回显每个切点的实际帧号。默认开启「只算计划」：只打印分块表、返回源帧占位，不加载模型不烧显存；关掉才进真采样循环。节点上的「分段计划」面板按三层父子关系展开：L1 先定整片怎么分段（平均／按镜头切点／整片一段）；L2 才逐段决定这一段要不要分块、分几块（段长不超过 H3 帧数上限时默认整段一次生成，压根不露块参数）；L3 段内块边界固定连续接缝，只有段与段之间的镜头边界才可标硬切 H（零重叠、不羽化、不续接上段尾帧）或连续 C:N（N 帧重叠真实生效）。面板点格子即可改，不用背语法；老工作流不点就保持原样。",
+  "XH_WN_H3AutoLongRipple": "XiaoHei 自研的长镜头改帧传播：把整段时间窗按 24fps 的 17k+5 合法帧网格切成若干段（默认 10.13 秒＝243 帧），重叠帧向下对齐到合法网格，每段复用原作者 WN_RippleApply 的 conditioning 与空 AV latent 单独采样，上一段末帧作为下一段第 0 帧的引导图，拼接时裁掉重叠帧（可选线性羽化），末段冻结最后一帧补齐再裁回源时长，因此输出帧数与源窗口一帧不差。音频整段透传。节点上的分段面板跟着「分段方式」变：选平均切只露段数；选自己点只露切点行（位置、硬切/连续、连续才有的重叠）；选整片不切什么都不用填。镜头太长、超过 H3 单块帧数上限时，节点会在段内自动补切，这是物理硬约束、没有开关。默认开启「只算不跑」：只打印分块表、返回源帧占位，不加载模型不烧显存；关掉才进真采样循环。面板点格子即可改，不用背语法；老工作流不点就保持原样。",
   "XH_WN_RippleFromFrames": "从任意视频加载器取得帧，按 Ripple 流程准备好时间窗，保留源画面构图与音频。",
 };
 /** 返回某节点类型在指定语言下的说明：zh 用中译，en 用后端原始英文（fallbackEn）。 */

@@ -70,7 +70,9 @@ const XH_I18N = {
     zh: {
         nodes: { XHLoadVideo: "加载视频" },
         widgets: {
+            source: "来源",
             video: "视频文件",
+            abs_path: "路径(绝对路径时用)",
             force_rate: "目标帧率(0=原速)",
             custom_width: "目标宽度(0=原)",
             custom_height: "目标高度(0=原)",
@@ -111,7 +113,9 @@ const XH_I18N = {
     en: {
         nodes: { XHLoadVideo: "Load Video" },
         widgets: {
+            source: "source",
             video: "video",
+            abs_path: "path (for absolute)",
             force_rate: "force rate (0=keep)",
             custom_width: "width (0=orig)",
             custom_height: "height (0=orig)",
@@ -177,6 +181,15 @@ function wStr(node, name) {
     return w && w.value != null ? String(w.value) : "";
 }
 
+// 当前来源对应的预览信息。absolute 用 abs_path 框的完整路径；其余用 video 下拉值
+// （output 项带 [output] 后缀，官方 /view 和 probe 都认这个注解）。
+function currentSourceInfo(node) {
+    const sw = widget(node, "source");
+    const mode = String(sw?.value || "input");
+    if (mode === "absolute") return { mode, name: wStr(node, "abs_path"), abs: true };
+    return { mode, name: wStr(node, "video"), abs: false };
+}
+
 function fmtNum(x, d) {
     if (!isFinite(x)) return "-";
     return Number(x).toFixed(d == null ? 0 : d);
@@ -217,6 +230,7 @@ function selectVideo(node, name) {
     try {
         const vals = w.options && w.options.values;
         if (Array.isArray(vals) && !vals.includes(name)) vals.push(name);
+        if (Array.isArray(w._xhAllVideos) && !w._xhAllVideos.includes(name)) w._xhAllVideos.push(name);
     } catch (e) {}
     w.value = name;
     try { w.callback && w.callback(name, node, w); } catch (e) {}
@@ -563,16 +577,19 @@ function makePlayer(node) {
 function syncPlayer(node) {
     const vl = node._xhVL;
     if (!vl || !vl.videoEl) return;
-    const name = wStr(node, "video");
+    const src = currentSourceInfo(node);
+    const name = src.name;
     // 没选文件 **或** 预览开关被关 → 立刻卸流：不拉、不解码、不占内存
-    if (!name || vl.previewOn === false) {
+    if (!name || vl.previewOn === false || src.abs) {
+        // absolute 的完整路径官方 /view 出于安全不认（只放行 input/output/temp），
+        // 这里卸流 + 提示；节点实际运行读文件不受影响，规格看信息条。
         try { vl.videoEl.pause?.(); } catch (e) {}
         try { vl.videoEl.removeAttribute("src"); vl.videoEl.load?.(); } catch (e) {}
         vl.hasFile = !!name;         // 有文件只是不预览 → 信息条照样显示规格
         vl.curFile = "";             // 清掉「已挂 src」判据 → 重新打开时会再拉一次
         vl.ar = 0;
         vl.err = false;
-        showPlayerHint(node, "");
+        showPlayerHint(node, src.abs ? "绝对路径不支持网页预览，直接运行即可" : "");
         relayout(node);
         return;
     }
@@ -863,9 +880,10 @@ function paintInfo(node, state, payload) {
     } catch (e) {}
 }
 
-async function probeVideo(node, name) {
-    const url = api.apiURL("/xh/videoload/probe?filename=" + encodeURIComponent(name) + "&type=input");
-    const resp = await api.fetchApi(url, { method: "GET" });
+async function probeVideo(node, name, abs) {
+    let url = "/xh/videoload/probe?filename=" + encodeURIComponent(name);
+    if (abs) url += "&abs=1";
+    const resp = await api.fetchApi(api.apiURL(url), { method: "GET" });
     const data = await resp.json();
     if (!data || data.ok !== true) throw new Error((data && data.error) || "probe failed");
     return data;
@@ -874,7 +892,8 @@ async function probeVideo(node, name) {
 function refreshInfo(node, force) {
     const vl = node._xhVL;
     if (!vl || !vl.textEl) return;
-    const name = wStr(node, "video");
+    const src = currentSourceInfo(node);
+    const name = src.name;
     if (!name) {
         vl.data = null; vl.file = "";
         paintInfo(node, "empty");
@@ -886,9 +905,9 @@ function refreshInfo(node, force) {
         return;
     }
     vl.file = name;
-    probeVideo(node, name)
+    probeVideo(node, name, src.abs)
         .then((data) => {
-            if (wStr(node, "video") !== name) return;    // 期间又换文件了
+            if (currentSourceInfo(node).name !== name) return;    // 期间又换文件了
             vl.data = data;
             paintInfo(node, "ok", data);
             clampTrim(node);      // probe 到了才有 total，越界 skip 这时才能判
@@ -1385,11 +1404,52 @@ function clampTrim(node) {
 // ⑦ 控件顺序：工具条 → 视频下拉 → [拖动轴 + 6 个高级参数， 折叠] → 信息条（恒显、紧贴播放框）→ 播放框（沉底）
 //    DOM 控件都是 serialize:false，改顺序不影响存档（与 kit 的 pinWidgetToTop 同理）
 // ---------------------------------------------------------------------------
+// 按「来源」切换控件：video 下拉过滤到对应目录 / abs_path 显隐 / 上传按钮显隐。
+//   input  → 下拉只列 input 文件（不带 [output]），显示上传按钮，隐藏路径框
+//   output → 下拉只列 output 文件（带 [output]），隐藏上传按钮和路径框
+//   absolute → 隐藏下拉和上传按钮，显示路径框让用户粘完整地址
+function applySourceMode(node) {
+    try {
+        const sw = widget(node, "source");
+        const vw = widget(node, "video");
+        const pw = widget(node, "abs_path");
+        if (!sw || !vw) return;
+        const mode = String(sw.value || "input");
+
+        // 记住后端给的完整下拉候选（只在第一次），之后按来源过滤而不破坏原表
+        if (!vw._xhAllVideos && Array.isArray(vw.options && vw.options.values)) {
+            vw._xhAllVideos = vw.options.values.slice();
+        }
+        const all = vw._xhAllVideos || [];
+        const isOut = (s) => /\[output\]\s*$/.test(String(s));
+        let shown;
+        if (mode === "output") shown = all.filter(isOut);
+        else if (mode === "input") shown = all.filter((s) => !isOut(s));
+        else shown = all;   // absolute：下拉隐藏，内容无所谓
+        if (Array.isArray(vw.options)) vw.options.values = shown;
+
+        // absolute 时下拉里没得选会显示空值，给它一个占位，避免前端报错
+        if (mode === "absolute" && (vw.value == null || vw.value === "")) {
+            vw.value = shown[0] || "absolute";
+        }
+
+        const showAbs = mode === "absolute";
+        if (pw && pw.element) { try { pw.element.style.display = showAbs ? "" : "none"; } catch (e) {} }
+        if (vw.element) { try { vw.element.style.display = showAbs ? "none" : ""; } catch (e) {} }
+
+        // 上传按钮只在 input 模式有意义（它总是上传到 input 目录）
+        const uploadBtn = node._xhVLUploadBtn;
+        if (uploadBtn) uploadBtn.style.display = mode === "input" ? "" : "none";
+    } catch (e) {
+        console.warn("[XHLoadVideo] applySourceMode:", e);
+    }
+}
+
 function arrangeWidgets(node) {
     const w = node.widgets;
     if (!Array.isArray(w)) return;
     const byName = (n) => w.find((x) => x && x.name === n) || null;
-    const head = [BAR_WIDGET, "video"].map(byName).filter(Boolean);
+    const head = [BAR_WIDGET, "source", "video", "abs_path"].map(byName).filter(Boolean);
     // 2026-10-20：拖动轴已取消，高级参数区直接就是 ADV_KEYS（⏱ start_sec/duration 在列）
     const mid = [...ADV_KEYS].map(byName).filter(Boolean);
     const tail = [INFO_WIDGET, PLAYER_WIDGET].map(byName).filter(Boolean);  // 信息条恒显在前、播放框沉底在后
@@ -1547,6 +1607,7 @@ app.registerExtension({
                 node._xhVLFileInput = fileInput;
 
                 const uploadBtn = makeUploadButton(node, fileInput);
+                node._xhVLUploadBtn = uploadBtn;   // 来源切换时按 input 模式显隐
                 const previewBtn = makePreviewButton(node);
                 const gearBtn = makeGearButton(node);
 
@@ -1567,6 +1628,7 @@ app.registerExtension({
                 //    paintTrim / clampTrim 内部都有 `if (!vl.trimEl) return` 守卫，不创建即安全空转。
                 // makeTrimBar(node);
                 arrangeWidgets(node);
+                applySourceMode(node);
 
                 node._xhVL.rootEl = findRootEl(node, node._xhVL.infoEl || bar);
                 node._xhVL.barEl = bar;
@@ -1583,7 +1645,7 @@ app.registerExtension({
                 // 参数一改就重算信息条（包住原回调，绝不覆盖）
                 // ⏱ start_sec / duration、 start_frame / frame_count 也在列：
                 //    改这些框时信息条要跟着重算「选段 / 将加载帧数」
-                for (const nm of ["video", "force_rate", "custom_width", "custom_height",
+                for (const nm of ["source", "video", "abs_path", "force_rate", "custom_width", "custom_height",
                     "frame_load_cap", "skip_first_frames", "select_every_nth",
                     "start_sec", "duration", "start_frame", "frame_count"]) {
                     const wd = widget(node, nm);
@@ -1592,9 +1654,11 @@ app.registerExtension({
                     const orig = wd.callback;
                     wd.callback = function () {
                         const rr = orig ? orig.apply(this, arguments) : undefined;
-                        refreshInfo(node, nm === "video");
+                        if (nm === "source") applySourceMode(node);
+                        const isVideoVal = nm === "video" || nm === "abs_path";
+                        refreshInfo(node, isVideoVal);
                         if (nm !== "video") { clampTrim(node); paintTrim(node); }   // 拖动轴跟着框走
-                        if (nm === "video") syncPlayer(node);
+                        if (isVideoVal) syncPlayer(node);
                         return rr;
                     };
                 }
@@ -1621,6 +1685,7 @@ app.registerExtension({
                     if (this._xhVL && pv !== undefined) this._xhVL.previewOn = pv !== false;
                     paintPreview(this);
                 } catch (e) {}
+                applySourceMode(this);   // 载入后恢复来源对应的下拉过滤/显隐
                 refreshInfo(this, true);
                 syncPlayer(this);
                 paintTrim(this);

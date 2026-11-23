@@ -78,7 +78,7 @@ export function installLatentBatch(node, opts) {
   injectCSS();
   const band = document.createElement("div");
   band.className = "pix-lb-band";
-  band.title = "How many pictures the latent output makes in one run (1 to " + BATCH_MAX + ").";
+  band.title = "每次运行潜变量输出几张图（1 到 " + BATCH_MAX + ").";
   const lbl = document.createElement("span");
   lbl.className = "pix-lb-lbl";
   lbl.textContent = "batch";
@@ -86,7 +86,7 @@ export function installLatentBatch(node, opts) {
   dec.className = "pix-lb-btn pix-lb-dec";
   dec.type = "button";
   dec.textContent = "−";
-  dec.title = "One picture fewer";
+  dec.title = "少一张图";
   dec.setAttribute("aria-label", "Batch size: one fewer");
   const val = document.createElement("input");
   val.className = "pix-lb-val";
@@ -99,7 +99,7 @@ export function installLatentBatch(node, opts) {
   inc.className = "pix-lb-btn pix-lb-inc";
   inc.type = "button";
   inc.textContent = "+";
-  inc.title = "One picture more";
+  inc.title = "多一张图";
   inc.setAttribute("aria-label", "Batch size: one more");
   band.append(lbl, dec, val, inc);
 

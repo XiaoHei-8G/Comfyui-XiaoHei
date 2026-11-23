@@ -495,16 +495,17 @@ def plan_hierarchical(total, spec, chunk_duration, default_overlap=9, max_chunks
     hard = sum(1 for m in marks.values() if m["kind"] == "H")
     longest = max((s["generated"] for s in segments), default=0)
     outside = longest > MAX_SEGMENT_FRAMES
-    mode_label = {"average": "even", "cuts": "shot cuts", "single": "one shot"}[spec["mode"]]
-    mode_label_zh = {"average": "平均分段", "cuts": "按镜头切点", "single": "整片一段"}[spec["mode"]]
+    # 与节点面板上的三种模式按钮逐字一致：平均切 / 自己点 / 整片不切
+    mode_label = {"average": "even cut", "cuts": "own cut points", "single": "no cut"}[spec["mode"]]
+    mode_label_zh = {"average": "平均切", "cuts": "自己点", "single": "整片不切"}[spec["mode"]]
     summary = line(
-        f"Hierarchical plan: L1 {mode_label} -> {len(segments_meta)} segment(s), "
-        f"L2/L3 -> {len(segments)} block(s); {hard} hard cut(s); "
+        f"H3 plan: {len(segments_meta)} segment(s) ({mode_label}) -> "
+        f"{len(segments)} block(s) in total; {hard} hard cut(s); "
         f"longest block {longest} frames{' (outside trained window)' if outside else ''}; "
         f"output {output_frames}/{total} frames.",
-        f"三层计划：L1 {mode_label_zh} → {len(segments_meta)} 段，"
-        f"L2/L3 → {len(segments)} 块；硬切 {hard} 处；最长一块生成 {longest} 帧"
-        f"{'（ 训练窗口外）' if outside else ''}；输出 {output_frames}/{total} 帧。")
+        f"H3 排段：{len(segments_meta)} 段（{mode_label_zh}）→ 共 {len(segments)} 块；"
+        f"硬切 {hard} 处；最长一块生成 {longest} 帧"
+        f"{'（训练窗口外）' if outside else ''}；输出 {output_frames}/{total} 帧。")
     return {
         "chunk_frames": L_cap,
         "requested_overlap": O_def,
@@ -522,26 +523,33 @@ def plan_hierarchical(total, spec, chunk_duration, default_overlap=9, max_chunks
 
 
 def hierarchy_line(p, spec):
-    """双语状态行：按 L1 → L2 → L3 逐层回显，让用户一眼看出「我填的切点落在哪」。"""
+    """双语状态行：按「段 → 块」逐层回显，让用户一眼看出「我填的切点落在哪」。
+
+    文案里不出现 L1/L2/L3 这类内部层号——用户只需要看到「分了几段、每段几块」。
+    """
     rows_zh, rows_en = [], []
     for s in p["segments_meta"]:
         sec_a, sec_b = s["start"] / FPS, s["end"] / FPS
-        kind_zh = "硬切" if s["kind"] == "H" else "连续"
-        kind_en = "hard" if s["kind"] == "H" else "continuous"
         # off 与 auto 在 _inner_cuts() 里是同一条分支（超限照样补切），
         # 旧文案写「不分块 / no split」是假的，这里按真实行为写。
         policy_zh = {"auto": "超长才补切", "on": "强制均分", "off": "超长仍补切"}[s["policy"]]
         policy_en = {"auto": "split only when too long", "on": "forced even split",
                      "off": "still splits when too long"}[s["policy"]]
-        rows_zh.append(
-            f"段{s['index'] + 1} [{s['start']}:{s['end']}] {sec_a:.2f}–{sec_b:.2f}s "
-            f"入{kind_zh} → {s['blocks']} 块（{policy_zh}）")
-        rows_en.append(
-            f"seg {s['index'] + 1} [{s['start']}:{s['end']}] {sec_a:.2f}-{sec_b:.2f}s "
-            f"in {kind_en} -> {s['blocks']} block(s) ({policy_en})")
+        head_zh = f"段{s['index'] + 1} [{s['start']}:{s['end']}] {sec_a:.2f}–{sec_b:.2f}s"
+        head_en = f"seg {s['index'] + 1} [{s['start']}:{s['end']}] {sec_a:.2f}-{sec_b:.2f}s"
+        if s["index"] == 0:
+            # 片头没有接缝：不写类型，否则「段1 硬切」会被误读成这里切了一刀。
+            seam_zh, seam_en = "", ""
+        elif s["kind"] == "H":
+            seam_zh, seam_en = "，接缝 硬切", ", seam hard"
+        else:
+            seam_zh = f"，接缝 连续·重叠 {s['overlap']} 帧"
+            seam_en = f", seam continuous {s['overlap']}f"
+        rows_zh.append(f"{head_zh}{seam_zh} → {s['blocks']} 块（{policy_zh}）")
+        rows_en.append(f"{head_en}{seam_en} -> {s['blocks']} block(s) ({policy_en})")
     auto = sum(1 for s in p["segments"] if s.get("auto_split"))
     return line(
-        f"L1 segments: {'; '.join(rows_en)}. L3 auto-split seams: {auto}. "
-        f"(H = 0 overlap, no blend, no tail carry; C:N = N overlap frames.)",
-        f"L1 分段：{'；'.join(rows_zh)}。L3 段内自动补切 {auto} 处。"
-        f"（H＝0 重叠、不羽化、不续接尾帧；C:N＝该接缝重叠 N 帧。）")
+        f"Segments: {'; '.join(rows_en)}. Auto-split seams inside segments: {auto}. "
+        f"(hard = 0 overlap, no blend, no tail carry; continuous = seam overlaps N frames.)",
+        f"分段：{'；'.join(rows_zh)}。段内自动补切 {auto} 处。"
+        f"（硬切＝0 重叠、不羽化、不续接上一段尾帧；连续＝该接缝重叠指定帧数。）")

@@ -574,7 +574,7 @@ export function creatXHColorPicker(opts = {}) {
   hexRow.appendChild(hexInput);
 
   // Reset button — opt-out via `hideReset` for callers that supply
-  // their own action row (e.g. the "More colors..." modal which uses
+  // their own action row (e.g. the "更多颜色…" modal which uses
   // OK / Cancel buttons instead).
   if (!hideReset) {
     const resetBtn = document.createElement("button");
@@ -721,13 +721,13 @@ export function opeXHColorPickerPopup(anchorEl, opts = {}) {
 
 // ── Compact popup ────────────────────────────────────────────────
 //
-// Excel-style: swatches grid + Reset + "More colors..." footer. Each
+// Excel-style: swatches grid + Reset + "更多颜色…" footer. Each
 // swatch / Reset click fires `onPick(c)` ONCE and closes the popup
 // immediately — no SV-drag, no live preview, no multi-fire onPick
 // storms. Used by the Note editor's text and highlight pickers, where
 // the apply-once-and-done flow plays nicely with sticky stage state.
 //
-// "More colors..." closes the popup and opens openMoreColorsModal —
+// "更多颜色…" closes the popup and opens openMoreColorsModal —
 // a centered modal with a full SV / hue / hex picker plus OK / Cancel
 // buttons. OK fires `onPick` with the current color; Cancel does
 // nothing.
@@ -761,7 +761,7 @@ export function opeXHCompactColorPickerPopup(anchorEl, opts = {}) {
   popup.style.left = `${rect.left}px`;
   popup.style.top  = `${rect.bottom + 4}px`;
 
-  // Track open state so the "More colors..." path can close synchronously
+  // Track open state so the "更多颜色…" path can close synchronously
   // without racing with the document mousedown listener.
   let isOpen = true;
   function close() {
@@ -828,7 +828,7 @@ export function opeXHCompactColorPickerPopup(anchorEl, opts = {}) {
   }
   popup.appendChild(swatchGrid);
 
-  // Footer: Reset + More colors... (Reset gets resetColor — which can
+  // Footer: Reset + 更多颜色… (Reset gets resetColor — which can
   // be null so the highlight picker's Reset routes through the same
   // null branch as the transparent tile).
   const footer = document.createElement("div");
@@ -850,7 +850,7 @@ export function opeXHCompactColorPickerPopup(anchorEl, opts = {}) {
   const moreBtn = document.createElement("button");
   moreBtn.type = "button";
   moreBtn.className = "xh-cp-more-btn";
-  moreBtn.textContent = "More colors...";
+  moreBtn.textContent = "更多颜色…";
   moreBtn.addEventListener("mousedown", (e) => e.preventDefault());
   moreBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -875,7 +875,7 @@ export function opeXHCompactColorPickerPopup(anchorEl, opts = {}) {
   return { close };
 }
 
-// ── "More colors..." modal ───────────────────────────────────────
+// ── "更多颜色…" modal ───────────────────────────────────────
 //
 // PUBLIC: Photoshop-style color picker MODAL. Opens with a backdrop
 // (locks all interaction with the rest of the page) showing swatches +
@@ -890,7 +890,7 @@ export function opeXHCompactColorPickerPopup(anchorEl, opts = {}) {
 //   initialColor: hex string (default "#ffffff")
 //   swatches:     array of hex (default XH_PICKER_PALETTE)
 //   showClear:    bool — render a transparent tile that picks null
-//   title:        string (default "Pick a color")
+//   title:        string (default "选颜色")
 //   onPick:       (hex|null) => void
 //   onCancel:     () => void (optional)
 export function opeXHColorPickerModal(opts = {}) {
@@ -900,7 +900,7 @@ export function opeXHColorPickerModal(opts = {}) {
     initialColor = "#ffffff",
     swatches     = XH_PICKER_PALETTE,
     showClear    = false,
-    title        = "Pick a color",
+    title        = "选颜色",
     onPick       = () => {},
     onCancel     = () => {},
   } = opts;
@@ -1004,7 +1004,7 @@ function openMoreColorsModal(opts) {
 
   const title = document.createElement("div");
   title.className = "xh-cp-modal-title";
-  title.textContent = "Pick a color";
+  title.textContent = "选颜色";
   box.appendChild(title);
 
   let pickedColor = opts.initialColor ?? "#ffffff";

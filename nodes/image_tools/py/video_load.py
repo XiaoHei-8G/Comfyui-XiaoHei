@@ -57,9 +57,8 @@ EXACT_SKIP_MAX = 2400
 # ---------------------------------------------------------------------------
 # 小工具
 # ---------------------------------------------------------------------------
-def _list_input_videos():
-    """扫 ComfyUI 的 input 目录，列出所有视频文件（供下拉框）。"""
-    d = folder_paths.get_input_directory()
+def _list_dir_videos(d):
+    """扫一个目录，列出里面的视频文件。"""
     out = []
     try:
         for f in os.listdir(d):
@@ -70,6 +69,49 @@ def _list_input_videos():
     except Exception:
         pass
     return sorted(out)
+
+
+def _list_input_videos():
+    """扫 ComfyUI 的 input 目录（供下拉框）。保留此名兼容旧调用。"""
+    return _list_dir_videos(folder_paths.get_input_directory())
+
+
+def _list_output_videos():
+    """扫 ComfyUI 的 output 目录（供「来源=output」下拉框）。"""
+    return _list_dir_videos(folder_paths.get_output_directory())
+
+
+def _list_all_videos():
+    """下拉框的完整候选：input 文件原名 + output 文件带 [output] 注解。
+
+    前端按「来源」过滤显示哪一组；后端拿到值后靠 [output] 后缀分辨走哪个目录。
+    合并成一份是为了让 COMBO 的下拉值在后端一次定好，前端只做过滤、不重建控件。
+    """
+    ins = _list_input_videos()
+    outs = [f + " [output]" for f in _list_output_videos()]
+    return ins + outs
+
+
+def _resolve_video_path(video, source="input", path=""):
+    """按来源把控件里的字符串解析成磁盘上的真实路径。
+
+    * input  —— 老行为：input 目录下拉选文件名，走官方 annotated 解析（兼容子目录）。
+    * output —— output 目录下拉选文件名，文件带 [output] 注解交给官方解析。
+    * absolute —— 用「路径」框里的完整地址（任意盘符/目录），原样用，不拼目录、不拦盘外。
+
+    绝对路径与 mkv 无关：mkv 只是恰好躺在 output 目录才需要它。老工作流不填 source
+    时默认 input，行为逐字不变。
+    """
+    if source == "absolute":
+        name = (path or "").strip()
+        if not name:
+            raise FileNotFoundError("来源选了「绝对路径」，但「路径」框里没填地址。")
+        return os.path.abspath(os.path.expanduser(name))
+
+    name = (video or "").strip()
+    if source == "output" and not name.endswith("[output]"):
+        name = name + "[output]"
+    return folder_paths.get_annotated_filepath(name)
 
 
 def _target_size(width, height, custom_width, custom_height, downscale_ratio=8):
@@ -410,10 +452,17 @@ def register_routes():
         fn = (q.get("filename") or "").strip()
         if not fn:
             return web.json_response({"ok": False, "error": "缺少 filename 参数"}, status=400)
-        try:
-            path = folder_paths.get_annotated_filepath(fn)
-        except Exception:
-            path = None
+        # abs=1：absolute 模式，filename 是用户粘的完整路径，原样解析（只用于本地预览探测）。
+        if (q.get("abs") or "").strip() in ("1", "true", "yes"):
+            try:
+                path = os.path.abspath(os.path.expanduser(fn))
+            except Exception:
+                path = None
+        else:
+            try:
+                path = folder_paths.get_annotated_filepath(fn)
+            except Exception:
+                path = None
         if not path or not os.path.isfile(path):
             return web.json_response({"ok": False, "error": f"文件不存在：{fn}"}, status=404)
         try:
@@ -473,13 +522,32 @@ class XHLoadVideo:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "video": (_list_input_videos(), {
+                "source": (["input", "output", "absolute"], {
+                    "default": "input",
                     "tooltip": (
-                        "【 视频文件】列出的是 ComfyUI 的 input 目录里的视频。\n"
-                        "没有你想要的？点节点上的「 上传视频」按钮选文件，或直接把视频拖到节点上，\n"
-                        "上传完会自动选中（也能手动把文件拷进 ComfyUI\\input\\ 后刷新页面）。\n"
-                        "支持：mp4 / mkv / webm / mov / gif\n"
-                        " 列表为空 = input 目录里一个视频都没有。"
+                        "【 从哪读这个视频】\n"
+                        "· input（默认）= 从 ComfyUI 的 input 目录选，老行为，原有工作流不受影响\n"
+                        "· output = 从 ComfyUI 的 output 目录选（比如上一步生成的 mkv 就在这）\n"
+                        "· absolute = 绝对路径：在下面「路径」框里粘完整地址，"
+                        "如 C:/Users/xxx/ComfyUI/output/片段.mkv，文件放哪个盘都能读\n"
+                        " 注意：这说的是「文件在哪」，和视频是 mp4 还是 mkv 没关系。"
+                    ),
+                }),
+                "video": (_list_all_videos(), {
+                    "tooltip": (
+                        "【 视频文件】来源=input / output 时用这个下拉选：\n"
+                        "· 不带后缀的 = input 目录（可点「上传视频」或直接拖文件进来）\n"
+                        "· 带 [output] 后缀的 = output 目录（上一步生成的成片在这）\n"
+                        "来源=absolute 时忽略这个下拉，去下面「路径」框粘地址。\n"
+                        "支持：mp4 / mkv / webm / mov / gif"
+                    ),
+                }),
+                "abs_path": ("STRING", {
+                    "default": "",
+                    "tooltip": (
+                        "【 绝对路径】仅当「来源=absolute」时生效：直接粘视频的完整地址，"
+                        "如 C:/Users/61769/ComfyUI-Installs/ComfyUI/ComfyUI/output/片段.mkv。"
+                        "文件放任意盘、任意目录都能读。其他来源下这个框留空即可。"
                     ),
                 }),
                 "force_rate": ("FLOAT", {
@@ -646,12 +714,18 @@ class XHLoadVideo:
                    frame_load_cap, skip_first_frames, select_every_nth,
                    start_sec=0, duration=0,
                    start_frame=0, frame_count=0,
+                   source="input", abs_path="",
                    dynprompt=None, unique_id=None):
         import cv2
 
-        path = folder_paths.get_annotated_filepath(video)
+        path = _resolve_video_path(video, source, abs_path)
         if not path or not os.path.isfile(path):
-            raise FileNotFoundError(f"找不到视频文件：{video}（应在 ComfyUI 的 input 目录下）")
+            hint = {
+                "input": "应在 ComfyUI 的 input 目录下",
+                "output": "应在 ComfyUI 的 output 目录下",
+                "absolute": "这个绝对路径指向的文件不存在，检查地址是否写全写对",
+            }.get(source, "")
+            raise FileNotFoundError(f"找不到视频文件：{video}（{hint}）")
 
         vc = cv2.VideoCapture(path)
         if not vc.isOpened() or not vc.grab():
@@ -806,21 +880,23 @@ class XHLoadVideo:
         return (images, frame_count, audio, _video_from_file(path))
 
     @classmethod
-    def IS_CHANGED(cls, video, **kwargs):
+    def IS_CHANGED(cls, video, source="input", abs_path="", **kwargs):
         """文件改了（mtime 变）就重跑 —— 与 VHS 同一口径，避免大文件反复哈希。"""
         try:
-            path = folder_paths.get_annotated_filepath(video)
-            return f"{video}:{os.path.getmtime(path)}"
+            path = _resolve_video_path(video, source, abs_path)
+            return f"{source}:{video}:{abs_path}:{os.path.getmtime(path)}"
         except Exception:
             return float("NaN")
 
     @classmethod
-    def VALIDATE_INPUTS(cls, video, **kwargs):
+    def VALIDATE_INPUTS(cls, video, source="input", abs_path="", **kwargs):
         try:
-            if not folder_paths.exists_annotated_filepath(video):
-                return f"输入目录里没有这个视频：{video}"
-        except Exception:
-            pass
+            path = _resolve_video_path(video, source, abs_path)
+            if not os.path.isfile(path):
+                label = {"input": "输入目录", "output": "输出目录", "absolute": "这个路径"}.get(source, "")
+                return f"{label}里没有这个视频：{video}"
+        except Exception as exc:
+            return str(exc)
         return True
 
 

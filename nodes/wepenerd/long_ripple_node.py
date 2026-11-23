@@ -66,7 +66,7 @@ def apply_class():
         if cls is not None:
             return cls
     raise RuntimeError(
-        "H3 Ripple Apply is not installed. 需要 Comfyui-XiaoHei / ComfyUI-WepeNerd 的 RippleApply 节点。")
+        "改帧传播节点（RippleApply）未安装，请确认已加载 XiaoHei 家族的「改帧传播·条件合成」节点。")
 
 
 def _unwrap(out):
@@ -201,7 +201,7 @@ class XH_WN_H3AutoLongRipple:
     DESCRIPTION = (
         "Long-take H3 Ripple edit propagation. Splits a long window into legal 17k+5 chunks, carries each edit "
         "through every chunk, trims the overlap and returns one continuous shot with the source audio. "
-        "This is an XiaoHei original node built on top of WepeNerd's open-source RippleApply chain."
+        "This is an XiaoHei original node built on the open-source RippleApply chain."
     )
 
     @classmethod
@@ -218,7 +218,7 @@ class XH_WN_H3AutoLongRipple:
                 "sampler": ("SAMPLER",),
                 "sigmas": ("SIGMAS",),
                 "prompt": ("STRING", {"multiline": True, "default": DEFAULT_PROMPT,
-                           "tooltip": "Keep WepeNerd's default propagation prompt."}),
+                           "tooltip": "Keep the default propagation prompt."}),
                 "chunk_duration": ("FLOAT", {"default": 10.13, "min": 0.21, "max": 60.0, "step": 0.01,
                                    "tooltip": "Seconds per chunk, snapped to H3's 17k+5 frame grid."}),
                 "overlap_frames": ("INT", {"default": 9, "min": 0, "max": 240, "step": 1,
@@ -241,7 +241,7 @@ class XH_WN_H3AutoLongRipple:
                 # XiaoHei 自加：按镜头切点手动分段。默认 average ⇒ 老工作流加载后行为一字不变。
                 #  2026-11-10 三层父子模型：cut_mode 扩成四档，manual 仅作旧语法兼容。
                 "cut_mode": (["average", "cuts", "single", "manual"], {"default": "average",
-                             "tooltip": "L1 segment mode: average = equal-length segments, cuts = your own shot "
+                             "tooltip": "Segment mode: average = equal-length segments, cuts = your own shot "
                                         "boundaries in the segment panel, single = one segment for the whole video, "
                                         "manual = legacy text syntax (compatibility only)."}),
                 "cut_points": ("STRING", {"multiline": True, "default": "",
@@ -250,7 +250,7 @@ class XH_WN_H3AutoLongRipple:
                                           "8.5H, 19.2C:20 syntax untouched to keep legacy behaviour."}),
                 #  新参数一律追加到 required 末尾：老工作流的 widgets_values 顺序不能错位。
                 "segment_count": ("INT", {"default": 0, "min": 0, "max": 512, "step": 1,
-                                 "tooltip": "L1 segment count for average mode; 0 = auto from the H3 frame cap. "
+                                 "tooltip": "Segment count for average mode; 0 = auto from the H3 frame cap. "
                                             "Ignored when the segment plan panel supplies its own count."}),
             },
             "optional": {"edited_images": ("IMAGE", {"tooltip":

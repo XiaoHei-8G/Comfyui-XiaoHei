@@ -37,7 +37,11 @@ const S = {
   libShown: [],
   libRendered: 0,
   libId: "",
+  staging: "",        // 下载暂存夹（网盘下载落点，一键归位的来源）；存 localStorage
 };
+
+const STAGING_KEY = "xh_mb.staging";
+try { S.staging = localStorage.getItem(STAGING_KEY) || ""; } catch (_) { S.staging = ""; }
 
 let mask = null;
 let grid = null;
@@ -96,7 +100,8 @@ function typeTxt(it) {
 
 // 样式版本号：改动 panel.css 后把这个数字 +1，浏览器就不会再吃旧缓存
 //  24 = 2026-11-19 家族化覆盖层（主色接 --xh-primary / 字体接 --font-sans）
-const CSS_VER = "24";
+//  25 = 2026-11-21 下载到模型目录（网盘链接 → 暂存夹 → 一键归位）
+const CSS_VER = "25";
 
 // 关键布局的内联兜底：即使外部样式表缺失或版本对不上，卡片也不会被压扁
 const HARD_CSS = `
@@ -931,6 +936,23 @@ function openLibDetail(id) {
           </div>
         </div>
         ${it.code ? `<div class="xhmb-row"><label>提取码</label><span>${ESC(it.code)}</span></div>` : ""}
+        <div class="xhmb-download">
+          <div class="xhmb-dl-title">${xhIconHTML("download", { size: 15, color: "current" })} 下载到模型目录</div>
+          <div class="xhmb-dl-steps">
+            <span>① 复制并打开网盘</span><span>② 下载到暂存夹</span><span>③ 一键归位</span>
+          </div>
+          <button class="xhmb-dl-main" data-act="dlopen">${xhIconHTML("external-link", { size: 14, color: "current" })} 复制网盘链接并打开</button>
+          <div class="xhmb-dl-stage">
+            <label>下载暂存夹<span class="xhmb-tip">网盘下载到哪 · 改一次以后都用它</span></label>
+            <div class="xhmb-urlrow">
+              <input class="xhmb-url xhmb-stage-input" spellcheck="false" placeholder="点右边「取默认」或粘贴文件夹路径" value="${ESC(S.staging)}">
+              <button class="xhmb-mini" data-act="stagedefault" title="填入系统下载目录">取默认</button>
+              <button class="xhmb-mini" data-act="stageopen" title="在资源管理器打开暂存夹">打开</button>
+            </div>
+          </div>
+          <button class="xhmb-dl-import" data-act="doimport">${xhIconHTML("move-right", { size: 14, color: "current" })} 一键归位到 models</button>
+          <div class="xhmb-dl-hint">下载好后点「一键归位」：按本条 ${it.total} 个文件的清单，自动移进 models 对应目录。已装的会跳过，不会覆盖。</div>
+        </div>
         ${it.note ? `<div class="xhmb-row"><label>说明</label><span class="xhmb-mini-txt">${ESC(it.note)}</span></div>` : ""}
         <div class="xhmb-field">
           <label>包含的模型<span class="xhmb-tip">按本地扫盘结果标出已装 / 未装</span></label>
@@ -1116,6 +1138,131 @@ async function copyText(t) {
   }
 }
 
+// ---------------- 下载 / 一键归位 -----------------------------
+
+function stageInput() {
+  const inp = detailEl.querySelector(".xhmb-stage-input");
+  return inp ? inp.value.trim() : S.staging;
+}
+
+function saveStaging(path) {
+  S.staging = path || "";
+  try {
+    if (S.staging) localStorage.setItem(STAGING_KEY, S.staging);
+    else localStorage.removeItem(STAGING_KEY);
+  } catch (_) { /* 隐私模式下写不了，忽略 */ }
+}
+
+// 复制网盘链接（带提取码）并打开夸克页面。浏览器不能写本地指定目录，
+// 所以这一步只负责把链接准备好 + 打开，落盘交给网盘，归位交给后端。
+async function dlOpen() {
+  const lib = S.libItems.find((x) => x.id === S.libId);
+  if (!lib || !lib.url) { toast("这条资源没有网盘链接", true); return; }
+  const code = (lib.code || "").trim();
+  const text = code ? `${lib.url} 提取码: ${code}` : lib.url;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+    else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    toast(code ? "链接和提取码已复制，去网盘下载" : "链接已复制，去网盘下载");
+  } catch (_) {
+    toast("复制失败，手动选一下链接", true);
+  }
+  window.open(lib.url, "_blank", "noopener, noreferrer");
+}
+
+async function stageDefault() {
+  try {
+    const r = await req("/staging");
+    const inp = detailEl.querySelector(".xhmb-stage-input");
+    if (inp) inp.value = r.staging || "";
+    saveStaging(r.staging || "");
+    toast("已填入系统下载目录");
+  } catch (e) {
+    toast("取默认值失败：" + e.message, true);
+  }
+}
+
+async function stageOpen() {
+  const staging = stageInput();
+  if (!staging) { toast("先填一个暂存夹路径", true); return; }
+  saveStaging(staging);
+  try {
+    await req("/openstaging", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ staging }),
+    });
+  } catch (e) {
+    toast("打开失败：" + e.message, true);
+  }
+}
+
+function showImportResult(r) {
+  const rows = (r.results || []).map((f) => {
+    const map = {
+      moved: ["已归位", "ok"],
+      exists: ["已装·跳过", "skip"],
+      missing: ["暂存夹里没找到", "miss"],
+      skip: ["跳过", "skip"],
+    };
+    const [label, cls] = map[f.status] || ["跳过", "skip"];
+    const why = f.why ? `（${f.why}）` : f.dest ? `→ ${f.dest}` : "";
+    return `<div class="xhmb-ir-row"><span class="xhmb-ir-flag ${cls}">${label}</span><span class="xhmb-ir-name" title="${ESC(f.dest || f.name)}">${ESC(f.name)}</span><span class="xhmb-ir-why" title="${ESC(why)}">${ESC(why)}</span></div>`;
+  }).join("");
+  let box = document.getElementById("xhmb-import-result");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "xhmb-import-result";
+    box.className = "xhmb-import-result";
+    const anchor = detailEl.querySelector(".xhmb-dl-import");
+    if (anchor) anchor.insertAdjacentElement("afterend", box);
+    else return;
+  }
+  box.innerHTML = `
+    <div class="xhmb-ir-head">归位结果：移进 ${r.moved || 0} / ${r.total || 0} 个
+      <button class="xhmb-mini" data-act="irclear">收起</button></div>
+    <div class="xhmb-ir-list">${rows || "（没有文件）"}</div>`;
+}
+
+async function doImport() {
+  const lib = S.libItems.find((x) => x.id === S.libId);
+  if (!lib) { toast("找不到这条资源", true); return; }
+  const staging = stageInput();
+  saveStaging(staging);              // 记住用户这次填的路径
+  const btn = detailEl.querySelector('[data-act="doimport"]');
+  if (btn) { btn.disabled = true; btn.textContent = "正在归位…"; }
+  try {
+    const r = await req("/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: lib.id, staging }),
+    });
+    if (r.ok === false) { toast(r.error || "归位失败", true); return; }
+    // 归位后本地台账变了，刷新本地列表和这条资源的已装标记
+    await loadList();
+    const fresh = await req("/library");
+    S.libItems = fresh.items || [];
+    S.libGroups = fresh.groups || [];
+    openLibDetail(lib.id);          // 重渲染（会清掉旧结果框）
+    showImportResult(r);            // 重渲染后再插入结果
+    toast(r.moved ? `归位成功 ${r.moved} 个文件` : "没有可归位的文件");
+  } catch (e) {
+    toast("归位失败：" + e.message, true);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = xhIconHTML("move-right", { size: 14, color: "current" }) + " 一键归位到 models";
+    }
+  }
+}
+
 // ---------------- 事件 -----------------------------
 
 function onClick(e) {
@@ -1253,6 +1400,15 @@ function onClick(e) {
     if (act === "copyurl") {
       const url = currentUrl();
       if (url) copyText(url);
+      return;
+    }
+    if (act === "dlopen") { dlOpen(); return; }
+    if (act === "stagedefault") { stageDefault(); return; }
+    if (act === "stageopen") { stageOpen(); return; }
+    if (act === "doimport") { doImport(); return; }
+    if (act === "irclear") {
+      const box = document.getElementById("xhmb-import-result");
+      if (box) box.remove();
       return;
     }
     if (act === "tag") {

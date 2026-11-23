@@ -910,7 +910,7 @@ export function openImageDropdown(node, anchorEl, onPick, target = null) {
   const addFolderBtn = document.createElement("span");
   addFolderBtn.className = "pix-li-pop-addfolder";
   addFolderBtn.textContent = "+ 文件夹";
-  addFolderBtn.title = "Add a folder of pictures. A folder window opens; the folder you pick there shows up on the left.";
+  addFolderBtn.title = "添加一个图片文件夹。会弹出文件夹窗口，你选的文件夹会显示在左侧。";
   const extra = (target?.actions || []).map((a) => {
     const b = document.createElement("span");
     b.className = "pix-li-pop-addfolder" + (a.cls ? " " + a.cls : "");

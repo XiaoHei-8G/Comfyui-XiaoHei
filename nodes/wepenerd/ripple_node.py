@@ -328,11 +328,19 @@ def encode_prompt(clip, prompt: str):
 
 
 def encode_source(vae, ripple: dict):
-    """The whole original window as one guide latent, cached per VAE and window."""
+    """把整段原始窗口编码成一个引导 latent，按 VAE 与窗口缓存。
+
+    2026-11-22：comfy.sd.VAE.encode 内部已按剩余显存自动分批，内存不足时还会
+    自动回退到分块编码；这里不再自己切时间块，那会破坏 H3 VAE 的时序上下文。
+    只在编码前清一次缓存，把采样刚结束时占着的显存先还回去，降低瞬时峰值。
+    """
     key = ripple.get("window_key")
     if key is not None and _same(_source_cache.get("vae"), vae) and _source_cache.get("key") == key:
         return _source_cache["value"]
-    value = vae.encode(ripple["window"][..., :3])
+    import comfy.model_management
+    comfy.model_management.soft_empty_cache()
+    pixels = ripple["window"][..., :3]
+    value = vae.encode(pixels if pixels.is_contiguous() else pixels.contiguous())
     _source_cache.clear()
     _source_cache.update(vae=_weak(vae), key=key, value=value)
     return value
@@ -460,7 +468,7 @@ class WN_RippleFromFrames(io.ComfyNode):
         return io.Schema(
             node_id="XH_WN_RippleFromFrames", display_name="H3 Ripple From Frames",
             category="XiaoHei/Video",
-            description="Prepare frames from any video loader for Ripple, keeping the source framing and audio.",
+            description="从任意视频加载器取帧供 Ripple 使用，保留原始构图和声音。",
             inputs=[
                 io.Image.Input("images", tooltip="输入图像批次（作为视频帧）"),
                 io.Float.Input("frame_rate", default=24.0, min=0.001, max=1000.0, tooltip="输出帧率（fps）"),
@@ -646,15 +654,23 @@ SAVE_CHOICES = ("shot + comparison", "shot", "comparison", "nothing")
 
 
 def comparison_frames(images: torch.Tensor, ripple: dict, show_anchor_markers: bool = False) -> torch.Tensor:
-    """Source | result side by side, optionally marking edited anchor frames."""
+    """Source | result side by side, optionally marking edited anchor frames.
+
+    2026-11-22 根治 0xC0000005：原来 source / result 都在 GPU 上裁剪、缩放、cat 再
+    clone，H3 采样刚结束显存尚未回落时这里会触发 native access violation。预览和
+    Save Video 最终本来就要把帧搬回 CPU（见 save_video_node.pixel_blocks），所以
+    整条对比图链路改在 CPU 完成，GPU 侧只做一次 detach + 搬运。
+    """
     count = min(len(images), ripple["length"])
-    images = trim_content(images[:count], ripple["geometry"])
-    source = trim_content(ripple["window"][:count], ripple["geometry"]).to(images.device, images.dtype)
-    if source.shape[1:3] != images.shape[1:3]:
+    # detach 避免把采样图的 autograd 图一起搬运；float32 是 Save Video 的输入约定。
+    result = trim_content(images[:count].detach().to(device="cpu", dtype=torch.float32), ripple["geometry"])
+    source = trim_content(ripple["window"][:count].to(device="cpu", dtype=torch.float32), ripple["geometry"])
+    if source.shape[1:3] != result.shape[1:3]:
         import comfy.utils
-        source = comfy.utils.common_upscale(source.movedim(-1, 1), int(images.shape[2]), int(images.shape[1]),
+        source = comfy.utils.common_upscale(source.movedim(-1, 1), int(result.shape[2]), int(result.shape[1]),
                                             "lanczos", "disabled").movedim(1, -1)
-    comparison = torch.cat((source, images[..., :3]), dim=2).clone()
+    # torch.cat 已经分配了新张量，原来那次 .clone() 是显存峰值元凶，直接去掉。
+    comparison = torch.cat((source, result[..., :3]), dim=2)
     if show_anchor_markers:
         for marker in ripple["markers"]:
             if marker["frame"] < count:
@@ -693,15 +709,22 @@ class WN_RippleOutput:
                                     "tooltip": "文件名前缀（可含子文件夹）"}),
                 "show_anchor_markers": ("BOOLEAN", {"default": False, "advanced": True,
                                         "tooltip": "在编辑/锚点帧上画黄色标记条"}),
+                "skip_comparison": ("BOOLEAN", {"default": False, "advanced": True,
+                                    "tooltip": "8GB 显存建议勾选：不生成双倍宽对比图，只保存成片，避免内存访问冲突"}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
         }
 
     def output(self, images, ripple, save=SAVE_CHOICES[0], filename_prefix="ripple/edit", prompt=None,
-               extra_pnginfo=None, show_anchor_markers=False):
+               extra_pnginfo=None, show_anchor_markers=False, skip_comparison=False):
         count = min(len(images), ripple["length"])
-        comparison = comparison_frames(images[:count], ripple, show_anchor_markers=show_anchor_markers)
-        images = trim_content(images[:count], ripple["geometry"])
+        # 2026-11-22 根治：comparison 原来无条件生成，save=shot/nothing 也会先做
+        # 一张双倍宽的大图再丢掉；8GB 卡上这是 0xC0000005 的直接崩点。
+        wants_comparison = save in ("shot + comparison", "comparison") and not skip_comparison
+        comparison = (comparison_frames(images[:count], ripple, show_anchor_markers=show_anchor_markers)
+                      if wants_comparison else images[:0].detach().to(device="cpu", dtype=torch.float32))
+        # 成片帧也在 CPU 上裁剪：Save Video 最终本来就要 cpu().numpy()。
+        images = trim_content(images[:count].detach().to(device="cpu", dtype=torch.float32), ripple["geometry"])
         fps, audio, previews = float(ripple["fps"]), ripple.get("audio"), []
         if save in ("shot + comparison", "shot", "comparison"):
             try:
@@ -712,15 +735,20 @@ class WN_RippleOutput:
             jobs = []
             if save != "comparison":
                 jobs.append((images, filename_prefix, audio))
-            if save != "shot":
+            if save != "shot" and wants_comparison:
                 jobs.append((comparison, f"{filename_prefix}_compare", None))
             for frames, prefix, sound in jobs:
                 saved = saver.save_video(frames, fps, prefix, audio=sound, prompt=prompt, extra_pnginfo=extra_pnginfo)
                 previews += saved["ui"]["images"]
         result = (images, audio, fps, comparison)
-        if not previews:
+        ui = {"images": previews, "animated": (True,)} if previews else {}
+        if skip_comparison:
+            ui["text"] = [rc.line(
+                "skip_comparison is on: no comparison image was generated or saved.",
+                "已勾选跳过对比图：本次没有生成或保存对比图。")]
+        if not ui:
             return result
-        return {"ui": {"images": previews, "animated": (True,)}, "result": result}
+        return {"ui": ui, "result": result}
 
 
 def query_geometry(query):

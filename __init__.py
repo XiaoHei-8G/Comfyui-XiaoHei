@@ -537,7 +537,7 @@
 #    分发 / 压缩命名规范：Comfyui-XiaoHei_v{主}.{次}.{修}_{YYYYMMDD}.zip
 #    改完节点包后升级对应位，再重新压缩，文件名版本号才对得上。
 # ---------------------------------------------------------------------------
-VERSION = "1.0.5"  # 修复跨工作流串图/加载节点名字图不符；提示词节点原生右键菜单+按钮按压反馈；wepenerd 前端入口补回；资源库链接校对
+VERSION = "1.0.6"  # 修复分享工作流来源标记（缺失包误报，家族节点全标 comfyui-xiaohei + 前端自愈守卫）；清除用户可见文案里的 WepeNerd 痕迹
 
 # ---------------------------------------------------------------------------
 #  子模块加载：逐个 try，缺谁只少谁（2026-10-05 改造，为「分发给别人」而做）
@@ -886,7 +886,7 @@ except Exception as _e:
     _fail("xhsketch", "标注（1:1 深度复刻 Pixaroma）", [("torch", "torch")], _e)
     _M_SKETCH = _D_SKETCH = {}
 
-# 2026-11-08：1:1 复刻 ComfyUI-WepeNerd（MIT）。整包物理拷贝进 wepenerd/，
+# 2026-11-08：1:1 复刻来源项目（MIT）。整包物理拷贝进 wepenerd/，
 #   逻辑/界面/英文原版文案一字未改，只换了 class_type 前缀 XH_、路由前缀 /xh/wn/、
 #   前端子目录 web/xh_wepenerd/。class_type 全部带 XH_ 前缀 ⇒ 与原版同装不抢注册。
 #   原包两个 Qwen 对齐模块顶层 import scipy（本机 .venv 已装 1.18.0）；
@@ -897,7 +897,7 @@ try:
         NODE_DISPLAY_NAME_MAPPINGS as _D_WN,
     )
 except Exception as _e:
-    _fail("wepenerd", "H3 Ripple / Load Video / Save Video / VAE DeGrid（1:1 复刻 WepeNerd）",
+    _fail("wepenerd", "H3 改帧传播 / 加载视频 / 保存视频 / VAE 去网格",
           [("av", "av"), ("scipy", "scipy")], _e)
     _M_WN = _D_WN = {}
 
@@ -1014,6 +1014,36 @@ except Exception as _e:
     _fail("charsheet", "小黑·全能角色设定表（1 节点）", [], _e)
     _M_CS = _D_CS = {}
 
+# 2026-11-21：1:1 复刻 ComfyUI-Pixaroma 的 Free VRAM Pixaroma（MIT）——
+#   在流程的任意位置把显存/模型交还：三档（全部/仅模型/仅缓存）+ 内存条读数 +
+#   阈值门 + 每次执行开关。纯决策逻辑在 _free_vram_helpers.py（无 torch 可离线测）；
+#   状态存 node.properties.xhFreeVramState，前端排队前注入隐藏输入 XHFreeVramState。
+#   界面全中文、接家族语言中枢、配色走官方 CSS 变量 + 主题预设、图案走家族图标库；
+#   class_type = XH_FreeVram，显示名「释放显存 XiaoHei」。
+try:
+    from .nodes.free_vram import (
+        NODE_CLASS_MAPPINGS as _M_FV,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_FV,
+    )
+except Exception as _e:
+    _fail("free_vram", "释放显存 XiaoHei（1:1 复刻 Free VRAM Pixaroma）", [], _e)
+    _M_FV = _D_FV = {}
+
+# 2026-11-22：完整 1:1 复刻 ComfyUI-SceneCut（MIT）——视频自动识别分镜并裁剪导出。
+#   12 个 V3 节点整包移植：核心算法 nodes/xh_scenecut/scenecut/ 原样；
+#   接线标识 XH_*、路由 /xh_scenecut/*、分类 XiaoHei/分镜、显示名「功能名 XiaoHei」。
+#   模型目录 models/scenecut + models/clip_vision 是数据契约（三模型已预下载），沿用不改名。
+#   V3 类直接进 NODE_CLASS_MAPPINGS 即可：execution.py / server.py 都按 _ComfyNodeInternal 判定，
+#   家族主包无需启用 comfy_entrypoint。
+try:
+    from .nodes.xh_scenecut import (
+        NODE_CLASS_MAPPINGS as _M_XHSC,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_XHSC,
+    )
+except Exception as _e:
+    _fail("xh_scenecut", "分镜切分 XiaoHei（12 节点，1:1 复刻 SceneCut）", [], _e)
+    _M_XHSC = _D_XHSC = {}
+
 # (子模块名, class 映射, 显示名映射) —— 顺序即注册顺序
 # 加载失败的子模块在 except 里被填成 {}，这里直接过滤掉（不占位、不报重名）
 _PARTS = tuple(
@@ -1052,6 +1082,8 @@ _PARTS = tuple(
         ("openh3", _M_OH3, _D_OH3),
         ("qwen21_edit", _M_QE, _D_QE),
         ("charsheet", _M_CS, _D_CS),
+        ("free_vram", _M_FV, _D_FV),
+        ("xh_scenecut", _M_XHSC, _D_XHSC),
     ) if _p[1]
 )
 

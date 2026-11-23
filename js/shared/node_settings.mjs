@@ -816,7 +816,7 @@ function buildColorRow(row, onChange, onPickerOpen) {
   const sw = el("div", "pix-nset-sw");
   const cur = () => nodeSetting(row.setting, row.defaultValue) || BRAND;
   sw.style.background = cur();
-  sw.title = "Pick a colour";
+  sw.title = "选颜色";
   sw.addEventListener("click", (e) => {
     e.stopPropagation();
     const h = openPixaromaColorPickerPopup(sw, {
@@ -880,12 +880,15 @@ export function createAccentSection(node, opts = {}) {
   const def = getNodeSettings(node?.comfyClass);
   const title = opts.title || def?.title || defaultTitle(node?.comfyClass);
   const setting = def?.setting || classAccentSetting(node?.comfyClass);
+  // 可选本地化文案：不传则全部沿用原版英文，家族其它节点零影响。
+  // 译制节点通过 opts.i18n 注入中文/英文，切语言时由宿主重开面板生效。
+  const L = opts.i18n || {};
 
   const wrap = el("div", "pix-nset-sec");
   wrap.style.setProperty(ACCENT_VAR, accentOf(node));
 
   const sw = el("div", "pix-nset-sw");
-  sw.title = "Pick the colour this node paints with";
+  sw.title = L.swTitle || "Pick the colour this node paints with";
   sw.style.background = accentOf(node);
 
   const repaint = () => {
@@ -939,19 +942,20 @@ export function createAccentSection(node, opts = {}) {
   };
 
   const btns = el("div", "pix-nset-row");
-  const bType = el("button", "pix-nset-btn", "New " + title + " nodes");
-  bType.title = "Every new " + title + " node starts with this colour";
+  const newText = L.newNodes ? L.newNodes(title) : ("New " + title + " nodes");
+  const bType = el("button", "pix-nset-btn", newText);
+  bType.title = L.newNodesTip ? L.newNodesTip(title) : ("Every new " + title + " node starts with this colour");
   bType.addEventListener("click", async () => {
-    if (await writeSetting(setting, accentOf(node))) { flash(bType, "Saved"); repaintAllAccents(); }
+    if (await writeSetting(setting, accentOf(node))) { flash(bType, L.saved || "Saved"); repaintAllAccents(); }
   });
-  const bAll = el("button", "pix-nset-btn", "Every Pixaroma node");
-  bAll.title = "Every Pixaroma node follows this colour, unless it has been given one of its own";
+  const bAll = el("button", "pix-nset-btn", L.allNodes || "Every Pixaroma node");
+  bAll.title = L.allNodesTip || "Every Pixaroma node follows this colour, unless it has been given one of its own";
   bAll.addEventListener("click", async () => {
-    if (await writeSetting(GLOBAL_ACCENT_SETTING, accentOf(node))) { flash(bAll, "Saved"); repaintAllAccents(); }
+    if (await writeSetting(GLOBAL_ACCENT_SETTING, accentOf(node))) { flash(bAll, L.saved || "Saved"); repaintAllAccents(); }
   });
   btns.append(bType, bAll);
 
-  wrap.append(row, el("div", "pix-nset-dt", "Use this colour as the default for"), btns);
+  wrap.append(row, el("div", "pix-nset-dt", L.defaultFor || "Use this colour as the default for"), btns);
   return wrap;
 }
 

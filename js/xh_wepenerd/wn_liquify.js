@@ -39,7 +39,7 @@ function setupLiquify(node) {
     canvas.width = canvas.height = 0;
     const cursor = document.createElement("div");
     cursor.style.cssText = "position:absolute;display:none;border:1px solid white;box-shadow:0 0 0 1px #0008;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);box-sizing:border-box;";
-    const hint = document.createElement("div"); hint.textContent = "Load an image, or connect IMAGE and Queue once";
+    const hint = document.createElement("div"); hint.textContent = "载入一张图，或接上 IMAGE 后点一次执行";
     hint.style.cssText = "position:absolute;color:#999;text-align:center;padding:8px;pointer-events:none;";
     const status = document.createElement("div"); status.style.cssText = "min-height:13px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
     const picker = document.createElement("input"); picker.type = "file"; picker.accept = "image/png,image/jpeg,image/webp"; picker.hidden = true;

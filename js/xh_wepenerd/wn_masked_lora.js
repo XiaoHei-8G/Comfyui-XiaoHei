@@ -130,7 +130,7 @@ export function setupMaskedLora(node, { maskOnly = false, label = "", outputSize
     const fill = iconButton("Fill enclosed areas", null, ["m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z", "m5 2 5 5", "M2 13h15", "M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"]);
     fill.title = "Fill enclosed areas: paint the inside of every closed outline at the current Opacity.";
     const grayscale = iconButton("Grayscale mask", null, ["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z", "M12 3v18M12 6h6M12 9h8M12 12h9M12 15h8M12 18h6"]);
-    grayscale.title = "Inspect saved painting as grayscale coverage (black 0, white 1).";
+    grayscale.title = "以灰度覆盖率查看已保存的笔触（黑 0，白 1）。";
     function control(label, input, unit) {
         const group = element("label", "wn-mask-control"), name = element("span"), value = element("span", "wn-mask-value");
         name.textContent = label;
@@ -143,21 +143,21 @@ export function setupMaskedLora(node, { maskOnly = false, label = "", outputSize
     for (const [input, label, value] of [[softness, "Softness", saved.softness], [opacity, "Opacity", saved.opacity]]) {
         input.type = "range"; input.min = 0; input.max = 100; input.value = value; input.setAttribute("aria-label", label);
     }
-    softness.title = "Brush and eraser edge falloff; rectangles have hard edges.";
-    opacity.title = "Coverage deposited or removed by one gesture; repeated gestures build coverage.";
+    softness.title = "画笔和橡皮的边缘羽化；矩形是硬边。";
+    opacity.title = "一次手势增加或擦除的覆盖量；重复手势会累积。";
     const brushSettings = element("div", "wn-mask-row");
     brushSettings.append(control("Softness", softness, "%"), control("Opacity", opacity, "%"));
     const source = element("button");
     source.title = maskOnly ? "Run the connected upstream path and load its first image. Never runs downstream nodes." : "Load a snapshot of the first image in the connected batch. Never runs downstream nodes.";
     toolbar.append(brush, rectangle, eraser, control("Size", size, "px"), fill, undo, clear, grayscale);
     const override = element("div", "wn-mask-override"); override.hidden = true;
-    override.textContent = "Saved painting only — disconnect MASK to apply it.";
+    override.textContent = "仅用已保存的笔触——断开 MASK 才会应用它。";
     const sourceRow = element("div", "wn-mask-row wn-mask-between");
     const sourceState = element("span", "wn-mask-note");
     sourceRow.append(sourceState, source);
-    const removeRef = element("button"); removeRef.textContent = "Remove reference";
+    const removeRef = element("button"); removeRef.textContent = "移除参考图";
     const decision = element("div", "wn-mask-row wn-mask-decision"); decision.hidden = true;
-    const question = element("span"); question.textContent = "Replace image and clear mask?";
+    const question = element("span"); question.textContent = "替换图片并清空蒙版？";
     const replace = element("button"); replace.textContent = "Replace";
     const cancel = element("button"); cancel.textContent = "Cancel";
     decision.append(question, replace, cancel);
@@ -166,7 +166,7 @@ export function setupMaskedLora(node, { maskOnly = false, label = "", outputSize
     const composite = element("canvas", "wn-mask-composite");
     const tint = element("canvas"), referenceLayer = element("canvas");
     canvas.setAttribute("aria-label", "Paint mask here, or drop an image");
-    const hint = element("span", "wn-mask-hint"); hint.textContent = "Drop image or paint here";
+    const hint = element("span", "wn-mask-hint"); hint.textContent = "把图片拖到这里，或在此涂画";
     stage.append(composite, canvas, hint);
     const dimensions = element("div", "wn-mask-note");
     dimensions.title = outputSize ? "Painted at the image's own size. All outputs are resized to the size after the arrow (the Qwen reference grid)." : maskOnly ? "MASK output uses these exact dimensions. Painted areas are white (1); untouched areas are black (0)." : "The mask maps proportionally to the output image grid. A blank square mask stretches on non-square outputs. Load an image with the intended aspect ratio for aligned painting.";

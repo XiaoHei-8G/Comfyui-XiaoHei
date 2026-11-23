@@ -60,7 +60,7 @@ function setupZoomCrop(node) {
     const root = element("div", "wn-zc");
     const frame = element("div", "wn-zc-frame");
     frame.tabIndex = 0;
-    frame.title = "Click or drag to choose which part of the image to keep. Arrow keys nudge, C centers.";
+    frame.title = "点击或拖动选择要保留的画面部分。方向键微调，C 居中。";
     const keep = element("div", "wn-zc-keep");
     const ghost = element("div", "wn-zc-ghost");
     const dots = POSITIONS.map((value, index) => {

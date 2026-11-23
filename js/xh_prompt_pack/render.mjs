@@ -6,7 +6,7 @@
 //   图案全部走自有图标库 xhIconHTML（零硬编码 SVG / 零 emoji / 零字母冒充），
 //   字体统一 var(--font-sans, ui-sans-serif, system-ui, sans-serif)。
 import { MODES, parsePrompts } from "./core.mjs";
-import { xhIconHTML } from "../xh_ui_kit.js";
+import { xhIconHTML, onLangChanged } from "../xh_ui_kit.js";
 
 const CSS_ID = "xh-prompt-pack-css";
 const CSS = `
@@ -66,7 +66,7 @@ export function injectCSS() {
 
 /** 一颗带家族图标的动作按钮；文字单独放 span，翻转反馈只改这个 span，
  *  不会把图标 innerHTML 冲掉（§13.49 状态翻转文案铁律）。 */
-function mkActBtn(icon, label, title) {
+function mkActBtn(icon, label, title, langKey) {
   const b = document.createElement("button");
   b.type = "button";
   b.className = "xh-pp-actbtn";
@@ -75,8 +75,29 @@ function mkActBtn(icon, label, title) {
     + '<span class="xh-pp-btnlabel"></span>';
   b.querySelector(".xh-pp-btnlabel").textContent = label;
   b.dataset.xhIconDone = "1";
+  if (langKey) b.dataset.xhPpLang = langKey;
   return b;
 }
+// 🔴 按钮文案走家族语言中枢（2026-11-21 用户拍板）：「粘贴替换」→「粘贴」，
+//    三颗按钮以前硬编码中文、切英文纹丝不动，这里一并接 onLangChanged。
+const BTN_LANG = {
+  copy:  { zh: ["复制全部", "把框里全部文字复制到剪贴板"], en: ["Copy all", "Copy all text in the box to the clipboard"] },
+  paste: { zh: ["粘贴", "用剪贴板里的文字覆盖框里的内容（剪贴板是空的或只有图片时不会清空）"], en: ["Paste", "Replace the box with text from the clipboard (empty or image-only clipboard leaves it untouched)"] },
+  clear: { zh: ["清空", "立刻清空框里的文字（不弹确认）"], en: ["Clear", "Clear the text immediately (no confirmation)"] },
+};
+const L = (zh, en) => (window.XH_LANG === "en" ? en : zh);
+function applyBtnLang() {
+  for (const b of document.querySelectorAll(".xh-pp-actbtn[data-xh-pp-lang]")) {
+    const rec = BTN_LANG[b.dataset.xhPpLang];
+    if (!rec) continue;
+    const pair = L(rec.zh, rec.en);
+    const span = b.querySelector(".xh-pp-btnlabel");
+    // 只改文字 span，绝不动 innerHTML（图标还在里面）。
+    if (span) span.textContent = pair[0];
+    b.title = pair[1];
+  }
+}
+onLangChanged(applyBtnLang, { tag: "XiaoHei.PromptPack.BtnLang" });
 
 /** 造一整块 DOM。事件由 interaction.mjs::wireEvents 挂。 */
 export function buildRoot() {
@@ -112,9 +133,13 @@ export function buildRoot() {
   const actions = document.createElement("div");
   actions.className = "xh-pp-actions";
 
-  const copyBtn = mkActBtn("copy", "复制全部", "把框里全部文字复制到剪贴板");
-  const replaceBtn = mkActBtn("clipboard-paste", "粘贴替换", "用剪贴板里的文字替换框里的内容（剪贴板是空的或只有图片时不会清空）");
-  const clearBtn = mkActBtn("trash-2", "清空", "立刻清空框里的文字（不弹确认）");
+  const mkLangBtn = (key, icon) => {
+    const pair = L(BTN_LANG[key].zh, BTN_LANG[key].en);
+    return mkActBtn(icon, pair[0], pair[1], key);
+  };
+  const copyBtn = mkLangBtn("copy", "copy");
+  const replaceBtn = mkLangBtn("paste", "clipboard-paste");
+  const clearBtn = mkLangBtn("clear", "trash-2");
   clearBtn.disabled = true;
   actions.append(copyBtn, replaceBtn, clearBtn);
 

@@ -84,7 +84,7 @@ function setupSigmaCurve(node) {
     // ---- DOM -------------------------------------------------------------
     const root = el("div", "wn-sigma"); root.tabIndex = 0;
     const bar = el("div", "sc-bar");
-    const preset = el("select"); preset.title = "Replace the curve with a standard schedule (uses sigma_min / sigma_max)";
+    const preset = el("select"); preset.title = "用标准调度替换曲线（使用 sigma_min / sigma_max）";
     preset.append(new Option("Preset…", ""));
     for (const [key, p] of Object.entries(PRESETS)) preset.append(new Option(p.label, key));
     const logBtn = button("Log", "Log-scale sigma axis (view only) — shows detail at low sigmas");

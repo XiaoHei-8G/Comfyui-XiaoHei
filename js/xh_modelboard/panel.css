@@ -740,3 +740,70 @@
 #xhmb-mask .xhmb-tr.on,
 #xhmb-mask .xhmb-tr.istype.on,
 #xhmb-mask .xhmb-tab.on { color: var(--xh-on-primary, #1A1613) !important; }
+
+/* ── 下载到模型目录：网盘链接 → 下载暂存夹 → 一键归位 ── */
+#xhmb-mask .xhmb-download {
+  margin-top: 4px; padding: 11px 12px; border-radius: 8px;
+  background: var(--xh-surface, #1c1c1c); border: 1px solid var(--xh-border, #333);
+  display: flex; flex-direction: column; gap: 9px;
+}
+#xhmb-mask .xhmb-dl-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 500; color: var(--xh-primary, #E8A33C);
+}
+#xhmb-mask .xhmb-dl-steps {
+  display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px;
+  color: var(--xh-sub, #8a8a8a); font-variant-numeric: tabular-nums;
+}
+#xhmb-mask .xhmb-dl-main,
+#xhmb-mask .xhmb-dl-import {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 12px; border-radius: 7px; cursor: pointer;
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 12px; font-weight: 500; transition: filter .15s, opacity .15s;
+}
+#xhmb-mask .xhmb-dl-main {
+  background: var(--xh-primary, #E8A33C); border: 1px solid var(--xh-primary, #E8A33C);
+  color: var(--xh-on-primary, #1A1613);
+}
+#xhmb-mask .xhmb-dl-import {
+  background: transparent; border: 1px solid var(--xh-primary, #E8A33C);
+  color: var(--xh-primary, #E8A33C);
+}
+#xhmb-mask .xhmb-dl-main:hover,
+#xhmb-mask .xhmb-dl-import:hover { filter: brightness(1.08); }
+#xhmb-mask .xhmb-dl-main:disabled,
+#xhmb-mask .xhmb-dl-import:disabled { opacity: .45; cursor: default; filter: none; }
+#xhmb-mask .xhmb-dl-stage { display: flex; flex-direction: column; gap: 5px; }
+#xhmb-mask .xhmb-dl-stage > label {
+  font-size: 12px; color: var(--xh-sub, #8a8a8a);
+  display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+}
+#xhmb-mask .xhmb-dl-hint {
+  font-size: 11px; line-height: 1.6; color: var(--xh-sub, #8a8a8a);
+}
+#xhmb-mask .xhmb-import-result {
+  border: 1px solid var(--xh-border, #333); border-radius: 7px;
+  background: var(--xh-card, #252525); padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+#xhmb-mask .xhmb-ir-head {
+  display: flex; align-items: center; gap: 8px; font-size: 12px;
+  font-weight: 500; color: var(--xh-text, #e8e8e8);
+}
+#xhmb-mask .xhmb-ir-head .xhmb-mini { margin-left: auto; }
+#xhmb-mask .xhmb-ir-list {
+  max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px;
+}
+#xhmb-mask .xhmb-ir-row {
+  display: grid; grid-template-columns: 76px minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 8px; align-items: center; font-size: 11px; line-height: 1.5;
+}
+#xhmb-mask .xhmb-ir-flag { font-size: 10px; white-space: nowrap; }
+#xhmb-mask .xhmb-ir-flag.ok { color: #4caf72; }
+#xhmb-mask .xhmb-ir-flag.skip { color: var(--xh-sub, #8a8a8a); }
+#xhmb-mask .xhmb-ir-flag.miss { color: var(--xh-danger, #e05858); }
+#xhmb-mask .xhmb-ir-name,
+#xhmb-mask .xhmb-ir-why { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#xhmb-mask .xhmb-ir-name { color: var(--xh-text, #e8e8e8); }
+#xhmb-mask .xhmb-ir-why { color: var(--xh-sub, #8a8a8a); }

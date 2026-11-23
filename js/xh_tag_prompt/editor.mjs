@@ -71,6 +71,20 @@ const CSS = `
 .xh-tage-menu div{padding:6px 10px;cursor:pointer;border-radius:4px;font-size:12px}
 .xh-tage-menu div:hover{background:color-mix(in srgb,var(--xh-primary,#E8A33C) 22%,transparent)}
 .xh-tage-warn{border:1px solid var(--xh-primary,#E8A33C);border-radius:6px;padding:8px 10px;margin-bottom:12px}
+/* 2026-11-21 新增：三种记号的引导条（复刻 Pix 时原样搬来、零解释，粉丝看不懂）*/
+.xh-tage-guide{flex:none;padding:10px 14px;border-bottom:1px solid var(--border,#494a50);
+  display:flex;flex-direction:column;gap:9px}
+.xh-tage-guide .lead{font-size:12px;opacity:.9}
+.xh-tage-symcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.xh-tage-symcard{border:1px solid var(--border,#494a50);border-radius:8px;padding:9px 11px;
+  background:var(--background,#171718)}
+.xh-tage-symcard .k{display:inline-block;border-radius:5px;padding:1px 8px;margin-bottom:6px;
+  background:color-mix(in srgb,var(--xh-primary,#E8A33C) 20%,transparent);
+  color:var(--xh-primary,#E8A33C);font-weight:600;font-size:12px}
+.xh-tage-symcard .d{font-size:11.5px;opacity:.82;line-height:1.5}
+.xh-tage-seltype{background:var(--secondary,#262729);color:var(--foreground,#fff);
+  border:1px solid var(--border,#494a50);border-radius:5px;padding:5px 8px;
+  font:11px var(--font-family,sans-serif);outline:none}
 `;
 function injectCSS() {
   if (document.getElementById(CSS_ID)) return;
@@ -116,7 +130,9 @@ function renderSide(host) {
   all.append(el("span", null, "全部标签"), el("span", "n", String(_work.tags.length)));
   all.addEventListener("click", () => { _curCat = "全部"; render(); });
   host.appendChild(all);
-  for (const [side, label] of [["text", "文字分类"], ["list", "清单分类"]]) {
+  // 2026-11-21：分组标题改成「符号 + 大白话」，跟顶部引导条一一对应，
+  // 不再用 Pix 原版「文字分类 / 清单分类」那种分不清的概念词。
+  for (const [side, label] of [["text", "@ 文字标签 · 固定"], ["list", "# 清单标签 · 抽一行"]]) {
     host.appendChild(el("div", "xh-tage-h", label));
     for (const c of getCategories(side)) {
       if (!_work.categories.includes(c) && ![TEXT_BUCKET, LIST_BUCKET].includes(c)) continue;
@@ -127,26 +143,38 @@ function renderSide(host) {
       host.appendChild(row);
     }
   }
-  host.appendChild(el("div", "xh-tage-h", "分类"));
-  const btn = el("button", "xh-tage-btn", "＋ 新建分类（清单）");
+  host.appendChild(el("div", "xh-tage-h", "* 分类 · 随机挑"));
+  const btn = el("button", "xh-tage-btn", "＋ 新建分类");
   btn.style.width = "100%";
   btn.addEventListener("click", () => {
+    // 2026-11-21：取消「名字前加 *」手打语法 —— 输入框 + 下拉选类型，纯点击。
+    const wrap = el("div", "xh-tage-row");
+    wrap.style.cssText = "flex-wrap:nowrap;margin-top:8px";
     const inp = el("input", "xh-tage-newcat");
-    inp.placeholder = "输入名字后回车；名字前加 * 建文字分类";
-    host.appendChild(inp); inp.focus();
-    inp.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { inp.remove(); return; }
-      if (e.key !== "Enter") return;
-      const raw = inp.value.trim(); if (!raw) { inp.remove(); return; }
-      const asList = !raw.startsWith("*");
-      const name = asList ? raw : raw.slice(1).trim();
-      if (name && !_work.categories.includes(name)) {
+    inp.style.cssText = "margin-top:0;flex:1 1 auto;min-width:0";
+    inp.placeholder = "分类名字，回车";
+    const sel = el("select", "xh-tage-seltype");
+    for (const [lab, val] of [["清单", "list"], ["文字", "text"]]) {
+      const op = el("option", null, lab); op.value = val; sel.appendChild(op);
+    }
+    sel.title = "清单 = 这类的标签每次抽一行；文字 = 固定文字";
+    const add = () => {
+      const name = inp.value.trim(); if (!name) { render(); return; }
+      const asList = sel.value === "list";
+      if (!_work.categories.includes(name)) {
         _work.categories.push(name);
         if (asList && !_work.listCats.includes(name)) _work.listCats.push(name);
         commitNow();
       }
-      inp.remove(); render();
+      render();
+    };
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { render(); return; }
+      if (e.key !== "Enter") return;
+      e.preventDefault(); add();
     });
+    wrap.append(inp, sel);
+    host.appendChild(wrap); inp.focus();
   });
   host.appendChild(btn);
 }
@@ -157,15 +185,15 @@ function renderCreate(host) {
   c1.appendChild(el("div", "xh-tage-lbl", "标签名字"));
   const nameIn = el("input"); nameIn.placeholder = "例如 油画风";
   c1.appendChild(nameIn);
-  c2.appendChild(el("div", "xh-tage-lbl", "展开成什么内容（清单类一行一个选项）"));
-  const textIn = el("textarea"); textIn.placeholder = "厚涂笔触、伦勃朗光、画布纹理…";
+  c2.appendChild(el("div", "xh-tage-lbl", "展开成什么内容（清单：一行一个选项，运行时随机抽一行）"));
+  const textIn = el("textarea"); textIn.placeholder = "厚涂笔触\n伦勃朗光\n画布纹理　← 一行一个";
   c2.appendChild(textIn);
   const sideWrap = el("div");
-  sideWrap.appendChild(el("div", "xh-tage-lbl", "类型"));
+  sideWrap.appendChild(el("div", "xh-tage-lbl", "类型（决定插进提示词用 @ 还是 #）"));
   const seg = el("div", "xh-tage-row");
   let asList = false;
-  const bText = el("button", "xh-tage-btn on", "文字");
-  const bList = el("button", "xh-tage-btn", "清单");
+  const bText = el("button", "xh-tage-btn on", "@ 文字");
+  const bList = el("button", "xh-tage-btn", "# 清单");
   const paint = () => { bText.classList.toggle("on", !asList); bList.classList.toggle("on", asList); };
   bText.addEventListener("click", () => { asList = false; paint(); });
   bList.addEventListener("click", () => { asList = true; paint(); });
@@ -216,12 +244,15 @@ function renderCards(host) {
     ta.addEventListener("input", () => { t.text = ta.value; commit(); });
     ta.addEventListener("keydown", (e) => e.stopPropagation());
     const row = el("div", "xh-tage-row");
-    const ins = el("button", "xh-tage-btn pri", "插入");
-    ins.title = isListTag(t) ? `插入 #${t.name}（每次运行抽一行）` : `插入 @${t.name}（整段文字）`;
+    // 2026-11-21：按钮直接写出插的是什么记号（原来只有「插入」俩字，插了 @ 还是 # 全靠猜）。
+    const insSym = isListTag(t) ? "#" : "@";
+    const insLabel = `插入 ${insSym}${t.name}`;
+    const ins = el("button", "xh-tage-btn pri", insLabel);
+    ins.title = isListTag(t) ? `把 #${t.name} 插进提示词（每次运行抽一行）` : `把 @${t.name} 插进提示词（整段文字）`;
     ins.addEventListener("click", () => {
       _opts?.onInsert?.(t.name, isListTag(t) ? "#" : "@");
-      const old = ins.textContent; ins.textContent = "已插入 ✓";
-      setTimeout(() => { ins.textContent = old; }, 850);
+      ins.textContent = "已插入 ✓";
+      setTimeout(() => { ins.textContent = insLabel; }, 850);
     });
     const bText = el("button", "xh-tage-btn", "文字");
     const bList = el("button", "xh-tage-btn", "清单" + (isListTag(t) ? ` · ${tagLines(t.text).length}` : ""));
@@ -293,6 +324,20 @@ export function openTagEditor(opts = {}) {
   const x = el("span", "xh-tage-x"); x.dataset.xhIconDone = "1"; x.innerHTML = xhIconHTML("x", { size: 14, color: "current" }); x.title = "关闭";
   x.addEventListener("click", closeTagEditor);
   bar.appendChild(x);
+  // 2026-11-21：顶部引导条 —— 三种记号一眼看懂，切语言时整块重刷。
+  const guide = el("div", "xh-tage-guide");
+  guide.append(el("div", "lead", "在提示词框里敲这些记号就会自动替换；也可以点下面卡片上的「插入」直接加进来。"));
+  const symcards = el("div", "xh-tage-symcards");
+  for (const [sym, desc] of [
+    ["@ 名字", "固定文字：每次都用这段原话，不随机。"],
+    ["# 名字", "清单：一行一个选项，每次运行随机抽一行。"],
+    ["* 分类", "随机：从这个分类的标签里挑一个。"],
+  ]) {
+    const card = el("div", "xh-tage-symcard");
+    card.append(el("span", "k", sym), el("div", "d", desc));
+    symcards.appendChild(card);
+  }
+  guide.appendChild(symcards);
   const main = el("div", "xh-tage-main");
   main.append(el("div", "xh-tage-side"), el("div", "xh-tage-content"));
   const foot = el("div", "xh-tage-foot");
@@ -336,7 +381,7 @@ export function openTagEditor(opts = {}) {
   const done = el("button", "xh-tage-btn pri", "完成");
   done.addEventListener("click", closeTagEditor);
   foot.append(exp, imp, file, el("span", "xh-tage-sp"), done);
-  ov.append(bar, main, foot);
+  ov.append(bar, guide, main, foot);
   document.body.appendChild(ov);
   _ov = ov;
   render();

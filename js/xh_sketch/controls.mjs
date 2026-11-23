@@ -8,6 +8,7 @@
 // typing - a rebuild would steal the note box's focus mid-word.
 
 import { isComfyTextShortcut } from "../shared/text_shortcuts.mjs";
+import { pixConfirm } from "../shared/confirm_dialog.mjs";
 import { xhIconHTML } from "../xh_ui_kit.js";
 import {
   COLORS, SWATCHES, WIDTH_KEYS, buildPrompt, injectedState, readState, rgbOf,
@@ -74,16 +75,16 @@ export function buildTools(node, host, { vertical = false } = {}) {
   };
 }
 
-/** Undo / Redo / Clear, plus the optional Expand and Gear. Returns sync(). */
+/** Undo / Redo, plus the optional Expand and Gear. Returns sync().
+ *  2026-11-20 大厂档：Clear 是破坏性操作，已从左侧工具轨拆出、移到右上角
+ *  （buildClear），跟画笔拉开距离并加二次确认。这里只留高频非破坏的撤销/重做。 */
 export function buildActions(node, host, { vertical = false, onExpand = null, onGear = null } = {}) {
   if (vertical) host.appendChild(sep(true));
   const u = btn("pix-sketch-btn", t("undo"), ico(ICON_UNDO));
   const r = btn("pix-sketch-btn", t("redo"), ico(ICON_REDO));
-  const c = btn("pix-sketch-btn", t("clear"), ico(ICON_CLEAR));
   u.addEventListener("click", (e) => { e.stopPropagation(); undo(node); });
   r.addEventListener("click", (e) => { e.stopPropagation(); redo(node); });
-  c.addEventListener("click", (e) => { e.stopPropagation(); clearMarks(node); });
-  host.append(u, r, c);
+  host.append(u, r);
   let x = null, g = null;
   if (onExpand) {
     x = btn("pix-sketch-btn", t("expand"), ico(ICON_EXPAND));
@@ -97,22 +98,45 @@ export function buildActions(node, host, { vertical = false, onExpand = null, on
   }
   return () => {
     const ui = uiState(node);
-    const has = readState(node).marks.length > 0;
     u.disabled = !ui.undo.length;
     r.disabled = !ui.redo.length;
-    c.disabled = !has;
-    u.title = t("undo"); r.title = t("redo"); c.title = t("clear");
+    u.title = t("undo"); r.title = t("redo");
     if (x) x.title = t("expand");
     if (g) g.title = t("settings");
   };
 }
 
+/** 清空全部标记：破坏性操作，右上角危险按钮 + 二次确认（大厂档 2026-11-20）。
+ *  pixConfirm 用 danger:true ⇒ 默认聚焦「取消」，键盘 Enter 不会误删。Returns sync(). */
+export function buildClear(node, host) {
+  const c = btn("pix-sketch-btn pix-sketch-clear", t("clear"), ico(ICON_CLEAR));
+  c.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!readState(node).marks.length) return;
+    const ok = await pixConfirm({
+      title: t("clearConfirmTitle"),
+      message: t("clearConfirmMsg"),
+      okText: t("clearConfirmOk"),
+      cancelText: t("clearConfirmCancel"),
+      danger: true,
+    });
+    if (ok) clearMarks(node);
+  });
+  host.appendChild(c);
+  return () => {
+    c.disabled = !readState(node).marks.length;
+    c.title = t("clear");
+  };
+}
+
 const WIDTH_TITLE = { S: "widthS", M: "widthM", L: "widthL", XL: "widthXL" };
 
-/** Just Expand and Gear, for the face's floating top-right corner (2026-11-20,
- *  方案 A: they no longer sit in the tool row). Returns sync(). */
+/** Expand / Gear / Clear, for the face's floating top-right corner (2026-11-20
+ *  方案 A + 大厂档: Clear 移到这里，跟完成/展开/设置成"结束区"，标红带确认).
+ *  Returns sync(). */
 export function buildMiniActions(node, host, { onExpand = null, onGear = null } = {}) {
   let x = null, g = null;
+  const syncClear = buildClear(node, host);   // 危险按钮排在右上第一个
   if (onExpand) {
     x = btn("pix-sketch-btn", t("expand"), ico(ICON_EXPAND));
     x.addEventListener("click", (e) => { e.stopPropagation(); onExpand(); });
@@ -124,6 +148,7 @@ export function buildMiniActions(node, host, { onExpand = null, onGear = null } 
     host.appendChild(g);
   }
   return () => {
+    syncClear?.();
     if (x) x.title = t("expand");
     if (g) g.title = t("settings");
   };

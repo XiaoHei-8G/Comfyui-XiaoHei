@@ -325,7 +325,7 @@ function buildHexBar(label, getVal, onCommit) {
   set(getVal());
   // Click the swatch to copy the color code (with a brief green flash).
   chip.style.cursor = "pointer";
-  chip.title = "Copy color code";
+  chip.title = "复制色值";
   chip.addEventListener("mousedown", (e) => e.stopPropagation());
   chip.addEventListener("pointerdown", (e) => e.stopPropagation());
   chip.addEventListener("click", () => {
@@ -638,7 +638,7 @@ function openNodeColorsPalette(targets, node) {
   const btnBar = buildHexBar("按键", () => btnHex, (v) => { btnHex = v; applyBtnNow(); if (target === "btn") picker.setColor(v); });
   btnBar.el.style.display = "none";
   // link toggle between Title & Body (when on, Body = a darker tint of Title)
-  linkBtn = document.createElement("button"); linkBtn.type = "button"; linkBtn.title = "Link Title & Body (Body = darker tint of Title)";
+  linkBtn = document.createElement("button"); linkBtn.type = "button"; linkBtn.title = "联动标题与正文（正文 = 标题加深）";
   linkBtn.style.cssText = "flex:0 0 auto;width:30px;align-self:stretch;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;padding:0;";
   linkIco = document.createElement("span");
   linkIco.style.cssText = "width:16px;height:16px;transform:rotate(45deg);background:currentColor;-webkit-mask:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Cpath fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 d=%22M9.5 14.5 14.5 9.5M8 12H6.5a4 4 0 0 1 0-8H10M16 12h1.5a4 4 0 0 1 0 8H14%22/%3E%3C/svg%3E') center/contain no-repeat;mask:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Cpath fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 d=%22M9.5 14.5 14.5 9.5M8 12H6.5a4 4 0 0 1 0-8H10M16 12h1.5a4 4 0 0 1 0 8H14%22/%3E%3C/svg%3E') center/contain no-repeat;";

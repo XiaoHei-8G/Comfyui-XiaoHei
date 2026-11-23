@@ -5,7 +5,7 @@
 //   ③ 齿轮 / 标签库 / 预览都作用在当前节点上，库靠打开时传入的回调写回；
 //   ④ 包装 app.graphToPrompt，点「运行」那一刻才把 @/*/# 展开并塞进隐藏输入。
 import { app } from "../../../scripts/app.js";
-import { xhIconHTML, isSizeLike } from "../xh_ui_kit.js";
+import { xhIconHTML, isSizeLike, onLangChanged } from "../xh_ui_kit.js";
 import { applyAdaptiveCanvasOnly, isVueNodes } from "../shared/nodes2.mjs";
 import { installResizeFloor } from "../shared/resize_floor.mjs";
 import { installNativeTextMenu } from "../shared/native_text_menu.mjs";
@@ -57,6 +57,42 @@ function btn(label, title) {
   b.type = "button"; b.className = "xh-tp-btn"; b.textContent = label; b.title = title;
   return b;
 }
+// 🔴 按钮文案走家族语言中枢（2026-11-21 用户拍板）：「替换」实为读剪贴板写入 ⇒ 改名「粘贴」。
+//    这几个按钮以前硬编码中文，切英文纹丝不动 —— 与局部重绘同一个病根，这里一并根治。
+const BTN_LANG = {
+  copy:  { zh: ["复制", "把整个提示词复制到剪贴板"], en: ["Copy", "Copy the whole prompt to the clipboard"] },
+  paste: { zh: ["粘贴", "用剪贴板里的文字覆盖整个提示词"], en: ["Paste", "Replace the whole prompt with text from the clipboard"] },
+  clear: { zh: ["清空", "清空提示词"], en: ["Clear", "Clear the prompt"] },
+  tags:  { zh: ["标签库", "打开标签库：新建、修改、插入标签"], en: ["Tag library", "Open the tag library: create, edit, insert tags"] },
+  prev:  { zh: ["预览", "在下方显示真正会送出去的字"], en: ["Preview", "Show the text that will actually be sent below"] },
+  gear:  { zh: ["", "打开本节点的设置"], en: ["", "Open this node's settings"] },
+};
+const L = (zh, en) => (window.XH_LANG === "en" ? en : zh);
+function mkBtn(key) {
+  const pair = L(BTN_LANG[key].zh, BTN_LANG[key].en);
+  const b = btn(pair[0], pair[1]);
+  b.dataset.xhTpLang = key;
+  return b;
+}
+function applyBtnLang() {
+  const visit = (g) => {
+    for (const n of (g?._nodes || g?.nodes || [])) {
+      const root = n?._xhTagRoot?.root;
+      if (root) for (const b of root.querySelectorAll(".xh-tp-btn[data-xh-tp-lang]")) {
+        const rec = BTN_LANG[b.dataset.xhTpLang];
+        if (!rec) continue;
+        const pair = L(rec.zh, rec.en);
+        // 齿轮是图标按钮：只换 title，textContent 是图标 span，动它会把图案冲掉。
+        if (b.dataset.xhTpLang !== "gear") b.textContent = pair[0];
+        b.title = pair[1];
+      }
+      const inner = n?.subgraph || n?.graph || n?._graph;
+      if (inner && inner !== g) visit(inner);
+    }
+  };
+  visit(app.graph);
+}
+onLangChanged(applyBtnLang, { tag: "XiaoHei.TagPrompt.BtnLang" });
 
 registerNodeSettings(CLASS, {
   title: "标签提示词",
@@ -102,32 +138,32 @@ export function setupNode(node) {
   const prev = document.createElement("div"); prev.className = "xh-tp-prev";
 
   const bar = document.createElement("div"); bar.className = "xh-tp-bar";
-  const copy = btn("复制", "把整个提示词复制到剪贴板");
+  const copy = mkBtn("copy");
   copy.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(field.getValue()); } catch { /* 权限不给就算了 */ }
   });
-  const replace = btn("替换", "用剪贴板里的文字替换整个提示词");
-  replace.addEventListener("click", async () => {
+  const paste = mkBtn("paste");
+  paste.addEventListener("click", async () => {
     try { field.setValue(await navigator.clipboard.readText()); writeState(node, { text: field.getValue() }); renderPreview(node); }
     catch { /* 同上 */ }
   });
-  const clear = btn("清空", "清空提示词");
+  const clear = mkBtn("clear");
   clear.addEventListener("click", () => { field.setValue(""); writeState(node, { text: "" }); renderPreview(node); });
-  const tags = btn("标签库", "打开标签库：新建、修改、插入标签");
+  const tags = mkBtn("tags");
   tags.addEventListener("click", () => openTagEditor({ onInsert: (name, sym) => field.insert(name, sym) }));
-  const prevBtn = btn("预览", "在下方显示真正会送出去的字");
+  const prevBtn = mkBtn("prev");
   prevBtn.addEventListener("click", () => {
     const next = !readState(node).showExpanded;
     writeState(node, { showExpanded: next });
     prevBtn.classList.toggle("on", next);
     renderPreview(node);
   });
-  const gear = btn("", "打开本节点的设置");
+  const gear = mkBtn("gear");
   gear.className = "xh-tp-btn gear";
   gear.dataset.xhTagGear = "1";
   gear.innerHTML = xhIconHTML("设置", { size: 14, color: "current" });
   gear.addEventListener("click", () => openTagSettings(node, () => renderPreview(node)));
-  bar.append(copy, replace, clear, tags, prevBtn, gear);
+  bar.append(copy, paste, clear, tags, prevBtn, gear);
 
   const foot = document.createElement("div"); foot.className = "xh-tp-foot";
   foot.textContent = "XiaoHei · 标签只存本机，分享工作流请用标签库里的导出";

@@ -16,7 +16,7 @@ from pathlib import Path
 
 PRESETS_PATH = Path(__file__).resolve().parent / "frame_number_presets.json"
 _LEADING_INT = re.compile(r"^\s*(\d+)")
-log = logging.getLogger("WepeNerd")
+log = logging.getLogger("XiaoHei")
 
 
 def make_label(frames):
@@ -63,7 +63,7 @@ def load_presets(path=PRESETS_PATH):
         try:
             fps, frames = expand_preset(cfg)
         except (KeyError, TypeError, ValueError) as error:
-            log.warning("[WepeNerd] Duration Selector: skipping preset %r (%s).", name, error)
+            log.warning("[XiaoHei] 时长预设：跳过 %r（%s）。", name, error)
             continue
         if not frames:
             continue
@@ -94,7 +94,7 @@ def select_frames(presets, preset, frames):
     count = parse_frames(frames)
     if count not in entry["frames"]:
         snapped = nearest(entry["frames"], count)
-        log.warning("[WepeNerd] Duration Selector: %d frames isn't valid for %s; using %d.",
+        log.warning("[XiaoHei] 时长预设：%d 帧对 %s 不合法，改用 %d 帧。",
                     count, preset, snapped)
         count = snapped
     return count, entry["fps"], round(count / entry["fps"], 4)

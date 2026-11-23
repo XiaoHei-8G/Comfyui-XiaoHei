@@ -47,12 +47,11 @@ function snapText(node) {
     const secs = (frames / FPS).toFixed(2);
     const outside = frames < TRAIN_MIN || frames > TRAIN_MAX;
     if (S?.dirty) {
-        const modeZh = { average: "平均分段", cuts: "按镜头切点", single: "整片一段" }[S.mode];
-        const modeEn = { average: "even segments", cuts: "shot cuts", single: "one shot" }[S.mode];
+        const modeZh = { average: "平均切", cuts: "自己点", single: "整片不切" }[S.mode];
+        const modeEn = { average: "even cut", cuts: "pick points", single: "no cut" }[S.mode];
         return T(
-            `→ 三层模式：L1 ${modeZh}；镜头超过 ${frames} 帧 · ${secs} 秒就按 H3 帧数上限自动补切`,
-            `→ Hierarchical: L1 ${modeEn}; shots over ${frames} frames · ${secs} s `
-            + `are auto-split at the H3 frame cap`);
+            `→ 分段：${modeZh}；镜头超过 ${frames} 帧 · ${secs} 秒就按 H3 帧数上限自动切成小块`,
+            `→ Split: ${modeEn}; shots over ${frames} frames · ${secs} s are auto-split at the H3 frame cap`);
     }
     if (widgetOf(node, "cut_mode")?.value === "manual") {
         return currentLang() === "zh"
@@ -97,7 +96,7 @@ const OUTPUT_TT_EN = [
     "Plain-text chunk plan, one row per segment.",
 ];
 const WIDGET_TT_EN = {
-    prompt: "Keep WepeNerd's default propagation prompt.",
+    prompt: "Keep the default propagation prompt.",
     chunk_duration: "Seconds per chunk, snapped to H3's 17k+5 frame grid.",
     overlap_frames: "Requested overlap; rounded DOWN to a legal 17k+5 count.",
     seed: "Base seed; chunk N uses seed + N.",
@@ -109,13 +108,13 @@ const WIDGET_TT_EN = {
         + "lowmem writes into one preallocated RAM buffer, "
         + "disk streams chunks to a temp folder first.",
     //  2026-11-10 三层父子模型（与 long_ripple_node.py 的 tooltip 逐字一致）
-    cut_mode: "L1 segment mode: average = equal-length segments, cuts = your own shot "
+    cut_mode: "Segment mode: average = equal-length segments, cuts = your own shot "
         + "boundaries in the segment panel, single = one segment for the whole video, "
         + "manual = legacy text syntax (compatibility only).",
     cut_points: "Legacy cut text, superseded by the on-node segment plan panel. "
         + "The panel writes a structured JSON plan here; leave the old "
         + "8.5H, 19.2C:20 syntax untouched to keep legacy behaviour.",
-    segment_count: "L1 segment count for average mode; 0 = auto from the H3 frame cap. "
+    segment_count: "Segment count for average mode; 0 = auto from the H3 frame cap. "
         + "Ignored when the segment plan panel supplies its own count.",
 };
 const INPUT_TT_EN = {
@@ -264,18 +263,26 @@ function stepFrame(frame, dir) {
 }
 
 function panelDefaults() {
-    // capF / blockov 是面板自己的真源：点击只改这里，不再依赖被隐藏数字框的 value 或 callback。
+    // 面板是唯一真源：点击只改这里，再容错写回被隐藏的原生 widget（不调 callback）。
+    // moreOpen 只是面板展开状态，跟渲染参数无关，但一起存进 JSON 便于刷新恢复。
     return { mode: "cuts", count: 0, rows: [], dirty: true, legacy: false,
-             capF: 243, blockov: 9 };
+             capF: 243, blockov: 9,
+             seamBlend: false, carryTail: true, memoryMode: "lowmem", dryRun: true,
+             moreOpen: false };
 }
 
 function readPanelValue(raw, node) {
     const S = panelDefaults();
     if (node) {
-        // 首次加载：数值从两个原生 widget 读一次，之后一律以面板状态为准。
+        // 首次加载：数值从原生 widget 读一次，之后一律以面板状态为准。
         S.capF = capFrames(widgetOf(node, "chunk_duration")?.value);
         S.blockov = Math.max(0, Math.min(240,
             Math.round(Number(widgetOf(node, "overlap_frames")?.value ?? 9))));
+        S.seamBlend = !!widgetOf(node, "seam_blend")?.value;
+        S.carryTail = widgetOf(node, "carry_tail")?.value !== false;
+        const mem = String(widgetOf(node, "memory_mode")?.value ?? "lowmem");
+        S.memoryMode = ["cpu", "lowmem", "disk"].includes(mem) ? mem : "lowmem";
+        S.dryRun = widgetOf(node, "dry_run")?.value !== false;
     }
     const text = String(raw ?? "").trim();
     if (!text) return S;
@@ -297,6 +304,11 @@ function readPanelValue(raw, node) {
                 S.capF = Math.max(5, Math.min(362, Math.round(Number(d.capF))));
             if (Number.isFinite(Number(d.blockov)))
                 S.blockov = Math.max(0, Math.min(240, Math.round(Number(d.blockov))));
+            if (typeof d.seamBlend === "boolean") S.seamBlend = d.seamBlend;
+            if (typeof d.carryTail === "boolean") S.carryTail = d.carryTail;
+            if (["cpu", "lowmem", "disk"].includes(d.memoryMode)) S.memoryMode = d.memoryMode;
+            if (typeof d.dryRun === "boolean") S.dryRun = d.dryRun;
+            if (typeof d.moreOpen === "boolean") S.moreOpen = d.moreOpen;
             S.dirty = true;
             return S;
         } catch (e) { /* 落到旧语法显示 */ }
@@ -345,7 +357,8 @@ function hideNativeWidget(w) {
  *  chunk_duration / overlap_frames 的值仍留在 widget.value 里喂后端，由面板格子点一下写回。 */
 function hideManagedWidgets(node) {
     for (const name of ["cut_points", "cut_mode", "segment_count", "chunk_mode",
-                        "chunk_duration", "overlap_frames"]) {
+                        "chunk_duration", "overlap_frames",
+                        "dry_run", "seam_blend", "carry_tail", "memory_mode"]) {
         hideNativeWidget(widgetOf(node, name));
     }
 }
@@ -383,38 +396,79 @@ function writeWidgetValue(node, name, value) {
 function writeBackBlockParams(node, S) {
     writeWidgetValue(node, "chunk_duration", Number((S.capF / FPS).toFixed(4)));
     writeWidgetValue(node, "overlap_frames", S.blockov);
+    // 「更多设置」里四个参数同样写回隐藏原生 widget：后端只认这几个 key。
+    // Boolean 的 w.value 不能走 writeWidgetValue 的 Number() 比较（true→1 会误判），直接赋值。
+    const setBool = (name, value) => {
+        const w = widgetOf(node, name);
+        if (!w) return;
+        try { w.value = value; } catch (e) {}
+        if (w.options) { try { w.options.value = value; } catch (e) {} }
+    };
+    setBool("seam_blend", S.seamBlend);
+    setBool("carry_tail", S.carryTail);
+    setBool("dry_run", S.dryRun);
+    writeWidgetValue(node, "memory_mode", S.memoryMode);
 }
 
+/** 面板高度跟着「当前模式 + 更多设置是否展开」变，不多占一像素、也不裁内容。 */
 function domPanelHeight(S) {
-    let h = 6 + 16 + 3 + 20 + 3;                    // padding + 标题 + L1 模式行
-    if (S.mode === "cuts") h += 20 + 3 + Math.max(1, S.rows.length) * (PANEL_ROW_H + 3);
-    else h += 20 + 3;
-    h += PANEL_NOTE_H + 3;                          // 一行人话说明：超长自动补切、无开关
-    if (showBlockParams(S)) h += 20 + 3;           // L3 单块上限 / 块间重叠，常驻
-    return h + 6;
+    // 每一项都必须和 renderPanelDom 里 row()/gridRow() 实际画的高度逐行对应，
+    // 少算一行就会把底部（尤其折叠区）裁掉——这里按渲染顺序数：
+    let h = 6 + 16 + 3 + 20 + 3;                    // 底 padding + 标题 + 模式行
+    if (S.mode === "cuts") {
+        h += 14 + 3;                                // 表头：位置 / 类型 / 重叠
+        h += 20 + 3;                                // 「加切点 / 删末个」行
+        h += Math.max(1, S.rows.length) * (PANEL_ROW_H + 3); // 切点行（空时占一行提示）
+    } else if (S.mode === "average") {
+        h += PANEL_ROW_H + 3;                       // 「切成几段」行
+    } else {
+        h += 16 + 3;                                // 一句话说明
+    }
+    h += 18 + 3;                                    // 人话提示行（三个模式都有）
+    h += 20 + 3;                                    // 折叠条「更多设置」
+    if (S.moreOpen && showBlockParams(S)) h += 6 * (PANEL_ROW_H + 3); // 6 行高级参数
+    return h + 6;                                   // 顶 padding
 }
 
-/** 面板结构抽成纯数据：测试桩不依赖 DOM 也能验「按层展开 / 纯点击」。 */
+/** 面板结构抽成纯数据：测试桩不依赖 DOM 也能验「按模式显隐 / 纯点击」。 */
 function panelModel(S) {
     const zh = currentLang() === "zh";
     const secs = (S.capF / FPS).toFixed(2);
+    const memLabels = {
+        lowmem: zh ? "低内存" : "Low RAM",
+        cpu: zh ? "普通内存" : "Plain RAM",
+        disk: zh ? "落盘" : "Disk",
+    };
     return {
-        title: zh ? "分段计划 · 点格子修改" : "Segment plan · click a cell",
+        title: zh ? "长镜头 · 怎么分" : "Long take · how to split",
         showBlocks: showBlockParams(S),
-        // 唯一一条规则写成人话，动态数字跟着 L3 参数走；中/EN 现场生成，不进词典。
+        moreOpen: S.moreOpen,
+        moreTitle: S.moreOpen
+            ? (zh ? "▾ 收起更多设置" : "▾ Hide more settings")
+            : (zh ? "▸ 更多设置" : "▸ More settings"),
+        // 一句话硬规则：任何模式都可能触发，动态数字跟着参数走。
         note: zh
-            ? `镜头超过 ${S.capF} 帧（${secs} 秒）就按 H3 帧数上限自动补切，块间重叠 ${S.blockov} 帧；这是硬约束，没有开关。`
-            : `Over ${S.capF}f (${secs} s) auto-split at the H3 cap, ${S.blockov}f block overlap; hard limit, no switch.`,
+            ? `镜头超过 ${S.capF} 帧（${secs} 秒）会自动切成小块，这是硬约束。`
+            : `Shots over ${S.capF}f (${secs} s) auto-split at the H3 cap; hard limit.`,
         modes: [
-            ["average", zh ? "平均分段" : "Even"],
-            ["cuts", zh ? "按镜头切点" : "Shot cuts"],
-            ["single", zh ? "整片一段" : "One shot"],
+            ["average", zh ? "平均切" : "Even cut"],
+            ["cuts", zh ? "自己点" : "Pick points"],
+            ["single", zh ? "整片不切" : "No cut"],
         ],
+        hint: S.mode === "average"
+            ? (zh ? "0 = 让软件按视频长度自己决定" : "0 = let the app decide from the video length")
+            : S.mode === "cuts"
+                ? (zh ? "点「硬切」＝画面直接跳，不加过渡" : "Hard cut = the picture jumps, no transition")
+                : (zh ? "整片当成一段，这里没有要调的。" : "One piece for the whole clip; nothing to adjust here."),
+        memLabels,
+        memoryMode: S.memoryMode,
         rows: S.rows.map((r, i) => ({
             index: i,
-            pos: `${(r.frame / FPS).toFixed(2)}s / ${r.frame}f`,
-            kind: r.kind === "H" ? (zh ? "硬切 H" : "Hard H") : (zh ? "连续 C" : "Cont. C"),
-            overlap: `${zh ? "重叠" : "ov"} ${r.overlap}`,
+            // 位置框固定 84px：只放一个统一的「秒」读数，帧号收进 tooltip。
+            pos: `${(r.frame / FPS).toFixed(2)} ${zh ? "秒" : "s"}`,
+            frame: r.frame,
+            kind: r.kind === "H" ? (zh ? "硬切" : "Hard cut") : (zh ? "连续" : "Smooth"),
+            overlap: `${r.overlap} ${zh ? "帧" : "f"}`,
             showOverlap: r.kind === "C",
         })),
     };
@@ -487,14 +541,35 @@ function renderPanelDom(P) {
         return d;
     };
     const act = (a) => panelAction(S, a, node, widget, P);
+    // ── 只选一次模式：下面只长该模式需要的按键 ──────────────────────────────────
     const modeRow = row(20);
     for (const [key, label] of m.modes) {
         makeButton(modeRow, label, { active: S.mode === key, flex: "1 1 0" },
             () => act({ type: "mode", value: key }));
     }
     if (S.mode === "cuts") {
+        // 固定列宽表格：序号 / − / 位置(84px) / + / 类型(44px) / 重叠。
+        // 每行共用同一个 grid 模板 ⇒ 位置框一样宽、硬切/连续上下对齐。
+        const GRID = "14px 18px 84px 18px 44px 1fr";
+        const gridRow = (h) => {
+            const d = document.createElement("div");
+            d.style.cssText = "box-sizing:border-box;display:grid;grid-template-columns:" + GRID
+                + ";gap:3px;align-items:center;height:" + h + "px;margin-bottom:3px;overflow:hidden;";
+            root.appendChild(d);
+            return d;
+        };
+        const gridHead = gridRow(14);
+        gridHead.style.color = "#8a949e";
+        const heads = ["", "", zh ? "位置" : "Position", "", zh ? "类型" : "Type", zh ? "重叠" : "Overlap"];
+        for (const [i, text] of heads.entries()) {
+            const c = document.createElement("span");
+            c.textContent = text;
+            c.style.cssText = "text-align:" + (i === 2 || i === 4 ? "center" : "left")
+                + ";font-size:10px;white-space:nowrap;overflow:hidden;";
+            gridHead.appendChild(c);
+        }
         const bar = row(20);
-        makeButton(bar, zh ? `＋ 加切点 (${S.rows.length})` : `+ Add cut (${S.rows.length})`,
+        makeButton(bar, zh ? "＋ 加切点" : "+ Add cut",
             { flex: "1 1 0" }, () => act({ type: "add" }));
         makeButton(bar, zh ? "－ 删末个" : "- Remove last",
             { flex: "1 1 0" }, () => act({ type: "remove" }));
@@ -505,72 +580,125 @@ function renderPanelDom(P) {
             hint.style.color = "#9a9a9a";
         }
         for (const r of m.rows) {
-            const line = row(PANEL_ROW_H);
-            line.style.overflow = "hidden";
+            const line = gridRow(PANEL_ROW_H);
+            const idx = document.createElement("span");
+            idx.textContent = String(r.index + 1);
+            idx.style.cssText = "color:#888;text-align:center;font-size:10px;";
+            line.appendChild(idx);
             const posTitle = zh
-                ? "切点位置：每点一次 ±17 帧（MiniMax H3 的 17k+5 帧网格）"
-                : "Cut position: ±17 frames per click (MiniMax H3 17k+5 grid)";
-            makeStepper(line, r.pos, { labelWidth: "88px", title: posTitle },
-                () => act({ type: "row", index: r.index, col: 0, delta: -1 }),
+                ? `第 ${r.index + 1} 个切点 ${r.frame} 帧：每点一次 ±17 帧（MiniMax H3 的 17k+5 帧网格）`
+                : `Cut #${r.index + 1} at ${r.frame}f: ±17 frames per click (MiniMax H3 17k+5 grid)`;
+            makeButton(line, "−", { width: "18px", title: posTitle },
+                () => act({ type: "row", index: r.index, col: 0, delta: -1 }));
+            const pos = document.createElement("span");
+            pos.textContent = r.pos;
+            pos.title = posTitle;
+            pos.style.cssText = "box-sizing:border-box;width:84px;text-align:center;"
+                + "background:#1f2120;border-radius:4px;line-height:20px;color:#e6e6e6;"
+                + "font-size:11px;white-space:nowrap;overflow:hidden;";
+            line.appendChild(pos);
+            makeButton(line, "＋", { width: "18px", title: posTitle },
                 () => act({ type: "row", index: r.index, col: 0, delta: 1 }));
-            makeButton(line, r.kind, { flex: "0 1 auto", hard: S.rows[r.index].kind === "H" },
+            const kindTitle = zh ? "点一下在硬切 / 连续之间切换；硬切＝零重叠、不羽化、不接上段尾帧"
+                                 : "Click to toggle hard cut / smooth. Hard = no overlap, no fade, no tail carry";
+            makeButton(line, r.kind, { width: "44px", title: kindTitle,
+                hard: S.rows[r.index].kind === "H" },
                 () => act({ type: "row", index: r.index, col: 1 }));
             if (r.showOverlap) {
-                const ovTitle = zh ? "该接缝重叠帧数：±5 帧（0–240）"
-                                   : "Seam overlap: ±5 frames (0–240)";
-                makeStepper(line, r.overlap, { labelWidth: "52px", title: ovTitle },
+                const ovTitle = zh ? "这条接缝重叠几帧：±5 帧（0–240）"
+                                   : "Overlap at this seam: ±5 frames (0–240)";
+                makeStepper(line, r.overlap, { labelWidth: "46px", title: ovTitle },
                     () => act({ type: "row", index: r.index, col: 2, delta: -1 }),
                     () => act({ type: "row", index: r.index, col: 2, delta: 1 }));
+            } else {
+                const dash = document.createElement("span");
+                dash.textContent = "—";
+                dash.title = zh ? "硬切没有重叠，也不用羽化" : "Hard cut: no overlap, no fade";
+                dash.style.cssText = "color:#777;";
+                line.appendChild(dash);
             }
         }
     } else if (S.mode === "average") {
-        const bar = row(20);
+        const bar = row(PANEL_ROW_H);
         const lab = document.createElement("span");
-        lab.textContent = zh ? `段数 ${S.count || "自动"}` : `Segments ${S.count || "auto"}`;
-        lab.style.cssText = "flex:1 1 auto;text-align:center;color:#d6d6d6;";
+        lab.textContent = S.count ? (zh ? `${S.count} 段` : `${S.count} pieces`)
+            : (zh ? "让软件决定" : "let the app decide");
+        lab.style.cssText = "flex:1 1 auto;text-align:center;color:#d6d6d6;white-space:nowrap;";
         bar.appendChild(lab);
         makeButton(bar, "−", { flex: "1 1 0" }, () => act({ type: "count", delta: -1 }));
         makeButton(bar, "＋", { flex: "1 1 0" }, () => act({ type: "count", delta: 1 }));
     } else {
-        const bar = row(20);
-        bar.textContent = zh ? "整片算 1 段；段内按 H3 帧数上限自动分块"
-                             : "1 segment for the whole video; auto-split into H3-sized blocks";
+        const bar = row(16);
+        bar.textContent = zh ? "整段一次做完，这里没有要调的。"
+                             : "One pass for the whole clip; nothing to adjust here.";
         bar.style.color = "#bdbdbd";
     }
-    const note = document.createElement("div");
-    note.textContent = m.note;
-    note.style.cssText = "box-sizing:border-box;height:" + PANEL_NOTE_H + "px;"
-        + "margin-bottom:3px;padding-top:2px;font-size:11px;line-height:12px;"
-        + "color:#a9c7dd;white-space:normal;overflow:hidden;";
-    root.appendChild(note);
-    if (m.showBlocks) {
-        // L3：常驻。读数一律取面板状态 S，不再读被隐藏的 widget（它可能已被 Vue 覆盖）。
-        const capF = S.capF;
-        const ov = S.blockov;
-        const bar = row(20);
-        bar.style.overflow = "visible";
-        const tag = document.createElement("span");
-        tag.textContent = zh ? "段内补切" : "in-shot blocks";
-        tag.style.cssText = "flex:0 0 auto;color:#8fd0ff;white-space:nowrap;";
-        bar.appendChild(tag);
-        const capLab = document.createElement("span");
-        capLab.textContent = zh ? "单块上限" : "max block";
-        capLab.style.cssText = "flex:0 0 auto;color:#bdbdbd;white-space:nowrap;";
-        bar.appendChild(capLab);
-        makeStepper(bar, `${capF}f`, {
-            labelWidth: "34px",
-            title: zh ? `一块最多生成几帧（${capF} 帧 · ${(capF / FPS).toFixed(2)} 秒）：镜头超过它就自动补切。每点一次 ±17 帧（MiniMax H3 的 17k+5 网格）`
-                      : `Max frames per block (${capF} frames · ${(capF / FPS).toFixed(2)} s): a longer shot is auto-split. ±17 frames per click (MiniMax H3 17k+5 grid)`,
+    // 一句人话提示：只说当前模式相关的那件事。
+    const hint = document.createElement("div");
+    hint.textContent = m.hint;
+    hint.style.cssText = "box-sizing:border-box;height:18px;line-height:16px;margin-bottom:3px;"
+        + "font-size:11px;color:#9aa5af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+    root.appendChild(hint);
+    // ── 折叠区：三个模式都用得上的高级参数，默认收起 ───────────────────────────
+    const toggle = row(20);
+    makeButton(toggle, m.moreTitle, { flex: "1 1 0", title: zh
+        ? "切块上限、接缝重叠、羽化、尾帧、内存、试跑都在这里"
+        : "Block cap, seam overlap, fade, tail carry, memory and dry run live here" },
+        () => act({ type: "more" }));
+    if (S.moreOpen && m.showBlocks) {
+        const advRow = (label, tip) => {
+            const d = row(PANEL_ROW_H);
+            const t = document.createElement("span");
+            t.textContent = label;
+            t.style.cssText = "flex:0 0 68px;color:#bdbdbd;font-size:11px;white-space:nowrap;";
+            if (tip) t.title = tip;
+            d.appendChild(t);
+            return d;
+        };
+        const capF = S.capF, ov = S.blockov;
+        const d1 = advRow(zh ? "一次最多几秒" : "Max seconds",
+            zh ? "一块最多生成几帧：镜头超过它就自动切成小块。±17 帧（H3 的 17k+5 网格）"
+                : "Max frames per block; longer shots auto-split. ±17 frames (H3 grid)");
+        makeStepper(d1, `${(capF / FPS).toFixed(2)}${zh ? "秒" : "s"}`, {
+            labelWidth: "48px", title: zh ? `当前 ${capF} 帧` : `${capF} frames`,
         }, () => act({ type: "cap", delta: -1 }), () => act({ type: "cap", delta: 1 }));
-        const ovLab = document.createElement("span");
-        ovLab.textContent = zh ? "块间重叠" : "block ov";
-        ovLab.style.cssText = "flex:0 0 auto;color:#bdbdbd;white-space:nowrap;";
-        bar.appendChild(ovLab);
-        makeStepper(bar, `${ov}f`, {
-            labelWidth: "30px",
-            title: zh ? "段内补切出来的块之间重叠几帧。镜头接缝的重叠在每行单独设，不归这里管。"
-                      : "Overlap between auto-split blocks inside one shot. Shot seams are set per row.",
-        }, () => act({ type: "blockov", delta: -1 }), () => act({ type: "blockov", delta: 1 }));
+        const d2 = advRow(zh ? "接缝重叠" : "Seam overlap",
+            zh ? "段内自动切出的块之间重叠几帧；镜头接缝的重叠在每一行单独设。"
+                : "Overlap between auto-split blocks; shot seams are set per row.");
+        makeStepper(d2, `${ov}${zh ? "帧" : "f"}`, { labelWidth: "38px" },
+            () => act({ type: "blockov", delta: -1 }), () => act({ type: "blockov", delta: 1 }));
+        const onoff = (parent, key, on, off, value, tip) => {
+            const t = document.createElement("span");
+            t.style.cssText = "flex:1 1 0;display:flex;gap:3px;";
+            parent.appendChild(t);
+            makeButton(t, on, { active: !!value, flex: "1 1 0", title: tip },
+                () => act({ type: key, value: true }));
+            makeButton(t, off, { active: !value, flex: "1 1 0", title: tip },
+                () => act({ type: key, value: false }));
+        };
+        const d3 = advRow(zh ? "渐变过渡" : "Cross-fade",
+            zh ? "只管已经是「连续」的接缝：重叠帧做线性渐变；「硬切」一律不受影响。"
+                : "Only smooth seams: linear cross-fade on overlap. Hard cuts are never affected.");
+        onoff(d3, "seamBlend", zh ? "开" : "On", zh ? "关" : "Off", S.seamBlend,
+            zh ? "连续接缝的羽化开关" : "Fade on smooth seams");
+        const d4 = advRow(zh ? "接上一镜头" : "Carry tail",
+            zh ? "把上一段最后一帧当这一段第 0 帧的引导图；硬切接缝不接。"
+                : "Use the previous chunk's last frame as this chunk's frame-0 guide; skipped at hard cuts.");
+        onoff(d4, "carryTail", zh ? "开" : "On", zh ? "关" : "Off", S.carryTail,
+            zh ? "尾帧续接开关" : "Tail carry switch");
+        const d5 = advRow(zh ? "内存用法" : "Memory",
+            zh ? "低内存＝预分配一块内存（推荐）；普通内存＝每段搬进内存；落盘＝先写临时文件。"
+                : "Low RAM = one preallocated buffer (recommended); plain = one buffer per chunk; disk = temp files.");
+        for (const [key, label] of [["lowmem", m.memLabels.lowmem],
+                                    ["cpu", m.memLabels.cpu], ["disk", m.memLabels.disk]]) {
+            makeButton(d5, label, { active: S.memoryMode === key, flex: "1 1 0" },
+                () => act({ type: "memoryMode", value: key }));
+        }
+        const d6 = advRow(zh ? "只算不跑" : "Plan only",
+            zh ? "开＝只打印分块计划、不加载模型不烧显存；关＝真采样。"
+                : "On = print the plan only, no model loaded; off = real sampling.");
+        onoff(d6, "dryRun", zh ? "开" : "On", zh ? "关" : "Off", S.dryRun,
+            zh ? "试跑开关" : "Dry-run switch");
     }
     if (domW) lockDomWidgetHeight(domW, () => domPanelHeight(S));
     try {
@@ -590,7 +718,10 @@ function commitPanel(S, node, widget, P) {
     // 唯一真源：面板写结构化 JSON 进 cut_points，后端 parse_spec() 直接读它。
     // capF / blockov 一并存档（parse_spec 忽略未知字段），刷新后不会丢。
     widget.value = JSON.stringify({ v: 1, mode: S.mode, count: S.count, rows: S.rows,
-                                    capF: S.capF, blockov: S.blockov });
+                                    capF: S.capF, blockov: S.blockov,
+                                    seamBlend: S.seamBlend, carryTail: S.carryTail,
+                                    memoryMode: S.memoryMode, dryRun: S.dryRun,
+                                    moreOpen: S.moreOpen });
     const modeW = widgetOf(node, "cut_mode");
     if (modeW) modeW.value = S.mode;
     const countW = widgetOf(node, "segment_count");
@@ -628,6 +759,13 @@ function panelAction(S, action, node, widget, P) {
                 S.blockov + (action.delta < 0 ? -5 : 5)));
             break;
         }
+        case "more": S.moreOpen = !S.moreOpen; break;
+        case "seamBlend": S.seamBlend = !!action.value; break;
+        case "carryTail": S.carryTail = !!action.value; break;
+        case "dryRun": S.dryRun = !!action.value; break;
+        case "memoryMode":
+            if (["cpu", "lowmem", "disk"].includes(action.value)) S.memoryMode = action.value;
+            break;
         case "row": {
             const r = S.rows[action.index];
             if (!r) break;
@@ -662,7 +800,10 @@ function installSegmentPanel(node) {
     if (!w || typeof node.addDOMWidget !== "function") return;
     const S = readPanelValue(w.value, node);
     w.value = JSON.stringify({ v: 1, mode: S.mode, count: S.count, rows: S.rows,
-                               capF: S.capF, blockov: S.blockov });
+                               capF: S.capF, blockov: S.blockov,
+                               seamBlend: S.seamBlend, carryTail: S.carryTail,
+                               memoryMode: S.memoryMode, dryRun: S.dryRun,
+                               moreOpen: S.moreOpen });
     const modeW = widgetOf(node, "cut_mode");
     if (modeW) modeW.value = S.mode;
     const countW = widgetOf(node, "segment_count");

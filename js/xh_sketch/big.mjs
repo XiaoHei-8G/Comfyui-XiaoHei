@@ -18,7 +18,7 @@ import { injectCSS } from "./css.mjs";
 import { renderStage } from "./draw.mjs";
 import { attachDrawing } from "./input.mjs";
 import { redo, uiState, undo } from "./actions.mjs";
-import { TOOLS, buildActions, buildColors, buildPromptBox, buildTools, focusLastNote, renderList } from "./controls.mjs";
+import { TOOLS, buildActions, buildClear, buildColors, buildPromptBox, buildTools, focusLastNote, renderList } from "./controls.mjs";
 import { t } from "./i18n.mjs";
 
 const el = (tag, cls, text) => {
@@ -48,10 +48,14 @@ export function openBig(node, title = null) {
   done.type = "button";
   done.title = t("doneTip");
   const hint = el("span", "pix-sketch-bhint", t("bigHint"));
+  // 2026-11-20 大厂档：清空是破坏性操作，放右上角跟完成成"结束区"（危险色+二次确认），
+  // 不再跟左侧画笔挤在一起。undo/redo 仍留左轨（高频非破坏，Figma/PS 同款）。
+  const headActions = el("div", "pix-sketch-bhead-actions");
   head.append(
     el("span", "pix-sketch-btitle", title),
     hint,
     el("span", "pix-sketch-grow"),
+    headActions,
     done,
   );
 
@@ -76,6 +80,7 @@ export function openBig(node, title = null) {
 
   const syncTools = buildTools(node, rail, { vertical: true });
   const syncActions = buildActions(node, rail, { vertical: true });
+  const syncClear = buildClear(node, headActions);
   const syncColors = buildColors(node, colors);
   const syncPrompt = buildPromptBox(node, prompt);
 
@@ -94,6 +99,7 @@ export function openBig(node, title = null) {
     if (structural) renderList(node, list);
     syncTools();
     syncActions();
+    syncClear?.();
     syncColors();
     syncPrompt();
     paint();

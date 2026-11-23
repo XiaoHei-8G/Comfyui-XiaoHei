@@ -14,7 +14,7 @@ function loadPresets() {
         .then((response) => response.json())
         .then((data) => (data && !data.error ? data : null))
         .catch((error) => {
-            console.warn("[WepeNerd] Duration Selector: couldn't load presets", error);
+            console.warn("[XiaoHei] 时长预设：读取失败", error);
             presetsRequest = null;
             return null;
         });

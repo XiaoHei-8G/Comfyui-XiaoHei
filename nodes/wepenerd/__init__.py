@@ -66,7 +66,7 @@ for _mod in _QWEN_PARTS:
                 NODE_CLASS_MAPPINGS[_key] = getattr(_m, _cls)
                 NODE_DISPLAY_NAME_MAPPINGS.setdefault(_key, _disp)
     except Exception as _e:
-        print("[XiaoHei-WepeNerd] 可选模块 %s 未加载（不影响 H3 Ripple）：%s" % (_mod, _e))
+        print("[XiaoHei] 可选模块 %s 未加载（不影响 H3 Ripple）：%s" % (_mod, _e))
 
 # 无外部依赖的其余模块：同样逐个 try，单模块异常不拖垮整包
 _CORE_PARTS = (
@@ -85,16 +85,16 @@ for _mod, _route in _CORE_PARTS:
             try:
                 getattr(_m, _route)()
             except Exception as _e:
-                print("[XiaoHei-WepeNerd] 路由 %s 注册失败：%s" % (_route, _e))
+                print("[XiaoHei] 路由 %s 注册失败：%s" % (_route, _e))
     except Exception as _e:
-        print("[XiaoHei-WepeNerd] 模块 %s 加载失败：%s" % (_mod, _e))
+        print("[XiaoHei] 模块 %s 加载失败：%s" % (_mod, _e))
 
 for _reg in (register_speedpaint_routes, register_load_video_routes,
              register_module_cache_headers):
     try:
         _reg()
     except Exception as _e:
-        print("[XiaoHei-WepeNerd] %s 注册失败：%s" % (_reg.__name__, _e))
+        print("[XiaoHei] %s 注册失败：%s" % (_reg.__name__, _e))
 
 # ComfyUI 只读顶层声明；子模块里这句与家族其它模块一致，属死变量（格式统一）。
 WEB_DIRECTORY = "js"
@@ -107,7 +107,7 @@ _XH_WN_ZH_DISPLAY = {
     "XH_WN_Slider": "数值滑杆",
     "XH_WN_ResizeMegapixels": "按百万像素缩放",
     "XH_WN_ZoomCrop": "缩放裁切",
-    "XH_WN_LoadVideo": "加载视频（上传）",
+    "XH_WN_LoadVideo": "加载视频·上传",
     "XH_WN_SaveVideo": "保存视频",
     "XH_WN_Speedpaint": "速涂画板",
     "XH_WN_LiquifyImage": "图像液化",
