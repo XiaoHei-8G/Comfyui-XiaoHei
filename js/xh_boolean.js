@@ -26,8 +26,8 @@ const NODE_TYPES = ["XHBooleanToggle", "XHBooleanSwitch"];
 const XH_I18N = {
     zh: {
         nodes: {
-            XHBooleanToggle: "布尔开关",
-            XHBooleanSwitch: "切换",
+            XHBooleanToggle: "布尔开关 XiaoHei",
+            XHBooleanSwitch: "切换 XiaoHei",
         },
         widgets: {
             value: "开关",
@@ -44,8 +44,8 @@ const XH_I18N = {
     },
     en: {
         nodes: {
-            XHBooleanToggle: "Boolean Toggle",
-            XHBooleanSwitch: "Switch",
+            XHBooleanToggle: "Boolean Toggle XiaoHei",
+            XHBooleanSwitch: "Switch XiaoHei",
         },
         widgets: {
             value: "value",

@@ -35,7 +35,7 @@ const COMBO_LABELS = {
 // ---- 文案表（V3 DynamicCombo 子控件名 = mode.前缀，与官方视口读写名一致）----
 const XH_I18N = {
     zh: {
-        nodes: { XHCameraParam: "相机参数" },
+        nodes: { XHCameraParam: "相机参数 XiaoHei" },
         widgets: {
             "mode": "模式",
             "mode.yaw": "偏航角",
@@ -64,7 +64,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHCameraParam: "Camera Param" },
+        nodes: { XHCameraParam: "Camera Param XiaoHei" },
         widgets: {
             "mode": "mode",
             "mode.yaw": "yaw",

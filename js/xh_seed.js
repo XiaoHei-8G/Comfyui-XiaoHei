@@ -33,7 +33,7 @@ const NODE_TYPE = "XHSeed";
 // ---- 文案表（家族规范：nodes / widgets / slots 三张 + ui 自用文案）----
 const XH_I18N = {
     zh: {
-        nodes: { XHSeed: "种子" },
+        nodes: { XHSeed: "种子 XiaoHei" },
         widgets: { seed: "种子" },
         slots: { SEED: "种子" },
         ui: {
@@ -65,7 +65,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHSeed: "Seed" },
+        nodes: { XHSeed: "Seed XiaoHei" },
         widgets: { seed: "seed" },
         slots: { SEED: "SEED" },
         ui: {

@@ -68,7 +68,7 @@ const DOM_WIDGETS = [BAR_WIDGET, INFO_WIDGET, PLAYER_WIDGET];
 
 const XH_I18N = {
     zh: {
-        nodes: { XHLoadVideo: "加载视频" },
+        nodes: { XHLoadVideo: "加载视频 XiaoHei" },
         widgets: {
             source: "来源",
             video: "视频文件",
@@ -111,7 +111,7 @@ const XH_I18N = {
         trimResampled: "（轴按「重采样后」的帧数算，右边数字框可精确输入）",
     },
     en: {
-        nodes: { XHLoadVideo: "Load Video" },
+        nodes: { XHLoadVideo: "Load Video XiaoHei" },
         widgets: {
             source: "source",
             video: "video",

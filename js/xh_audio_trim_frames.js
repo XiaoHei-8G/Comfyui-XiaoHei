@@ -23,7 +23,7 @@ const NODE_TYPE = "XHAudioTrimFrames";
 
 const XH_I18N = {
     zh: {
-        nodes: { XHAudioTrimFrames: "按帧裁音频" },
+        nodes: { XHAudioTrimFrames: "按帧裁音频 XiaoHei" },
         widgets: {
             //  2026-10-29 用户定案：索引类参数统一「索引（原名）」格式 + 置顶
             start_frame: "索引（起始帧）",
@@ -38,7 +38,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHAudioTrimFrames: "Audio Trim Frames" },
+        nodes: { XHAudioTrimFrames: "Audio Trim Frames XiaoHei" },
         widgets: {
             start_frame: "Index (start frame)",
             length_frames: "num frames",

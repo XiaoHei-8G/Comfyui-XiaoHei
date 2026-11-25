@@ -47,9 +47,16 @@
         const pm = String(nodeOrData.python_module || "");
         const cat = String(nodeOrData.category || "");
         const type = String(nodeOrData.type || nodeOrData.comfyClass || nodeOrData.name || "");
-        return pm.includes("Comfyui-XiaoHei") || pm.includes("Comfyui-XH_Toolbox")
-            || cat.startsWith("XiaoHei/") || cat.startsWith("🔁XH/")
-            || /^XH/.test(type);
+        if (pm.includes("Comfyui-XiaoHei") || pm.includes("Comfyui-XH_Toolbox")) return true;
+        if (cat.startsWith("XiaoHei/") || cat.startsWith("🔁XH/")) return true;
+        // 🔴 严禁用 /^XH/ 前缀：XHGroupExecutor/XHH3Stitch/XHPet 等第三方节点
+        //    也以 XH 开头，前缀判据会把它们误标成 comfyui-xiaohei，反而骗粉丝装错包。
+        //    白名单精确命中，覆盖 python_module/category 缺失的反序列化场景。
+        try {
+            const set = window.__XH_FAMILY_TYPES__;
+            if (set && typeof set.has === "function" && set.has(type)) return true;
+        } catch (e) {}
+        return false;
     }
 
     function allNodes(app) {

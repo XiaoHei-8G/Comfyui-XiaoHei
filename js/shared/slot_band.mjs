@@ -50,7 +50,7 @@ function injectCSS() {
   if (_cssInjected) return;
   _cssInjected = true;
   const style = document.createElement("style");
-  style.id = "pix-slot-band-css";
+  style.id = "xh-slot-band-css";
   style.textContent = `
 .pix-slot-band { position:absolute; height:${BAND_H}px; display:flex; align-items:center; pointer-events:none; font:22px Consolas,ui-monospace,monospace; color:#cdcdcd; white-space:nowrap; text-shadow:0 1px 2px rgba(0,0,0,0.6); }
 .pix-slot-band.is-right { justify-content:flex-end; }

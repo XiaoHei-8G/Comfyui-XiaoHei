@@ -56,14 +56,21 @@ const PROTO_CONTRACT = new WeakMap();
 const isBlank = (v) => v === "" || v === null || v === undefined;
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 
-/** 只认 XiaoHei 自家节点（/object_info 的 python_module 是硬标记）。 */
+/** 只认 XiaoHei 自家节点。🔴 严禁用 /^XH/ 前缀：XHGroupExecutor/XHH3Stitch/XHPet
+ *  等第三方节点也以 XH 开头，前缀判据会把它们误认成家族节点、篡改其归属标记。 */
 export function isFamilyNodeData(nodeData) {
     if (!nodeData) return false;
     const pm = String(nodeData.python_module || "");
     const cat = String(nodeData.category || "");
     const name = String(nodeData.name || "");
-    return pm.includes("Comfyui-XiaoHei") || pm.includes("Comfyui-XH_Toolbox")
-        || cat.startsWith("XiaoHei/") || cat.startsWith("🔁XH/") || /^XH/.test(name);
+    if (pm.includes("Comfyui-XiaoHei") || pm.includes("Comfyui-XH_Toolbox")) return true;
+    if (cat.startsWith("XiaoHei/") || cat.startsWith("🔁XH/")) return true;
+    // 白名单兜底（覆盖 python_module/category 缺失的反序列化场景）——精确命中，不靠前缀
+    try {
+        const set = window.__XH_FAMILY_TYPES__;
+        if (set && typeof set.has === "function" && set.has(name)) return true;
+    } catch (e) {}
+    return false;
 }
 
 /**

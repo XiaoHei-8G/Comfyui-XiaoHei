@@ -187,7 +187,7 @@ function setSegWidgetValue(node, name, v) {
 
 const XH_I18N = {
     zh: {
-        nodes: { XHSegmentTable: "分段表" },
+        nodes: { XHSegmentTable: "分段表 XiaoHei" },
         widgets: {
             index: "索引（接循环）",
             durations: "批量粘贴（一行一个；逐段模式下休眠不生效）",
@@ -214,7 +214,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHSegmentTable: "Segment Table" },
+        nodes: { XHSegmentTable: "Segment Table XiaoHei" },
         widgets: {
             index: "index (from loop)",
             durations: "bulk paste (dormant in field mode)",

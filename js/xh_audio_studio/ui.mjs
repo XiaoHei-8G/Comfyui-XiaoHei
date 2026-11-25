@@ -92,7 +92,7 @@ function isCustomHeightAspect(v) {
 }
 
 function injectSidebarCSS() {
-  if (document.getElementById("pix-as-sidebar-css")) return;
+  if (document.getElementById("xh-as-sidebar-css")) return;
   // Slider rows reuse the framework's `.pxf-slider-row` styling (label +
   // range + boxed number input on one line) so we look identical to 3D
   // Builder. The only Audio-Studio-specific rules below cover the
@@ -248,7 +248,7 @@ function injectSidebarCSS() {
     }
   `;
   const style = document.createElement("style");
-  style.id = "pix-as-sidebar-css";
+  style.id = "xh-as-sidebar-css";
   style.textContent = css;
   document.head.appendChild(style);
 }

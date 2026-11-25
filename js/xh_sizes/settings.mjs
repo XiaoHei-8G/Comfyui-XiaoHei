@@ -29,9 +29,9 @@ function el(tag, cls, text) {
 }
 
 function injectCSS() {
-  if (document.getElementById("pix-szp-css")) return;
+  if (document.getElementById("xh-szp-css")) return;
   const s = document.createElement("style");
-  s.id = "pix-szp-css";
+  s.id = "xh-szp-css";
   s.textContent = `
     .pix-szp { position:fixed; z-index:10010; width:320px; max-width:94vw; background:#1a1a1a;
       border:1px solid #4a4a4a; border-radius:10px; box-shadow:0 18px 50px rgba(0,0,0,0.6);
@@ -177,12 +177,12 @@ function makeDraggable(panel, handle) {
 function outsideClose(e) {
   if (!_panel) return;
   if (_panel.contains(e.target)) return;
-  if (e.target.closest?.(".pix-cp-popup, .pix-cp-modal-backdrop")) return; // the colour picker
+  if (e.target.closest?.(".xh-cp-popup, .xh-cp-modal-backdrop")) return; // the colour picker
   closeSizesPanel();
 }
 function escClose(e) {
   if (e.key === "Escape" && _panel) {
-    if (document.querySelector(".pix-cp-popup, .pix-cp-modal-backdrop")) return;
+    if (document.querySelector(".xh-cp-popup, .xh-cp-modal-backdrop")) return;
     e.stopPropagation();
     closeSizesPanel();
   }

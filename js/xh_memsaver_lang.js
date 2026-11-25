@@ -14,9 +14,9 @@ const NODE_TYPES = ["XHImagePrecision", "XHImageCacheWrite", "XHImageCacheRead"]
 const XH_I18N = {
     zh: {
         nodes: {
-            XHImagePrecision: "图像精度",
-            XHImageCacheWrite: "图像落盘",
-            XHImageCacheRead: "图像读取",
+            XHImagePrecision: "图像精度 XiaoHei",
+            XHImageCacheWrite: "图像落盘 XiaoHei",
+            XHImageCacheRead: "图像读取 XiaoHei",
         },
         widgets: {
             images: "图像",
@@ -34,9 +34,9 @@ const XH_I18N = {
     },
     en: {
         nodes: {
-            XHImagePrecision: "Image Precision",
-            XHImageCacheWrite: "Image Cache Write",
-            XHImageCacheRead: "Image Cache Read",
+            XHImagePrecision: "Image Precision XiaoHei",
+            XHImageCacheWrite: "Image Cache Write XiaoHei",
+            XHImageCacheRead: "Image Cache Read XiaoHei",
         },
         widgets: {
             images: "images",

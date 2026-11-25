@@ -38,7 +38,7 @@ const COMBO_LABELS = {
 // ---- 文案表 ----
 const XH_I18N = {
     zh: {
-        nodes: { XHCameraAnglePrompt: "机位描述" },
+        nodes: { XHCameraAnglePrompt: "机位描述 XiaoHei" },
         widgets: {
             horizontal_angle: "方位角",
             vertical_angle: "俯仰角",
@@ -55,7 +55,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHCameraAnglePrompt: "Camera Angle Prompt" },
+        nodes: { XHCameraAnglePrompt: "Camera Angle Prompt XiaoHei" },
         widgets: {
             horizontal_angle: "H Angle",
             vertical_angle: "V Angle",

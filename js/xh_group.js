@@ -89,7 +89,7 @@ const GROUP_MIN_W = 250;
 
 // 中英文标签
 const LABELS = {
-    zh: { title: "分组控制", refresh: " 刷新", disableAll: "全关", enableAll: "全开", noGroups: "没有找到组，请先 Ctrl+G 创建组", on: "开", off: "关", blocked: "「只保留一个」限制下不能关掉最后一个",
+    zh: { title: "分组控制 XiaoHei", refresh: " 刷新", disableAll: "全关", enableAll: "全开", noGroups: "没有找到组，请先 Ctrl+G 创建组", on: "开", off: "关", blocked: "「只保留一个」限制下不能关掉最后一个",
         statRoot: "主图", statSub: "子图", subFrom: "来自子图：", manySub: "个子图",
         nonGroup: "个非组对象已挡掉", rootGroup: "主图上的分组", subGroup: "里的分组", unnamedSub: "未命名子图",
         gearExpand: "展开控制区（刷新 / 筛选）",
@@ -100,7 +100,7 @@ const LABELS = {
     //    词表里 `^All Off → "开关"` 命中 ⇒ 补上 toggle-right 图标 ⇒ 英文模式凭空多出 ⊙ 图案。
     //    中文文案 "全关" / "全开" 本来就没空格 ⇒ 不补 ⇒ 只有切英文才冒图案。
     //  ⚠️ refresh 的 " Refresh" 是**故意**留的（图标统一方案 B 靠它补图案），别一起删。
-    en: { title: "Group Control", refresh: " Refresh", disableAll: "All Off", enableAll: "All On", noGroups: "No groups found. Create one with Ctrl+G first", on: "ON", off: "OFF", blocked: "『always one』restriction: cannot turn off the last one",
+    en: { title: "Group Control XiaoHei", refresh: " Refresh", disableAll: "All Off", enableAll: "All On", noGroups: "No groups found. Create one with Ctrl+G first", on: "ON", off: "OFF", blocked: "『always one』restriction: cannot turn off the last one",
         statRoot: "root", statSub: "subgraph", subFrom: "From subgraph: ", manySub: "subgraphs",
         nonGroup: "non-group object(s) filtered", rootGroup: "Group on the root graph", subGroup: "Group in subgraph: ", unnamedSub: "Unnamed subgraph",
         gearExpand: "Expand controls (refresh / filter)",

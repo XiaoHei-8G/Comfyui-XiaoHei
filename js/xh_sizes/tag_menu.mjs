@@ -10,9 +10,9 @@ let _menu = null;
 let _anchor = null;
 
 function injectCSS() {
-  if (document.getElementById("pix-szp-tagmenu-css")) return;
+  if (document.getElementById("xh-szp-tagmenu-css")) return;
   const s = document.createElement("style");
-  s.id = "pix-szp-tagmenu-css";
+  s.id = "xh-szp-tagmenu-css";
   s.textContent = `
     .pix-szp-tagmenu { position:fixed; z-index:10020; box-sizing:border-box; min-width:104px; padding:0;
       background:#181818; border:1px solid #555; border-radius:6px; overflow:hidden;

@@ -89,7 +89,7 @@ const MIN_WIN_S = 0.05;         // 选区最小长度，防止拖成一个点
 
 const XH_I18N = {
     zh: {
-        nodes: { XHLoadAudio: "加载音频" },
+        nodes: { XHLoadAudio: "加载音频 XiaoHei" },
         widgets: {
             audio: "音频文件",
             source: "音频来源",
@@ -160,7 +160,7 @@ const XH_I18N = {
         waveLoop2: "末尾循环补齐 %s",
     },
     en: {
-        nodes: { XHLoadAudio: "Load Audio" },
+        nodes: { XHLoadAudio: "Load Audio XiaoHei" },
         widgets: {
             audio: "audio file",
             source: "audio source",

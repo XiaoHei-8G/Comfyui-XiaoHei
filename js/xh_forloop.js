@@ -16,8 +16,8 @@ const NODE_TYPES = ["XHForLoopStart", "XHForLoopEnd"];
 const XH_I18N = {
     zh: {
         nodes: {
-            XHForLoopStart: "循环开始",
-            XHForLoopEnd: "循环结束",
+            XHForLoopStart: "循环开始 XiaoHei",
+            XHForLoopEnd: "循环结束 XiaoHei",
         },
         widgets: {
             num_iterations: "次数",
@@ -78,8 +78,8 @@ const XH_I18N = {
     },
     en: {
         nodes: {
-            XHForLoopStart: "For Loop Start",
-            XHForLoopEnd: "For Loop End",
+            XHForLoopStart: "For Loop Start XiaoHei",
+            XHForLoopEnd: "For Loop End XiaoHei",
         },
         widgets: {
             num_iterations: "Iterations",

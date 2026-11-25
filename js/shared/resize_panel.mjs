@@ -18,7 +18,7 @@ import { pixAsset } from "./api_url.mjs";
 // orange preset chip and field label (Discord report 2026-10-03).
 let _resizePanelCSSInjected = false;
 export function injectResizePanelCSS() {
-  if (_resizePanelCSSInjected || document.getElementById("pix-resize-panel-css")) return;
+  if (_resizePanelCSSInjected || document.getElementById("xh-resize-panel-css")) return;
   _resizePanelCSSInjected = true;
   const css = `
     .pix-li-panel {
@@ -347,7 +347,7 @@ export function injectResizePanelCSS() {
     .pix-li-pad-colorlbl { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
   `;
   const s = document.createElement("style");
-  s.id = "pix-resize-panel-css";
+  s.id = "xh-resize-panel-css";
   s.textContent = css;
   document.head.appendChild(s);
 }

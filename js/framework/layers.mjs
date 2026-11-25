@@ -412,7 +412,7 @@ export function createLayerPanel(config) {
     opacityNum.max = 100;
     opacityNum.value = 100;
     function _syncOpFill() {
-      if (window._pxfUpdateFill) window._pxfUpdateFill(opacitySlider);
+      if (window._xhUpdateFill) window._xhUpdateFill(opacitySlider);
     }
     opacitySlider.addEventListener("input", () => {
       opacityNum.value = opacitySlider.value;

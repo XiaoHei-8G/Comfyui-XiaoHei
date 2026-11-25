@@ -41,8 +41,8 @@ const FONT_STACK = 'system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-se
 const XH_I18N = {
     zh: {
         nodes: {
-            XHFrameAlign: "帧数对齐",
-            XHSegmentConcat: "分段拼接",
+            XHFrameAlign: "帧数对齐 XiaoHei",
+            XHSegmentConcat: "分段拼接 XiaoHei",
         },
         widgets: {
             seconds: " 数值(秒/帧)",
@@ -85,8 +85,8 @@ const XH_I18N = {
     },
     en: {
         nodes: {
-            XHFrameAlign: "Frame Align",
-            XHSegmentConcat: "Segment Concat",
+            XHFrameAlign: "Frame Align XiaoHei",
+            XHSegmentConcat: "Segment Concat XiaoHei",
         },
         widgets: {
             seconds: "value (sec/frames)",

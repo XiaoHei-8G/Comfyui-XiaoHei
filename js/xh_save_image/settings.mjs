@@ -48,7 +48,7 @@ function stopFollowing() {
 function outsideClose(e) {
   if (!_panel) return;
   if (_panel.contains(e.target)) return;
-  if (e.target.closest?.(".pix-cp-popup, .pix-cp-modal-backdrop")) return;  // the colour picker
+  if (e.target.closest?.(".xh-cp-popup, .xh-cp-modal-backdrop")) return;  // the colour picker
   closeSettingsPanel();
 }
 function escClose(e) {

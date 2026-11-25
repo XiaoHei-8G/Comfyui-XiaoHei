@@ -39,10 +39,10 @@ function el(tag, cls, text) {
 }
 
 function injectPanelCSS() {
-  if (_cssDone || document.getElementById("pix-npick-panel-css")) return;
+  if (_cssDone || document.getElementById("xh-npick-panel-css")) return;
   _cssDone = true;
   const style = document.createElement("style");
-  style.id = "pix-npick-panel-css";
+  style.id = "xh-npick-panel-css";
   style.textContent = [
     ".pix-npick-panel{position:fixed;z-index:10010;width:330px;max-width:94vw;background:#1a1a1a;border:1px solid #444;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.6);font-family:var(--font-sans, ui-sans-serif, system-ui, sans-serif);overflow:hidden;max-height:88vh;display:flex;flex-direction:column;}",
     ".pix-npick-phead{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #333;color:#ddd;font-size:13px;font-weight:600;cursor:move;}",
@@ -74,7 +74,7 @@ function outsideClose(e) {
   // The XiaoHei colour picker and the generic option popup both open on
   // document.body, and this guard is capture phase - so without exempting them,
   // picking a colour would dismiss the panel underneath.
-  if (e.target.closest?.(".pix-cp-popup, .pix-cp-modal-backdrop, .pix-nset-pop")) return;
+  if (e.target.closest?.(".xh-cp-popup, .xh-cp-modal-backdrop, .pix-nset-pop")) return;
   // The face's own gear acts on `click`, which lands AFTER this pointerdown -
   // without this the panel would close and instantly reopen, so the gear could
   // never shut what it opened.

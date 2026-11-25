@@ -75,7 +75,7 @@ const PLAIN = {
 
     XHBBoxRegion: {
         zh: {
-            title: "区域限定框",
+            title: "区域限定框 XiaoHei",
             widgets: {
                 center_x: "中心X占比", center_y: "中心Y占比",
                 box_w: "区域宽占比", box_h: "区域高占比",
@@ -84,7 +84,7 @@ const PLAIN = {
             slots: { image: "图像", BBOX: "限定框" },
         },
         en: {
-            title: "BBox Region",
+            title: "BBox Region XiaoHei",
             widgets: {
                 center_x: "Center X %", center_y: "Center Y %",
                 box_w: "Box W %", box_h: "Box H %",
@@ -115,7 +115,7 @@ const PLAIN = {
 
     XHBeatCueTable: {
         zh: {
-            title: "音乐卡点表",
+            title: "音乐卡点表 XiaoHei",
             widgets: {
                 audio: "音频", target_sec: "目标秒数", fps: "帧率",
                 frame_mod: "帧格模数", frame_offset: "帧格偏移",
@@ -133,7 +133,7 @@ const PLAIN = {
             },
         },
         en: {
-            title: "Beat Cue Table",
+            title: "Beat Cue Table XiaoHei",
             widgets: {
                 audio: "Audio", target_sec: "Target Sec", fps: "FPS",
                 frame_mod: "Frame Mod", frame_offset: "Frame Offset",
@@ -152,7 +152,7 @@ const PLAIN = {
 
     XHFloatVideo: {
         zh: {
-            title: "悬浮任意窗口",
+            title: "悬浮任意窗口 XiaoHei",
             widgets: {
                 size_preset: "尺寸预设", corner: "停靠角", opacity: "不透明度",
                 width: "宽", height: "高", title_keyword: "窗口标题关键字",
@@ -160,7 +160,7 @@ const PLAIN = {
             slots: {},
         },
         en: {
-            title: "Float Any Window",
+            title: "Float Any Window XiaoHei",
             widgets: {
                 size_preset: "Size Preset", corner: "Corner", opacity: "Opacity",
                 width: "Width", height: "Height", title_keyword: "Title Keyword",
@@ -171,12 +171,12 @@ const PLAIN = {
 
     XHGroupController: {
         zh: {
-            title: "分组控制",
+            title: "分组控制 XiaoHei",
             widgets: { opt: "分组" },
             slots: { OPT_CONNECTION: "分组连接" },
         },
         en: {
-            title: "Group Controller",
+            title: "Group Controller XiaoHei",
             widgets: { opt: "Group" },
             slots: { OPT_CONNECTION: "Group Link" },
         },
@@ -184,7 +184,7 @@ const PLAIN = {
 
     XHH3LatentContinuation: {
         zh: {
-            title: "H3 latent接续",
+            title: "H3 latent接续 XiaoHei",
             widgets: {
                 positive: "正向提示", target_latent: "目标潜变量", previous_latent: "上一段潜变量",
                 overlap_frames: "重叠帧数", is_first: "是否第一段", drift_control: "漂移控制",
@@ -195,7 +195,7 @@ const PLAIN = {
             },
         },
         en: {
-            title: "H3 Latent Continuation",
+            title: "H3 Latent Continuation XiaoHei",
             widgets: {
                 positive: "Positive", target_latent: "Target Latent", previous_latent: "Previous Latent",
                 overlap_frames: "Overlap Frames", is_first: "Is First", drift_control: "Drift Control",
@@ -209,12 +209,12 @@ const PLAIN = {
 
     XHH3TemporalCorrection: {
         zh: {
-            title: "H3 动作校正",
+            title: "H3 动作校正 XiaoHei",
             widgets: { model: "模型", tau: "校正强度", log_diagnostics: "诊断日志" },
             slots: { model: "模型" },
         },
         en: {
-            title: "H3 Motion Correction",
+            title: "H3 Motion Correction XiaoHei",
             widgets: { model: "Model", tau: "Strength", log_diagnostics: "Diagnostics" },
             slots: { model: "Model" },
         },
@@ -222,12 +222,12 @@ const PLAIN = {
 
     XHImageBatchMulti: {
         zh: {
-            title: "图像批量合并",
+            title: "图像批量合并 XiaoHei",
             widgets: { image_1: "第 1 张图", image_2: "第 2 张图" },
             slots: { images: "合并图" },
         },
         en: {
-            title: "Batch Images",
+            title: "Batch Images XiaoHei",
             widgets: { image_1: "Image 1", image_2: "Image 2" },
             slots: { images: "Images" },
         },
@@ -235,7 +235,7 @@ const PLAIN = {
 
     XHImageCompare: {
         zh: {
-            title: "图像对比拼图",
+            title: "图像对比拼图 XiaoHei",
             widgets: {
                 text1: "标题1", text2: "标题2", text3: "标题3", size_base: "基准图",
                 text_color: "文字颜色", bg_color: "背景色", font_size: "字号",
@@ -244,7 +244,7 @@ const PLAIN = {
             slots: { IMAGE: "拼图" },
         },
         en: {
-            title: "Image Compare",
+            title: "Image Compare XiaoHei",
             widgets: {
                 text1: "Title 1", text2: "Title 2", text3: "Title 3", size_base: "Base",
                 text_color: "Text Color", bg_color: "BG Color", font_size: "Font Size",
@@ -256,12 +256,12 @@ const PLAIN = {
 
     XHImageContrast: {
         zh: {
-            title: "图像对比度",
+            title: "图像对比度 XiaoHei",
             widgets: { image: "输入图像", contrast: "对比度", brightness: "亮度", strength: "作用强度" },
             slots: { image: "图像" },
         },
         en: {
-            title: "Image Contrast",
+            title: "Image Contrast XiaoHei",
             widgets: { image: "Image", contrast: "Contrast", brightness: "Brightness", strength: "Strength" },
             slots: { image: "Image" },
         },
@@ -269,12 +269,12 @@ const PLAIN = {
 
     XHImageGetByIndex: {
         zh: {
-            title: "图像按序取",
+            title: "图像按序取 XiaoHei",
             widgets: { images: "图像批次", index: "序号", index_from_one: "从 1 开始", clamp: "越界夹取" },
             slots: { IMAGE: "图像", actual_index: "实际序号" },
         },
         en: {
-            title: "Image By Index",
+            title: "Image By Index XiaoHei",
             widgets: { images: "Images", index: "Index", index_from_one: "1-based", clamp: "Clamp" },
             slots: { IMAGE: "Image", actual_index: "Actual Index" },
         },
@@ -282,12 +282,12 @@ const PLAIN = {
 
     XHImageList: {
         zh: {
-            title: "图片列表",
+            title: "图片列表 XiaoHei",
             widgets: { images: "图像批次", all_segments: "自循环·逐张输出" },
             slots: { IMAGE: "图像", count: "总数" },
         },
         en: {
-            title: "Image List",
+            title: "Image List XiaoHei",
             widgets: { images: "Images", all_segments: "Auto-loop: one per run" },
             slots: { IMAGE: "Image", count: "Count" },
         },
@@ -295,7 +295,7 @@ const PLAIN = {
 
     XHImageMaskScale: {
         zh: {
-            title: "图像遮罩缩放",
+            title: "图像遮罩缩放 XiaoHei",
             widgets: {
                 input: "输入", resize_mode: "调整类型", size: "目标尺寸",
                 interpolation: "缩放方法", divisible_by: "整除对齐",
@@ -303,7 +303,7 @@ const PLAIN = {
             slots: { input: "输入", resized: "缩放后" },
         },
         en: {
-            title: "Mask Scale",
+            title: "Mask Scale XiaoHei",
             widgets: {
                 input: "Input", resize_mode: "Mode", size: "Size",
                 interpolation: "Interpolation", divisible_by: "Divisible By",
@@ -314,7 +314,7 @@ const PLAIN = {
 
     XHImageResizeV2: {
         zh: {
-            title: "图像缩放v2",
+            title: "图像缩放v2 XiaoHei",
             widgets: {
                 image: "输入图像", width: "目标宽度", height: "目标高度",
                 upscale_method: "缩放算法", keep_proportion: "保持比例方式", pad_color: "补边颜色",
@@ -323,7 +323,7 @@ const PLAIN = {
             slots: { image: "图像", mask: "蒙版", IMAGE: "图像", width: "宽", height: "高" },
         },
         en: {
-            title: "Image Resize v2",
+            title: "Image Resize v2 XiaoHei",
             widgets: {
                 image: "Image", width: "Width", height: "Height",
                 upscale_method: "Method", keep_proportion: "Keep Proportion", pad_color: "Pad Color",
@@ -335,25 +335,25 @@ const PLAIN = {
 
     XHImageSize: {
         zh: {
-            title: "图像尺寸",
+            title: "图像尺寸 XiaoHei",
             widgets: { image: "输入图像" },
             slots: { image: "图像", width: "宽", height: "高", batch_size: "张数", info: "信息" },
         },
         en: {
-            title: "Image Size",
+            title: "Image Size XiaoHei",
             widgets: { image: "Image" },
             slots: { image: "Image", width: "Width", height: "Height", batch_size: "Batch Size", info: "Info" },
         },
     },
 
     XHLabel: {
-        zh: { title: "标签", widgets: {}, slots: {} },
-        en: { title: "Label", widgets: {}, slots: {} },
+        zh: { title: "标签 XiaoHei", widgets: {}, slots: {} },
+        en: { title: "Label XiaoHei", widgets: {}, slots: {} },
     },
 
     XHLoopIteration: {
         zh: {
-            title: "循环迭代",
+            title: "循环迭代 XiaoHei",
             widgets: {
                 //  2026-10-29 用户定案：索引类参数统一「索引（原名）」格式 + 置顶
                 iteration_index: "索引（轮次）", is_first: "是否第一轮", is_last: "是否最后一轮",
@@ -370,7 +370,7 @@ const PLAIN = {
             },
         },
         en: {
-            title: "Loop Iteration",
+            title: "Loop Iteration XiaoHei",
             widgets: {
                 iteration_index: "Index (turn)", is_first: "Is First", is_last: "Is Last",
                 reuse_cache: "Reuse Cache",
@@ -389,12 +389,12 @@ const PLAIN = {
 
     XHLoopProgress: {
         zh: {
-            title: "循环进度",
+            title: "循环进度 XiaoHei",
             widgets: { start_id: "开始节点 ID", position: "第几轮", total: "总轮数" },
             slots: { progress: "进度文字" },
         },
         en: {
-            title: "Loop Progress",
+            title: "Loop Progress XiaoHei",
             widgets: { start_id: "Start Node ID", position: "Position", total: "Total" },
             slots: { progress: "Progress Text" },
         },
@@ -402,12 +402,12 @@ const PLAIN = {
 
     XHLoopResult: {
         zh: {
-            title: "循环收尾",
+            title: "循环收尾 XiaoHei",
             widgets: { close_id: "结束节点 ID" },
             slots: {},
         },
         en: {
-            title: "Loop Result",
+            title: "Loop Result XiaoHei",
             widgets: { close_id: "End Node ID" },
             slots: {},
         },
@@ -415,12 +415,12 @@ const PLAIN = {
 
     XHPowerLoraStack: {
         zh: {
-            title: "LoRA堆栈",
+            title: "LoRA堆栈 XiaoHei",
             widgets: { loras_json: "LoRA 列表", model: "模型", clip: "CLIP" },
             slots: { model: "模型", clip: "CLIP", MODEL: "模型", CLIP: "CLIP" },
         },
         en: {
-            title: "LoRA Stack",
+            title: "LoRA Stack XiaoHei",
             widgets: { loras_json: "LoRA List", model: "Model", clip: "CLIP" },
             slots: { model: "Model", clip: "CLIP", MODEL: "Model", CLIP: "CLIP" },
         },
@@ -428,12 +428,12 @@ const PLAIN = {
 
     XHPureLoraStack: {
         zh: {
-            title: "纯LoRA堆栈",
+            title: "纯LoRA堆栈 XiaoHei",
             widgets: { loras_json: "LoRA 列表", model: "模型" },
             slots: { model: "模型", MODEL: "模型" },
         },
         en: {
-            title: "Pure LoRA Stack",
+            title: "Pure LoRA Stack XiaoHei",
             widgets: { loras_json: "LoRA List", model: "Model" },
             slots: { model: "Model", MODEL: "Model" },
         },
@@ -441,7 +441,7 @@ const PLAIN = {
 
     XHRefSheetBuilder: {
         zh: {
-            title: "参考图拼接板",
+            title: "参考图拼接板 XiaoHei",
             widgets: {
                 image_1: "第 1 格", preset: "目标画幅", inputcount: "参考图数量", layout: "版式",
                 gap: "格间距", crop_fill: "裁切填满", pad_color: "补边色", divisible_by: "整除对齐",
@@ -450,7 +450,7 @@ const PLAIN = {
             slots: { ref_sheet: "拼接板", width: "宽", height: "高" },
         },
         en: {
-            title: "Ref Sheet",
+            title: "Ref Sheet XiaoHei",
             widgets: {
                 image_1: "Slot 1", preset: "Preset", inputcount: "Slots", layout: "Layout",
                 gap: "Gap", crop_fill: "Crop Fill", pad_color: "Pad Color", divisible_by: "Divisible By",
@@ -462,7 +462,7 @@ const PLAIN = {
 
     XHSeamFeather: {
         zh: {
-            title: "衔接淡化",
+            title: "衔接淡化 XiaoHei",
             widgets: {
                 images: "图像批次", reference: "参考帧", frames: "衔接帧数", strength: "强度",
                 falloff: "衰减", mode: "模式", ref_pick: "参考选取", blur_radius: "模糊半径",
@@ -470,7 +470,7 @@ const PLAIN = {
             slots: { images: "图像", reference: "参考帧" },
         },
         en: {
-            title: "Seam Feather",
+            title: "Seam Feather XiaoHei",
             widgets: {
                 images: "Images", reference: "Reference", frames: "Frames", strength: "Strength",
                 falloff: "Falloff", mode: "Mode", ref_pick: "Ref Pick", blur_radius: "Blur",
@@ -481,7 +481,7 @@ const PLAIN = {
 
     XHShapeMaskOverlay: {
         zh: {
-            title: "形状遮罩覆盖",
+            title: "形状遮罩覆盖 XiaoHei",
             widgets: {
                 shape: "形状", coord_center: "坐标中心", location_x: "偏移X", location_y: "偏移Y",
                 shape_width: "形状基准宽", shape_height: "形状基准高", scale: "缩放", rotation: "旋转",
@@ -493,7 +493,7 @@ const PLAIN = {
             slots: { image: "原图", mask: "遮罩", IMAGE: "图像", MASK: "遮罩", BOX2: "框" },
         },
         en: {
-            title: "Shape Mask Overlay",
+            title: "Shape Mask Overlay XiaoHei",
             widgets: {
                 shape: "Shape", coord_center: "Coord Center", location_x: "Offset X", location_y: "Offset Y",
                 shape_width: "Base W", shape_height: "Base H", scale: "Scale", rotation: "Rotation",
@@ -507,13 +507,13 @@ const PLAIN = {
     },
 
     XHSlider: {
-        zh: { title: "滑块", widgets: { slider_json: "滑块设置" }, slots: { X: "数值" } },
-        en: { title: "Slider", widgets: { slider_json: "Slider Settings" }, slots: { X: "Value" } },
+        zh: { title: "滑块 XiaoHei", widgets: { slider_json: "滑块设置" }, slots: { X: "数值" } },
+        en: { title: "Slider XiaoHei", widgets: { slider_json: "Slider Settings" }, slots: { X: "Value" } },
     },
 
     XHStoryboardGrid: {
         zh: {
-            title: "宫格底板",
+            title: "宫格底板 XiaoHei",
             widgets: {
                 width: "底板宽度", height: "底板高度", layout_mode: "排版方式", num_panels: "格数",
                 columns: "列数", rows: "行数", border_thickness: "边框粗细",
@@ -522,7 +522,7 @@ const PLAIN = {
             slots: { image: "底板", cell_mask: "格遮罩", info: "信息" },
         },
         en: {
-            title: "Storyboard Grid",
+            title: "Storyboard Grid XiaoHei",
             widgets: {
                 width: "Board W", height: "Board H", layout_mode: "Layout Mode", num_panels: "Panels",
                 columns: "Columns", rows: "Rows", border_thickness: "Border",
@@ -534,7 +534,7 @@ const PLAIN = {
 
     XHStoryboardPanelCrop: {
         zh: {
-            title: "宫格切图",
+            title: "宫格切图 XiaoHei",
             widgets: {
                 image: "输入宫格", columns: "列数", rows: "行数", shave_edges_pixels: "内缩像素",
                 offset_y: "纵向偏移", offset_x: "横向偏移", target_aspect_ratio: "目标比例",
@@ -543,7 +543,7 @@ const PLAIN = {
             slots: { image: "宫格", images: "切出的图", grid_preview: "预览", panel_count: "格数" },
         },
         en: {
-            title: "Storyboard Crop",
+            title: "Storyboard Crop XiaoHei",
             widgets: {
                 image: "Grid Image", columns: "Columns", rows: "Rows", shave_edges_pixels: "Shave Px",
                 offset_y: "Offset Y", offset_x: "Offset X", target_aspect_ratio: "Target AR",
@@ -554,18 +554,18 @@ const PLAIN = {
     },
 
     XHTimer: {
-        zh: { title: "计时器", widgets: {}, slots: {} },
-        en: { title: "Timer", widgets: {}, slots: {} },
+        zh: { title: "计时器 XiaoHei", widgets: {}, slots: {} },
+        en: { title: "Timer XiaoHei", widgets: {}, slots: {} },
     },
 
     XHTrackColorize: {
         zh: {
-            title: "跟踪上色",
+            title: "跟踪上色 XiaoHei",
             widgets: { track_data: "跟踪数据", opacity: "ID色浓度", draw_numbers: "编号", images: "原视频帧" },
             slots: { images: "原视频帧", image: "上色后" },
         },
         en: {
-            title: "Track Colorize",
+            title: "Track Colorize XiaoHei",
             widgets: { track_data: "Track Data", opacity: "ID Color", draw_numbers: "Draw Numbers", images: "Frames" },
             slots: { images: "Frames", image: "Colorized" },
         },

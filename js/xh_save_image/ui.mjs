@@ -20,13 +20,13 @@ export function el(tag, cls, text) {
 
 let _cssDone = false;
 export function injectCSS() {
-  if (_cssDone || document.getElementById("pix-si-css")) {
+  if (_cssDone || document.getElementById("xh-si-css")) {
     _cssDone = true;
     return;
   }
   _cssDone = true;
   const s = document.createElement("style");
-  s.id = "pix-si-css";
+  s.id = "xh-si-css";
   s.textContent = [
     // flex:1 1 0 (ABSOLUTE basis) + min-height:0, never height:100% - see the long
     // note on .pix-sv-root in js/save_video/ui.mjs. A percentage basis against a

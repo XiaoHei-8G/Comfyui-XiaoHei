@@ -29,11 +29,9 @@ import { t } from "./i18n.mjs";
 
 export const WIDGET_NAME = "sketch_ui";
 export const WIDGET_TYPE = "xh_sketch";   // unique: a registered Vue type would swallow the DOM
-// The picture is the point of this node: the tool bar, the corner buttons and
-// the colour strip all float ON it, so the floor has to hold the tallest of
-// them (nine 20 px buttons + 8 gaps + divider + padding = 211).
-export const STAGE_MIN = 212;
-export const FLOOR = 320;                        // rows + the picture at STAGE_MIN + one list row
+// 2026-11-25 不遮图：控件全部移到图片外的独立行，图片区只需一块能看清画面的底限。
+export const STAGE_MIN = 140;
+export const FLOOR = 320;                        // tools row + picture + colours row + one list row
 export const MIN_W = 360;                        // the widest control row still fits (both renderers)
 
 const el = (tag, cls) => {
@@ -55,25 +53,27 @@ export function buildFace(node, { onExpand }) {
   // One short line: the banner sits over the picture, on top of the very marks it asks you to check.
   warn.textContent = t("warnShape");
   warn.hidden = true;
-  // Layout 2026-11-20 (方案 A): the picture takes the whole body, and every
-  // control floats on it - tools down the left edge, Expand + Gear in the top
-  // right corner, colours and line width along the bottom edge. The notes list
-  // and the prompt keep the strip under the picture.
-  const tools = el("div", "pix-sketch-vtools");
-  const acts = el("div", "pix-sketch-hact");
-  const colors = el("div", "pix-sketch-hcolor");
-  stage.append(canvas, empty, warn, tools, acts, colors);
+  // Layout 2026-11-25 (不遮图): NO control floats on the picture any more.
+  // Row 1 = tools (left) + Expand/Gear/Clear (right); the picture is a clean
+  // stage on its own; row 2 = colours + line width; then notes and prompt.
+  const row1 = el("div", "pix-sketch-row1");
+  const tools = el("div", "pix-sketch-tools-row");
+  const acts = el("div", "pix-sketch-acts-row");
+  row1.append(tools, el("span", "pix-sketch-grow"), acts);
+  const colors = el("div", "pix-sketch-colors-row");
+  stage.append(canvas, empty, warn);
   const list = el("div", "pix-sketch-list");
   const prompt = el("div", "pix-sketch-prompt");
-  inner.append(stage, list, prompt);
+  inner.append(row1, stage, colors, list, prompt);
   root.appendChild(inner);
 
-  // A press on any overlay must never reach the picture under it: the drawing
-  // listener sits on the stage, and these are its children now.
-  for (const o of [tools, acts, colors]) o.addEventListener("pointerdown", (e) => e.stopPropagation());
+  // Overlays were stage children in the old floating layout, so their presses
+  // had to be stopped from reaching the drawing listener. Now they are siblings
+  // of the stage (outside it), so no stopPropagation is needed - and the colour
+  // row must NOT swallow pointer events that belong to the controls.
 
-  const syncTools = buildTools(node, tools, { vertical: true });
-  const syncActions = buildActions(node, tools, { vertical: true });
+  const syncTools = buildTools(node, tools, { vertical: false });
+  const syncActions = buildActions(node, tools, { vertical: false });
   const syncMini = buildMiniActions(node, acts, { onExpand, onGear: () => openNodeSettings(node) });
   const syncColors = buildColors(node, colors);
   const syncPrompt = buildPromptBox(node, prompt, { collapsible: true });

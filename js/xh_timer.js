@@ -47,8 +47,8 @@ let _timerListenersBound = false;
 
 // 中英文文字
 const LABELS = {
-    zh: { title: "计时器", reset: " 重置", remind: " 提醒", remindTitle: "定时提醒", remindOn: "已开启，每", remindOff: "已关闭", every: "每隔", minute: "分钟", hint: "每满设定分钟播报一次", hintStop: "跑完自动播报总用时（无需开关）", quick: "快捷", preview: "试听" },
-    en: { title: "Timer", reset: " Reset", remind: " Remind", remindTitle: "Time reminder", remindOn: "On, every", remindOff: "Off", every: "Every", minute: "min", hint: "Announces at each interval", hintStop: "Auto-announces total time on finish (no toggle)", quick: "Quick", preview: "Test" },
+    zh: { title: "计时器 XiaoHei", reset: " 重置", remind: " 提醒", remindTitle: "定时提醒", remindOn: "已开启，每", remindOff: "已关闭", every: "每隔", minute: "分钟", hint: "每满设定分钟播报一次", hintStop: "跑完自动播报总用时（无需开关）", quick: "快捷", preview: "试听" },
+    en: { title: "Timer XiaoHei", reset: " Reset", remind: " Remind", remindTitle: "Time reminder", remindOn: "On, every", remindOff: "Off", every: "Every", minute: "min", hint: "Announces at each interval", hintStop: "Auto-announces total time on finish (no toggle)", quick: "Quick", preview: "Test" },
 };
 
 // ---- 语音播报（计时器完成 / 定时提醒 共用）--------------------------------

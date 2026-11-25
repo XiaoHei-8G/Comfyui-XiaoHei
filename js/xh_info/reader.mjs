@@ -520,7 +520,7 @@ export function openReader(node) {
         (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
     // Leave Esc to anything open on top of us (a ComfyUI dialog, a menu, Help,
     // the "Delete this Info button?" question, which Esc must cancel alone).
-    if (document.querySelector(".p-dialog-mask, .litecontextmenu, .xh-info-start, .pix-help-backdrop, .pix-cfm-back")) return;
+    if (document.querySelector(".p-dialog-mask, .litecontextmenu, .xh-info-start, .xh-help-backdrop, .pix-cfm-back")) return;
     // ComfyUI's dialogs left PrimeVue (Settings already on frontend 1.55, all of them on 1.57): no .p-dialog-mask,
     // only role="dialog", which this window carries too. Measured: Esc closed us under an open Settings dialog.
     if ([...document.querySelectorAll('[role="dialog"]')].some((d) => d !== _win &&

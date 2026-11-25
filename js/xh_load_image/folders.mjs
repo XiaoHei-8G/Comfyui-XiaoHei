@@ -247,10 +247,10 @@ export function folderCounter(node) {
 
 let _cssDone = false;
 function injectFoldersCSS() {
-  if (_cssDone || document.getElementById("pix-lifold-css")) { _cssDone = true; return; }
+  if (_cssDone || document.getElementById("xh-lifold-css")) { _cssDone = true; return; }
   _cssDone = true;
   const s = document.createElement("style");
-  s.id = "pix-lifold-css";
+  s.id = "xh-lifold-css";
   s.textContent = `
     .pix-lifold { display:flex; flex-direction:column; gap:7px; }
     .pix-lifold-h { font-size:12px; color:#ddd; font-weight:600; }

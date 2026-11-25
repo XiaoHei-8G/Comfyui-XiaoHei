@@ -51,6 +51,32 @@ export function pixApiUrl(route) {
 }
 
 /**
+ * 由 stateJson 里保存的 input 相对路径拼出可用的 /view 地址。
+ *
+ * 家族节点新数据都带真实子目录：画板 composite/layer 存在 input/xh_paint/，
+ * 局部重绘的 src/mask 存在 input/xh_inpaint/（见各自后端 save 路由的
+ * relative_path）。旧代码却写死 subfolder=pixaroma，去找一个不存在的目录，
+ * /view 返回 404 → img.onload 不触发 → 缩略图永远停在上一次成功的旧图上。
+ * 这就是「换了图却一直是之前那张」的根因（粉丝反馈 2026-11-23）。
+ *
+ * 这里从路径本身解析子目录，兼容三种历史写法：
+ *   xh_inpaint/xxx.png、xh_paint/xxx.png → 用真实子目录；
+ *   pixaroma/xxx.png                    → 保留 pixaroma（原版老数据）；
+ *   xxx.png（无子目录）                  → 回落 pixaroma（最早只存文件名的存档）。
+ * 顺带剥掉 LoadImage 的 "[input]" 之类标注尾巴和前导斜杠。
+ */
+export function inputImageURL(rel, bust = true) {
+  let s = String(rel || "").replace(/\\/g, "/").trim();
+  s = s.replace(/\s*\[(input|output|temp)\]\s*$/i, "").replace(/^\/+/, "");
+  const i = s.lastIndexOf("/");
+  const filename = i >= 0 ? s.slice(i + 1) : s;
+  const subfolder = i >= 0 ? s.slice(0, i) : "pixaroma";
+  return pixApiUrl(`/view?filename=${encodeURIComponent(filename)}` +
+    `&type=input&subfolder=${encodeURIComponent(subfolder)}` +
+    (bust ? `&t=${Date.now()}` : ""));
+}
+
+/**
  * Absolute-safe URL for one of OUR bundled assets (icons, fonts, sounds, models).
  *
  * @param {string} tail path BELOW assets, e.g. "icons/ui/play.svg". No leading /.

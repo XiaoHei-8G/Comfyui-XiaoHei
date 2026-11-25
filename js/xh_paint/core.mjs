@@ -30,14 +30,14 @@ import {
 } from "../framework/index.mjs";
 import { fetchBgRemovalInfo, buildBgRemovalDropdown } from "../framework/bg_removal_dropdown.mjs";
 
-const PAINT_STYLE_ID = "pixaroma-paint-extra-styles-v5";
+const PAINT_STYLE_ID = "xh-paint-extra-styles-v5";
 
 function injectPaintExtraStyles() {
   if (document.getElementById(PAINT_STYLE_ID)) return;
   // remove old versions
-  document.getElementById("pixaroma-paint-extra-styles-v4")?.remove();
-  document.getElementById("pixaroma-paint-styles-v3")?.remove();
-  document.getElementById("pixaroma-paint-styles-v2")?.remove();
+  document.getElementById("xh-paint-extra-styles-v4")?.remove();
+  document.getElementById("xh-paint-styles-v3")?.remove();
+  document.getElementById("xh-paint-styles-v2")?.remove();
   const s = document.createElement("style");
   s.id = PAINT_STYLE_ID;
   s.textContent = `

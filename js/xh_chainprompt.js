@@ -42,8 +42,8 @@ const JOIN_KEEP_INPUTS = 2;  // 常驻口数（prompt_0 / prompt_1）
 const XH_I18N = {
     zh: {
         nodes: {
-            XH_ChainPromptSelector: "提示词表",
-            XH_DynamicPromptJoin: "提示词联结(动态)",
+            XH_ChainPromptSelector: "提示词表 XiaoHei",
+            XH_DynamicPromptJoin: "提示词联结(动态) XiaoHei",
         },
         widgets: {
             num_slots: "框数（改数字实时生效）",
@@ -94,8 +94,8 @@ const XH_I18N = {
     },
     en: {
         nodes: {
-            XH_ChainPromptSelector: "ChainPrompt Selector",
-            XH_DynamicPromptJoin: "Prompt Join (Dynamic)",
+            XH_ChainPromptSelector: "ChainPrompt Selector XiaoHei",
+            XH_DynamicPromptJoin: "Prompt Join (Dynamic) XiaoHei",
         },
         widgets: {
             num_slots: "Slots (live)",

@@ -29,7 +29,7 @@ const ADV_KEYS = [
 
 const XH_I18N = {
     zh: {
-        nodes: { XHMSRRelayEncode: "MSR精修编码" },
+        nodes: { XHMSRRelayEncode: "MSR精修编码 XiaoHei" },
         widgets: {
             global_prompt: "全局提示词（整段不变，可留空）",
             shot_prompts: "分段提示词（每段末尾写时长，如 [3] 或 [0-3]）",
@@ -59,7 +59,7 @@ const XH_I18N = {
         advHide: "收起高级参数",
     },
     en: {
-        nodes: { XHMSRRelayEncode: "MSR Refine Encode" },
+        nodes: { XHMSRRelayEncode: "MSR Refine Encode XiaoHei" },
         widgets: {
             global_prompt: "global prompt (whole video, optional)",
             shot_prompts: "shot script (put duration at each shot's end, e.g. [3] or [0-3])",

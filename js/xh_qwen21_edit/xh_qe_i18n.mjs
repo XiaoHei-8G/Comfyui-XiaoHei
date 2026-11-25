@@ -7,16 +7,16 @@
 //  绝不改 name 与 COMBO values（那是存档值，改了会崩）。
 
 export const QE_NODES_ZH = {
-    "XHQwen21Cut": "Qwen21约束裁切",
-    "XHColorCalibrator": "局部色彩校准",
-    "XHImageSliderCompare": "双图滑块对比",
-    "XHLoadImageWithMask": "加载图像(带遮罩)",
+    "XHQwen21Cut": "Qwen21约束裁切 XiaoHei",
+    "XHColorCalibrator": "局部色彩校准 XiaoHei",
+    "XHImageSliderCompare": "双图滑块对比 XiaoHei",
+    "XHLoadImageWithMask": "加载图像(带遮罩) XiaoHei",
 };
 export const QE_NODES_EN = {
-    "XHQwen21Cut": "Qwen21 Constrained Cut",
-    "XHColorCalibrator": "Local Color Calibrator",
-    "XHImageSliderCompare": "Image Slider Compare",
-    "XHLoadImageWithMask": "Load Image (with Mask)",
+    "XHQwen21Cut": "Qwen21 Constrained Cut XiaoHei",
+    "XHColorCalibrator": "Local Color Calibrator XiaoHei",
+    "XHImageSliderCompare": "Image Slider Compare XiaoHei",
+    "XHLoadImageWithMask": "Load Image (with Mask) XiaoHei",
 };
 
 const ZH = {

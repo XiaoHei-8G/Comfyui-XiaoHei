@@ -2877,7 +2877,7 @@ const SETTING_DEFS = [
         id: `${NS}.connFxSize`, name: "接线特效大小", type: "slider",
         attrs: { min: 0.8, max: 3, step: 0.1 }, defaultValue: 2.2,
         group: "连线",
-        description: "端口光晕、流动粒子、电弧整体的尺寸倍数。1.0 ≈ Pixaroma 原版；2.2 = 默认（比原版大一倍多）；3.0 = 很夸张。改完立刻生效。",
+        description: "端口光晕、流动粒子、电弧整体的尺寸倍数。1.0 ≈ 原始尺寸；2.2 = 默认（比原始大一倍多）；3.0 = 很夸张。改完立刻生效。",
         onChange: (v) => { (window.__XH_CFX = window.__XH_CFX || {}).connFxSize = Number(v); },
     },
     {

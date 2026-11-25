@@ -13,13 +13,13 @@ ensureLangBridge();
 const NODE_TYPE = "XHMathFloat";
 const XH_I18N = {
     zh: {
-        nodes: { XHMathFloat: "浮点运算" },
+        nodes: { XHMathFloat: "浮点运算 XiaoHei" },
         widgets: { a: "a", b: "b", operation: "操作" },
         // a/b 是多类型输入（FLOAT,INT,BOOLEAN）⇒ 前端按「端口」渲染，标签走 slots 表才生效（与 xh_lang_audit 口径一致）
         slots: { FLOAT: "浮点数", a: "a", b: "b" },
     },
     en: {
-        nodes: { XHMathFloat: "Float Math" },
+        nodes: { XHMathFloat: "Float Math XiaoHei" },
         widgets: { a: "a", b: "b", operation: "operation" },
         slots: { FLOAT: "FLOAT", a: "a", b: "b" },
     },

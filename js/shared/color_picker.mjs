@@ -112,7 +112,7 @@ function ensureCSS() {
   if (_cssInjected) return;
   _cssInjected = true;
   const s = document.createElement("style");
-  s.id = "pixaroma-color-picker-css";
+  s.id = "xh-color-picker-css";
   s.textContent = `
 .pix-cp {
   display: flex;
@@ -121,13 +121,13 @@ function ensureCSS() {
   width: 100%;
   box-sizing: border-box;
 }
-.pix-cp-swatches {
+.xh-cp-swatches {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 3px;
   width: 100%;
 }
-.pix-cp-tile {
+.xh-cp-tile {
   width: 100%;
   aspect-ratio: 1;
   border-radius: 3px;
@@ -136,26 +136,26 @@ function ensureCSS() {
   padding: 0;
   box-sizing: border-box;
 }
-.pix-cp-tile.selected {
+.xh-cp-tile.selected {
   outline: 2px solid ${BRAND};
   outline-offset: 1px;
 }
-.pix-cp-tile-clear {
+.xh-cp-tile-clear {
   background:
     linear-gradient(45deg, transparent 45%, #d33 45%, #d33 55%, transparent 55%),
     repeating-conic-gradient(#888 0 25%, #444 0 50%) 50%/8px 8px;
 }
-.pix-cp-tile-clear.disabled {
+.xh-cp-tile-clear.disabled {
   cursor: not-allowed;
   opacity: 0.35;
   filter: grayscale(1);
 }
-.pix-cp-sv-row {
+.xh-cp-sv-row {
   display: flex;
   gap: 6px;
   align-items: stretch;
 }
-.pix-cp-sv {
+.xh-cp-sv {
   border: 1px solid #444;
   border-radius: 3px;
   cursor: crosshair;
@@ -164,19 +164,19 @@ function ensureCSS() {
   width: 100%;
   height: 80px;
 }
-.pix-cp-hue {
+.xh-cp-hue {
   border: 1px solid #444;
   border-radius: 3px;
   cursor: ns-resize;
   display: block;
   flex: 0 0 auto;
 }
-.pix-cp-hexrow {
+.xh-cp-hexrow {
   display: flex;
   gap: 6px;
   align-items: center;
 }
-.pix-cp-hex {
+.xh-cp-hex {
   flex: 1 1 auto;
   min-width: 0;
   height: 22px;
@@ -189,11 +189,11 @@ function ensureCSS() {
   font-family: "Consolas", monospace;
   border-radius: 3px;
 }
-.pix-cp-hex:focus {
+.xh-cp-hex:focus {
   outline: none;
   border-color: ${BRAND};
 }
-.pix-cp-reset {
+.xh-cp-reset {
   flex: 0 0 auto;
   height: 22px;
   padding: 0 10px;
@@ -205,12 +205,12 @@ function ensureCSS() {
   font-size: 11px;
   font-family: "Segoe UI", system-ui, sans-serif;
 }
-.pix-cp-reset:hover {
+.xh-cp-reset:hover {
   color: ${BRAND};
   border-color: ${BRAND};
 }
 
-.pix-cp-popup {
+.xh-cp-popup {
   position: absolute;
   z-index: 100000;
   background: #1a1a1a;
@@ -223,34 +223,34 @@ function ensureCSS() {
 }
 /* Roomier variant (Sliders / Sizes accent) - a proper SV plane like the
    Group Colors picker rather than a cramped 80px strip. */
-.pix-cp-popup.pix-cp-popup-wide { width: 300px; padding: 12px; }
-.pix-cp-popup-wide .pix-cp-swatches { gap: 4px; }
-.pix-cp-popup-wide .pix-cp-sv { height: 190px; }
-.pix-cp-popup-wide .pix-cp-hex,
-.pix-cp-popup-wide .pix-cp-reset { height: 28px; font-size: 12px; }
+.xh-cp-popup.xh-cp-popup-wide { width: 300px; padding: 12px; }
+.xh-cp-popup-wide .xh-cp-swatches { gap: 4px; }
+.xh-cp-popup-wide .xh-cp-sv { height: 190px; }
+.xh-cp-popup-wide .xh-cp-hex,
+.xh-cp-popup-wide .xh-cp-reset { height: 28px; font-size: 12px; }
 
 /* Compact popup — swatches + Reset / More-colors row only. Used by the
    text and highlight pickers in the Note editor. Excel-style apply-on-
    click avoids the multi-fire onPick storms that SV-drag triggers. */
-.pix-cp-popup.pix-cp-popup-compact {
+.xh-cp-popup.xh-cp-popup-compact {
   width: 320px;
   padding: 12px;
 }
-.pix-cp-popup.pix-cp-popup-compact .pix-cp-swatches {
+.xh-cp-popup.xh-cp-popup-compact .xh-cp-swatches {
   gap: 4px;
 }
-.pix-cp-compact-footer {
+.xh-cp-compact-footer {
   display: flex;
   gap: 8px;
   margin-top: 10px;
 }
-.pix-cp-compact-footer .pix-cp-reset {
+.xh-cp-compact-footer .xh-cp-reset {
   flex: 0 0 auto;
   height: 28px;
   padding: 0 14px;
   font-size: 12px;
 }
-.pix-cp-more-btn {
+.xh-cp-more-btn {
   flex: 1 1 auto;
   height: 28px;
   padding: 0 14px;
@@ -262,14 +262,14 @@ function ensureCSS() {
   font-size: 12px;
   font-family: "Segoe UI", system-ui, sans-serif;
 }
-.pix-cp-more-btn:hover {
+.xh-cp-more-btn:hover {
   color: ${BRAND};
   border-color: ${BRAND};
 }
 
 /* "More colors" modal — full SV / hue / hex picker with OK / Cancel.
    Higher z-index than the picker popup so it stacks above. */
-.pix-cp-modal-backdrop {
+.xh-cp-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
@@ -278,7 +278,7 @@ function ensureCSS() {
   align-items: center;
   justify-content: center;
 }
-.pix-cp-modal-box {
+.xh-cp-modal-box {
   background: #1a1a1a;
   border: 1px solid #444;
   border-radius: 6px;
@@ -291,24 +291,24 @@ function ensureCSS() {
    inline picker normally renders SV as a wide rectangle (80px tall)
    which is fine for narrow popups, but in the dedicated picker modal
    we have room for a proper square saturation/value plane. */
-.pix-cp-modal-box .pix-cp-sv {
+.xh-cp-modal-box .xh-cp-sv {
   aspect-ratio: 1;
   height: auto;
 }
-.pix-cp-modal-title {
+.xh-cp-modal-title {
   color: #ddd;
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
   font-weight: 600;
   margin: 0 0 10px;
 }
-.pix-cp-modal-actions {
+.xh-cp-modal-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   margin-top: 12px;
 }
-.pix-cp-modal-btn {
+.xh-cp-modal-btn {
   height: 28px;
   padding: 0 14px;
   background: transparent;
@@ -319,16 +319,16 @@ function ensureCSS() {
   font-size: 12px;
   font-family: "Segoe UI", system-ui, sans-serif;
 }
-.pix-cp-modal-btn:hover {
+.xh-cp-modal-btn:hover {
   color: ${BRAND};
   border-color: ${BRAND};
 }
-.pix-cp-modal-btn.primary {
+.xh-cp-modal-btn.primary {
   background: ${BRAND};
   border-color: ${BRAND};
   color: #fff;
 }
-.pix-cp-modal-btn.primary:hover {
+.xh-cp-modal-btn.primary:hover {
   background: #d54f2c;
   border-color: #d54f2c;
   color: #fff;
@@ -372,7 +372,7 @@ export function createPixaromaColorPicker(opts = {}) {
 
   // ── Swatches (with optional Clear / transparent tile) ───────────
   const swatchGrid = document.createElement("div");
-  swatchGrid.className = "pix-cp-swatches";
+  swatchGrid.className = "xh-cp-swatches";
 
   /** @type {{tile: HTMLElement, hex: string|null}[]} */
   const swatchTiles = [];
@@ -380,7 +380,7 @@ export function createPixaromaColorPicker(opts = {}) {
   if (showClear) {
     const clearTile = document.createElement("button");
     clearTile.type = "button";
-    clearTile.className = "pix-cp-tile pix-cp-tile-clear";
+    clearTile.className = "xh-cp-tile xh-cp-tile-clear";
     clearTile.title = "透明 / 清除颜色";
     clearTile.addEventListener("mousedown", (e) => e.preventDefault());
     clearTile.addEventListener("click", (e) => {
@@ -396,7 +396,7 @@ export function createPixaromaColorPicker(opts = {}) {
   for (const hex of swatches) {
     const tile = document.createElement("button");
     tile.type = "button";
-    tile.className = "pix-cp-tile";
+    tile.className = "xh-cp-tile";
     tile.style.background = hex;
     tile.title = hex;
     tile.addEventListener("mousedown", (e) => e.preventDefault());
@@ -419,17 +419,17 @@ export function createPixaromaColorPicker(opts = {}) {
 
   // ── SV plane + Hue strip ────────────────────────────────────────
   const svRow = document.createElement("div");
-  svRow.className = "pix-cp-sv-row";
+  svRow.className = "xh-cp-sv-row";
 
   const svCanvas = document.createElement("canvas");
   svCanvas.width  = 168;
   svCanvas.height = 80;
-  svCanvas.className = "pix-cp-sv";
+  svCanvas.className = "xh-cp-sv";
 
   const hueCanvas = document.createElement("canvas");
   hueCanvas.width  = 14;
   hueCanvas.height = 80;
-  hueCanvas.className = "pix-cp-hue";
+  hueCanvas.className = "xh-cp-hue";
 
   svRow.appendChild(svCanvas);
   svRow.appendChild(hueCanvas);
@@ -548,11 +548,11 @@ export function createPixaromaColorPicker(opts = {}) {
 
   // ── Hex row + Reset ─────────────────────────────────────────────
   const hexRow = document.createElement("div");
-  hexRow.className = "pix-cp-hexrow";
+  hexRow.className = "xh-cp-hexrow";
 
   const hexInput = document.createElement("input");
   hexInput.type = "text";
-  hexInput.className = "pix-cp-hex";
+  hexInput.className = "xh-cp-hex";
   hexInput.placeholder = "#rrggbb";
   hexInput.spellcheck = false;
   hexInput.value = curColor || "";
@@ -576,7 +576,7 @@ export function createPixaromaColorPicker(opts = {}) {
   if (!hideReset) {
     const resetBtn = document.createElement("button");
     resetBtn.type = "button";
-    resetBtn.className = "pix-cp-reset";
+    resetBtn.className = "xh-cp-reset";
     resetBtn.title = resetColor === null ? "清除颜色" : `重置为 ${resetColor}`;
     resetBtn.textContent = "重置";
     resetBtn.addEventListener("mousedown", (e) => e.preventDefault());
@@ -659,8 +659,8 @@ export function createPixaromaColorPicker(opts = {}) {
 export function openPixaromaColorPickerPopup(anchorEl, opts = {}) {
   ensureCSS();
   const popup = document.createElement("div");
-  popup.className = "pix-cp-popup";
-  if (opts.wide) popup.classList.add("pix-cp-popup-wide");
+  popup.className = "xh-cp-popup";
+  if (opts.wide) popup.classList.add("xh-cp-popup-wide");
   const rect = anchorEl.getBoundingClientRect();
   popup.style.left = `${rect.left}px`;
   popup.style.top  = `${rect.bottom + 4}px`;
@@ -753,7 +753,7 @@ export function openPixaromaCompactColorPickerPopup(anchorEl, opts = {}) {
   const onPick        = opts.onPick || (() => {});
 
   const popup = document.createElement("div");
-  popup.className = "pix-cp-popup pix-cp-popup-compact";
+  popup.className = "xh-cp-popup xh-cp-popup-compact";
   const rect = anchorEl.getBoundingClientRect();
   popup.style.left = `${rect.left}px`;
   popup.style.top  = `${rect.bottom + 4}px`;
@@ -769,7 +769,7 @@ export function openPixaromaCompactColorPickerPopup(anchorEl, opts = {}) {
   }
 
   const swatchGrid = document.createElement("div");
-  swatchGrid.className = "pix-cp-swatches";
+  swatchGrid.className = "xh-cp-swatches";
 
   const isCurMatch = (hex) =>
     (initialColor === null && hex === null) ||
@@ -779,7 +779,7 @@ export function openPixaromaCompactColorPickerPopup(anchorEl, opts = {}) {
   const buildClearTile = () => {
     const tile = document.createElement("button");
     tile.type = "button";
-    tile.className = "pix-cp-tile pix-cp-tile-clear";
+    tile.className = "xh-cp-tile xh-cp-tile-clear";
     tile.title = clearDisabled
       ? "Transparent (not available for this picker)"
       : "Transparent / clear color";
@@ -807,7 +807,7 @@ export function openPixaromaCompactColorPickerPopup(anchorEl, opts = {}) {
   for (const hex of swatches) {
     const tile = document.createElement("button");
     tile.type = "button";
-    tile.className = "pix-cp-tile";
+    tile.className = "xh-cp-tile";
     tile.style.background = hex;
     tile.title = hex;
     if (isCurMatch(hex)) tile.classList.add("selected");
@@ -829,11 +829,11 @@ export function openPixaromaCompactColorPickerPopup(anchorEl, opts = {}) {
   // be null so the highlight picker's Reset routes through the same
   // null branch as the transparent tile).
   const footer = document.createElement("div");
-  footer.className = "pix-cp-compact-footer";
+  footer.className = "xh-cp-compact-footer";
 
   const resetBtn = document.createElement("button");
   resetBtn.type = "button";
-  resetBtn.className = "pix-cp-reset";
+  resetBtn.className = "xh-cp-reset";
   resetBtn.title = resetColor === null ? "Clear color" : `Reset to ${resetColor}`;
   resetBtn.textContent = "重置";
   resetBtn.addEventListener("mousedown", (e) => e.preventDefault());
@@ -846,7 +846,7 @@ export function openPixaromaCompactColorPickerPopup(anchorEl, opts = {}) {
 
   const moreBtn = document.createElement("button");
   moreBtn.type = "button";
-  moreBtn.className = "pix-cp-more-btn";
+  moreBtn.className = "xh-cp-more-btn";
   moreBtn.textContent = "更多颜色……";
   moreBtn.addEventListener("mousedown", (e) => e.preventDefault());
   moreBtn.addEventListener("click", (e) => {
@@ -903,13 +903,13 @@ export function openPixaromaColorPickerModal(opts = {}) {
   } = opts;
 
   const backdrop = document.createElement("div");
-  backdrop.className = "pix-cp-modal-backdrop";
+  backdrop.className = "xh-cp-modal-backdrop";
 
   const box = document.createElement("div");
-  box.className = "pix-cp-modal-box";
+  box.className = "xh-cp-modal-box";
 
   const titleEl = document.createElement("div");
-  titleEl.className = "pix-cp-modal-title";
+  titleEl.className = "xh-cp-modal-title";
   titleEl.textContent = title;
   box.appendChild(titleEl);
 
@@ -924,16 +924,16 @@ export function openPixaromaColorPickerModal(opts = {}) {
   box.appendChild(picker.element);
 
   const actions = document.createElement("div");
-  actions.className = "pix-cp-modal-actions";
+  actions.className = "xh-cp-modal-actions";
 
   const cancelBtn = document.createElement("button");
   cancelBtn.type = "button";
-  cancelBtn.className = "pix-cp-modal-btn";
+  cancelBtn.className = "xh-cp-modal-btn";
   cancelBtn.textContent = "取消";
 
   const applyBtn = document.createElement("button");
   applyBtn.type = "button";
-  applyBtn.className = "pix-cp-modal-btn primary";
+  applyBtn.className = "xh-cp-modal-btn primary";
   applyBtn.textContent = "应用";
 
   actions.appendChild(cancelBtn);
@@ -989,18 +989,18 @@ export function openPixaromaColorPickerModal(opts = {}) {
 // OK fires `opts.onPick(currentHex)` and closes; Cancel just closes.
 // Esc cancels (window-capture so it preempts the editor's overlay
 // keydown handler — Note editor's `_keyBlock` already returns early
-// when `.pix-cp-modal-backdrop` is in the DOM, see Pattern #27).
+// when `.xh-cp-modal-backdrop` is in the DOM, see Pattern #27).
 function openMoreColorsModal(opts) {
   ensureCSS();
 
   const backdrop = document.createElement("div");
-  backdrop.className = "pix-cp-modal-backdrop";
+  backdrop.className = "xh-cp-modal-backdrop";
 
   const box = document.createElement("div");
-  box.className = "pix-cp-modal-box";
+  box.className = "xh-cp-modal-box";
 
   const title = document.createElement("div");
-  title.className = "pix-cp-modal-title";
+  title.className = "xh-cp-modal-title";
   title.textContent = "选择颜色";
   box.appendChild(title);
 
@@ -1015,16 +1015,16 @@ function openMoreColorsModal(opts) {
   box.appendChild(picker.element);
 
   const actions = document.createElement("div");
-  actions.className = "pix-cp-modal-actions";
+  actions.className = "xh-cp-modal-actions";
 
   const cancelBtn = document.createElement("button");
   cancelBtn.type = "button";
-  cancelBtn.className = "pix-cp-modal-btn";
+  cancelBtn.className = "xh-cp-modal-btn";
   cancelBtn.textContent = "取消";
 
   const okBtn = document.createElement("button");
   okBtn.type = "button";
-  okBtn.className = "pix-cp-modal-btn primary";
+  okBtn.className = "xh-cp-modal-btn primary";
   okBtn.textContent = "确定";
 
   actions.appendChild(cancelBtn);
@@ -1062,7 +1062,7 @@ function openMoreColorsModal(opts) {
   // Esc cancels. Use window-capture + stopImmediatePropagation so any
   // editor-level Esc handler attached after this listener is preempted
   // (Vue-compat #6 territory). The Note editor's `_keyBlock` checks
-  // for an open `.pix-cp-modal-backdrop` and returns early, so this
+  // for an open `.xh-cp-modal-backdrop` and returns early, so this
   // also works without the stop.
   function onKey(e) {
     if (e.key === "Escape") {

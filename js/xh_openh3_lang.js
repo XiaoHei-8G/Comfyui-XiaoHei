@@ -11,14 +11,14 @@ ensureLangBridge();
 
 // class_type 键 -> { zh, en } 标题。键必须与 NODE_CLASS_MAPPINGS 完全一致。
 const XH_NODES = {
-    XHOpenH3AutoInput: { zh: "H3视频预处理", en: "H3 Video Prepare" },
-    XHOpenH3PromptEncodeRelease: { zh: "H3提示词编码", en: "H3 Prompt Encode" },
-    XHOpenH3RefineRelease: { zh: "H3精修", en: "H3 Refine" },
-    XHOpenH3VAEDecodeLowMemory: { zh: "H3低内存解码", en: "H3 LowMem Decode" },
-    XHOpenH3TiledDiffusion: { zh: "H3分块扩散", en: "H3 Tiled Diffusion" },
-    XHOpenH3ModelPatch: { zh: "H3模型补丁", en: "H3 Model Patch" },
-    XHOpenH3Sigmas: { zh: "H3官方步长", en: "H3 Official Sigmas" },
-    XHOpenH3LockAudio: { zh: "H3锁定音频", en: "H3 Lock Audio" },
+    XHOpenH3AutoInput: { zh: "H3视频预处理 XiaoHei", en: "H3 Video Prepare" },
+    XHOpenH3PromptEncodeRelease: { zh: "H3提示词编码 XiaoHei", en: "H3 Prompt Encode" },
+    XHOpenH3RefineRelease: { zh: "H3精修 XiaoHei", en: "H3 Refine" },
+    XHOpenH3VAEDecodeLowMemory: { zh: "H3低内存解码 XiaoHei", en: "H3 LowMem Decode" },
+    XHOpenH3TiledDiffusion: { zh: "H3分块扩散 XiaoHei", en: "H3 Tiled Diffusion" },
+    XHOpenH3ModelPatch: { zh: "H3模型补丁 XiaoHei", en: "H3 Model Patch" },
+    XHOpenH3Sigmas: { zh: "H3官方步长 XiaoHei", en: "H3 Official Sigmas" },
+    XHOpenH3LockAudio: { zh: "H3锁定音频 XiaoHei", en: "H3 Lock Audio" },
 };
 
 // 参数名 -> { zh, en } 标签。只改 label，绝不改 name（后端按 name 取参）。

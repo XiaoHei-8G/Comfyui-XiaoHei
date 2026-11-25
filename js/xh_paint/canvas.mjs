@@ -3,7 +3,7 @@
 // ============================================================
 import { PaintStudio } from "./core.mjs";
 
-import { pixApiUrl } from "../shared/api_url.mjs";
+import { inputImageURL } from "../shared/api_url.mjs";
 const proto = PaintStudio.prototype;
 
 // ─── Canvas init ──────────────────────────────────────────
@@ -248,8 +248,8 @@ proto._loadLayers = async function (layersData) {
           console.warn("[Paint] Failed to load layer:", ld.src);
           res();
         };
-        const fileNameOnly = ld.src.split(/[\\/]/).pop();
-        img.src = pixApiUrl(`/view?filename=${encodeURIComponent(fileNameOnly)}&type=input&subfolder=pixaroma&t=${Date.now()}`);
+        // 图层存在 xh_paint/，写死 pixaroma 会 404 → 重开工作流图层空白。
+        img.src = inputImageURL(ld.src);
       });
     }
     this.layers.push(ly);

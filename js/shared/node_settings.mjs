@@ -488,7 +488,7 @@ function closeOptionPopup() {
   try { document.querySelectorAll('.pix-nset-pop').forEach((e) => e.remove()); } catch {}
 }
 
-const CSS_ID = "pix-nodeset-css";
+const CSS_ID = "xh-nodeset-css";
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -651,7 +651,7 @@ function outsideClose(e) {
   // not shut the settings you were about to change. Their own pointerdown guard
   // cannot save them - that is a BUBBLE listener on the window, and this one is
   // CAPTURE on the document, so this always runs first.
-  if (e.target.closest?.(".pixhb-win, .pixwb-win, .pix-cp-popup, .pix-cp-modal-backdrop, .pix-nset-pop")) return;
+  if (e.target.closest?.(".pixhb-win, .pixwb-win, .xh-cp-popup, .xh-cp-modal-backdrop, .pix-nset-pop")) return;
   // A settings gear ON a node face toggles the panel itself: closing here on
   // pointerdown would make its click reopen it at once (panel checklist #3).
   if (e.target.closest?.("[data-pix-settings-gear]")) return;
@@ -666,7 +666,7 @@ export function nodeSettingsOpenFor(node) {
 function escClose(e) {
   if (e.key === "Escape" && _panel) {
     // an open picker / dropdown owns Escape first - it closes, the panel stays
-    if (document.querySelector(".pix-cp-popup, .pix-cp-modal-backdrop, .pix-nset-pop")) return;
+    if (document.querySelector(".xh-cp-popup, .xh-cp-modal-backdrop, .pix-nset-pop")) return;
     // Escape pressed while reading the Help window belongs to that window, or
     // Esc would close the settings panel behind it and, because of the
     // stopPropagation below, leave the help window open - the opposite of what
@@ -871,7 +871,7 @@ export function createOptionRows(node, rows, opts = {}) {
  *
  * The host panel MUST let clicks inside the picker through its outside-close
  * guard, or picking a colour dismisses the panel underneath:
- *   if (e.target.closest?.(".pix-cp-popup, .pix-cp-modal-backdrop")) return;
+ *   if (e.target.closest?.(".xh-cp-popup, .xh-cp-modal-backdrop")) return;
  *
  * opts = { title, label, hint, onChange(node), onPickerOpen(handle) }
  */
@@ -948,8 +948,8 @@ export function createAccentSection(node, opts = {}) {
   bType.addEventListener("click", async () => {
     if (await writeSetting(setting, accentOf(node))) { flash(bType, L.saved || "Saved"); repaintAllAccents(); }
   });
-  const bAll = el("button", "pix-nset-btn", L.allNodes || "Every Pixaroma node");
-  bAll.title = L.allNodesTip || "Every Pixaroma node follows this colour, unless it has been given one of its own";
+  const bAll = el("button", "pix-nset-btn", L.allNodes || "Every XiaoHei node");
+  bAll.title = L.allNodesTip || "Every XiaoHei node follows this colour, unless it has been given one of its own";
   bAll.addEventListener("click", async () => {
     if (await writeSetting(GLOBAL_ACCENT_SETTING, accentOf(node))) { flash(bAll, L.saved || "Saved"); repaintAllAccents(); }
   });

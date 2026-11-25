@@ -364,8 +364,8 @@ function buildUI(node) {
     return ctx;
 }
 
-const defZh = "滑块";
-const defEn = "Slider";
+const defZh = "滑块 XiaoHei";
+const defEn = "Slider XiaoHei";
 
 app.registerExtension({
     name: "XH.Slider",

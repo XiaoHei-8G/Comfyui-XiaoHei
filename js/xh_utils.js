@@ -52,12 +52,12 @@ function setFaceCollapsed(node, collapsed) {
 const XH_I18N = {
     zh: {
         nodes: {
-            XHMathExpression: "表达式求值",
-            XHNumberConvert: "数值转换",
-            XHSamplerSelect: "采样器选择",
-            XHSolidMask: "实心遮罩",
-            XHVAEDecodeTiled: "平铺VAE解码",
-            XHSmartFaceMask: "万能遮罩",
+            XHMathExpression: "表达式求值 XiaoHei",
+            XHNumberConvert: "数值转换 XiaoHei",
+            XHSamplerSelect: "采样器选择 XiaoHei",
+            XHSolidMask: "实心遮罩 XiaoHei",
+            XHVAEDecodeTiled: "平铺VAE解码 XiaoHei",
+            XHSmartFaceMask: "万能遮罩 XiaoHei",
         },
         widgets: {
             expression: "表达式",
@@ -88,12 +88,12 @@ const XH_I18N = {
     },
     en: {
         nodes: {
-            XHMathExpression: "Math Expression",
-            XHNumberConvert: "Number Convert",
-            XHSamplerSelect: "Sampler Select",
-            XHSolidMask: "Solid Mask",
-            XHVAEDecodeTiled: "Tiled VAE Decode",
-            XHSmartFaceMask: "Universal Mask",
+            XHMathExpression: "Math Expression XiaoHei",
+            XHNumberConvert: "Number Convert XiaoHei",
+            XHSamplerSelect: "Sampler Select XiaoHei",
+            XHSolidMask: "Solid Mask XiaoHei",
+            XHVAEDecodeTiled: "Tiled VAE Decode XiaoHei",
+            XHSmartFaceMask: "Universal Mask XiaoHei",
         },
         widgets: {
             expression: "expression",

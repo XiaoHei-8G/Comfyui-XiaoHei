@@ -15,7 +15,7 @@ ensureLangBridge();
 const NODE_TYPE = "XHColorCorrect";
 const XH_I18N = {
     zh: {
-        nodes: { XHColorCorrect: "色彩校正" },
+        nodes: { XHColorCorrect: "色彩校正 XiaoHei" },
         widgets: {
             image: "图像",
             temperature: "色温",
@@ -30,7 +30,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHColorCorrect: "Color Correct" },
+        nodes: { XHColorCorrect: "Color Correct XiaoHei" },
         widgets: {
             image: "image",
             temperature: "temperature",

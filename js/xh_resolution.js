@@ -17,7 +17,7 @@ ensureLangBridge();
 const NODE_TYPE = "XHResolutionSelect";
 const XH_I18N = {
     zh: {
-        nodes: { XHResolutionSelect: "分辨率选择器" },
+        nodes: { XHResolutionSelect: "分辨率选择器 XiaoHei" },
         widgets: {
             aspect_ratio: "宽高比",
             megapixels: "百万像素 (MP)",
@@ -27,7 +27,7 @@ const XH_I18N = {
         slots: { width: "宽", height: "高" },
     },
     en: {
-        nodes: { XHResolutionSelect: "Resolution Selector" },
+        nodes: { XHResolutionSelect: "Resolution Selector XiaoHei" },
         widgets: {
             aspect_ratio: "aspect ratio",
             megapixels: "megapixels (MP)",

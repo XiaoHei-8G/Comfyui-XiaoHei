@@ -12,8 +12,8 @@ ensureLangBridge();
 // class_type 键 -> { zh, en } 标题。键必须与 core.py 的 NODE_CLASS_MAPPINGS 完全一致。
 const XH_NODES = {
     XHSeamFeather: {
-        zh: "衔接淡化",
-        en: "SeamFeather",
+        zh: "衔接淡化 XiaoHei",
+        en: "SeamFeather XiaoHei",
     },
 };
 

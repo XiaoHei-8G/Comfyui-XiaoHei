@@ -11,7 +11,7 @@ ensureLangBridge();
 const NODE_TYPE = "XHImageRangeFromBatch";
 const XH_I18N = {
     zh: {
-        nodes: { XHImageRangeFromBatch: "取帧范围" },
+        nodes: { XHImageRangeFromBatch: "取帧范围 XiaoHei" },
         widgets: {
             //  2026-10-29 用户定案：索引类参数统一「索引（原名）」格式 + 置顶
             start_index: "索引（起始帧）", num_frames: "取几帧", clamp: "越界自动钳制",
@@ -20,7 +20,7 @@ const XH_I18N = {
         slots: { IMAGE: "图像", MASK: "遮罩", images: "图像（输入）", masks: "遮罩（输入）" },
     },
     en: {
-        nodes: { XHImageRangeFromBatch: "Image Range From Batch" },
+        nodes: { XHImageRangeFromBatch: "Image Range From Batch XiaoHei" },
         widgets: {
             start_index: "Index (start frame)", num_frames: "num frames", clamp: "clamp",
             images: "images", masks: "masks",

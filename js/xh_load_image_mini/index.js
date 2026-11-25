@@ -74,9 +74,9 @@ const ICONS = {
 };
 
 function injectCSS() {
-  if (document.getElementById("pix-lm-css")) return;
+  if (document.getElementById("xh-lm-css")) return;
   const s = document.createElement("style");
-  s.id = "pix-lm-css";
+  s.id = "xh-lm-css";
   s.textContent = `
     .pix-lm-root { width:100%; box-sizing:border-box; position:relative; background:#2a2a2a;
       border-radius:4px; color:#ddd; font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif); font-size:11px; }
@@ -136,9 +136,9 @@ function injectCSS() {
 // flex:1 preview CONTAINER for this node - we draw our own preview canvas
 // instead. Scoped to .pix-lm-root so it is a no-op elsewhere and in legacy.
 function injectNodes2CSS() {
-  if (document.getElementById("pix-lm-nodes2-css")) return;
+  if (document.getElementById("xh-lm-nodes2-css")) return;
   const s = document.createElement("style");
-  s.id = "pix-lm-nodes2-css";
+  s.id = "xh-lm-nodes2-css";
   s.textContent =
     ".lg-node:has(.pix-lm-root) .image-preview{display:none !important;}" +
     ".lg-node:has(.pix-lm-root) .lg-node-widgets + div.flex-1{display:none !important;}" +

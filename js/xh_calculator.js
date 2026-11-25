@@ -49,12 +49,12 @@ function fmt(v) {
 // ---- 语言包：节点标题 + 端口标签（按钮符号通用，不翻译）----
 const XH_I18N = {
     zh: {
-        nodes: { XHCalculator: "计算器" },
+        nodes: { XHCalculator: "计算器 XiaoHei" },
         widgets: { calc_state: "状态" },
         slots: { FLOAT: "浮点数", STRING: "字符串" },
     },
     en: {
-        nodes: { XHCalculator: "Calculator" },
+        nodes: { XHCalculator: "Calculator XiaoHei" },
         widgets: { calc_state: "state" },
         slots: { FLOAT: "FLOAT", STRING: "STRING" },
     },
@@ -248,8 +248,8 @@ function buildUI(node) {
     return ctx;
 }
 
-const defZh = "计算器";
-const defEn = "Calculator";
+const defZh = "计算器 XiaoHei";
+const defEn = "Calculator XiaoHei";
 
 app.registerExtension({
     name: "XH.Calculator",

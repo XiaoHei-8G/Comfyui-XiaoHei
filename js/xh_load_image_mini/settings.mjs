@@ -41,9 +41,9 @@ function el(tag, cls, text) {
 }
 
 function injectCSS() {
-  if (document.getElementById("pix-lmset-css")) return;
+  if (document.getElementById("xh-lmset-css")) return;
   const s = document.createElement("style");
-  s.id = "pix-lmset-css";
+  s.id = "xh-lmset-css";
   // No backtick / CSS unicode escape inside this literal.
   s.textContent = `
     .pix-lmset { position:fixed; z-index:10010; width:320px; max-width:94vw; background:#1a1a1a;
@@ -150,12 +150,12 @@ function outsideClose(e) {
   if (_panel.contains(e.target)) return;
   // The reused resize UI opens its own popups (resample, ratio colour, etc.) and
   // the accent picker - clicks inside those must not close the panel.
-  if (e.target.closest?.(".pix-cp-popup, .pix-cp-modal-backdrop, .pix-li-rs-popup, .pix-li-popup")) return;
+  if (e.target.closest?.(".xh-cp-popup, .xh-cp-modal-backdrop, .pix-li-rs-popup, .pix-li-popup")) return;
   closeMiniSettings();
 }
 function escClose(e) {
   if (e.key === "Escape" && _panel) {
-    if (document.querySelector(".pix-cp-popup, .pix-cp-modal-backdrop, .pix-li-rs-popup, .pix-li-popup")) return;
+    if (document.querySelector(".xh-cp-popup, .xh-cp-modal-backdrop, .pix-li-rs-popup, .pix-li-popup")) return;
     e.stopPropagation();
     closeMiniSettings();
   }

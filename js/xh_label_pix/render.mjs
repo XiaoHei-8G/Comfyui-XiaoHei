@@ -472,17 +472,17 @@ export function injectCSS() {
    is REQUIRED: a flex-item <canvas> keeps its intrinsic 168px width unless told
    it may shrink, which otherwise pushed the hue strip out over the swatches. */
 .xh-lbl-panel .pix-cp { width: 100%; max-width: none; margin: 0; min-width: 0; }
-.xh-lbl-panel .pix-cp-sv-row { min-width: 0; }
+.xh-lbl-panel .xh-cp-sv-row { min-width: 0; }
 /* Height is a close default; _alignColorColumns() refines it at open so the
    picker's bottom lines up exactly with the swatch grid's bottom row.
    border-box so the JS height set == the measured height (exact alignment). */
-.xh-lbl-panel .pix-cp-sv { height: 146px; min-width: 0; box-sizing: border-box; }
+.xh-lbl-panel .xh-cp-sv { height: 146px; min-width: 0; box-sizing: border-box; }
 /* Match the picker's SV/hue outlines to the surrounding wells; the shared
    picker's default #444 reads lighter than everything else in this section. */
-.xh-lbl-panel .pix-cp-sv, .xh-lbl-panel .pix-cp-hue { border-color: #3a3a40; }
+.xh-lbl-panel .xh-cp-sv, .xh-lbl-panel .xh-cp-hue { border-color: #3a3a40; }
 /* Hide the picker's own hex field — our labelled .xh-lbl-hexbar replaces it
    (it shows the selected target's name + code and changes with the buttons). */
-.xh-lbl-panel .pix-cp-hexrow { display: none; }
+.xh-lbl-panel .xh-cp-hexrow { display: none; }
 `;
   document.head.appendChild(style);
 }

@@ -33,7 +33,7 @@ import { nodeSetting, setNodeSetting } from "./node_settings.mjs";
 const VOL_ID = "Pixaroma.Video.Volume"; // 0..100
 const MUTE_ID = "Pixaroma.Video.Muted"; // boolean
 const UI_ICON = "icons/ui/";
-const CSS_FLAG = "__pixVolCssInstalled";
+const CSS_FLAG = "__xhVolCssInstalled";
 
 // Every live control, so moving one slider moves them all: the level is one
 // shared preference, and a second player still sitting at the old volume would

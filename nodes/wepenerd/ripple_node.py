@@ -559,16 +559,24 @@ class WN_RippleApply:
                 **{name: ("IMAGE", {"tooltip": f"Exactly one edited image for marker {i}. Overrides its batch or upload."
                                     + ("" if i == 1 else f" Requires marker {i}.")})
                    for i, name in enumerate(EDITED_ANCHOR_NAMES, 1)},
+                "audio": ("AUDIO", {"tooltip": "可选音频引导，从窗口第 0 帧开始，让口型跟着声音走。"
+                                              "接「改帧·选片段」输出的 audio，或已经对齐同一起点的音频；"
+                                              "必须同时接 audio_vae，且不会替换保存的原声。"}),
+                "audio_vae": ("VAE", {"tooltip": "H3 音频 VAE（不是视频 VAE）；只在接了 audio 时需要。"}),
             },
         }
 
-    def apply(self, clip, vae, ripple, prompt, edited_images=None, **edited_anchors):
+    def apply(self, clip, vae, ripple, prompt, edited_images=None, audio=None, audio_vae=None, **edited_anchors):
         import node_helpers
         from comfy_extras.nodes_minimax_h3 import _empty_av_latent
 
         unknown = sorted(set(edited_anchors) - set(EDITED_ANCHOR_NAMES))
         if unknown:
             raise TypeError(f"Unknown Ripple Apply input: {', '.join(unknown)}")
+        if audio is not None and audio_vae is None:
+            raise ValueError("接了 audio 就必须接 audio_vae：音频引导要用 H3 音频 VAE。")
+        if audio is not None and audio["waveform"].shape[-1] == 0:
+            raise ValueError("audio 是空的：请接所选窗口内有声音的音频，或把音频对齐到同一起点。")
         width, height, length = ripple["width"], ripple["height"], ripple["length"]
         markers, _ = rc.parse_markers(ripple["markers"], length)
         geometry = ripple["geometry"]
@@ -639,6 +647,15 @@ class WN_RippleApply:
         positive = encode_prompt(clip, prompt)
         keyframes = [{"resolved_frame_index": 0, "latent": encode_source(vae, ripple)}, *keyframes_edit]
         positive = node_helpers.conditioning_set_values(positive, {"minimax_keyframes": keyframes})
+        if audio is not None:
+            from comfy_extras.nodes_minimax_h3 import MiniMaxH3AddGuide
+
+            samples = round(length / rc.FPS * audio["sample_rate"])
+            guide_audio = {**audio, "waveform": audio["waveform"][..., :samples]}
+            positive = MiniMaxH3AddGuide.execute(
+                positive, latent, frame_idx=0, audio_vae=audio_vae, audio=guide_audio).result[0]
+            notes.append(rc.line("Audio guidance enabled at the window start; saved audio is unchanged.",
+                                 "已在窗口起点启用音频引导；保存的音轨保持原样。"))
         where = ", ".join(f"{m['frame'] + 1} {c}" for m, c in zip(markers, checks))
         cw, ch = geometry["content_rect"][2:]
         count = len(markers)

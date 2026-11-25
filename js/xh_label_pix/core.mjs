@@ -118,7 +118,7 @@ export class LabelEditor {
       if (e.type === "keydown" && e.key === "Escape") {
         e.stopImmediatePropagation();
         e.preventDefault();
-        if (document.querySelector(".pix-help-backdrop")) closeHelpPopup();
+        if (document.querySelector(".xh-help-backdrop")) closeHelpPopup();
         else this.close();
         return;
       }
@@ -589,7 +589,7 @@ export class LabelEditor {
   _alignColorColumns() {
     if (!this._el) return;
     const grid = this._el.querySelector(".xh-lbl-swgrid");
-    const sv = this._el.querySelector(".pix-cp-sv");
+    const sv = this._el.querySelector(".xh-cp-sv");
     const picker = this._el.querySelector(".pix-cp");
     if (!grid || !sv || !picker) return;
     // Measure border-box bottoms; nudge the SV plane height by the gap so the
@@ -615,7 +615,7 @@ export class LabelEditor {
     // than the browser's Home screen, matching node_colors and pixgroup.
     openHelpFor("XHLabelPix", LABEL_HELP, { comfyClass: "XHLabelPix" });
     // The editor overlay is z-index 99999; lift the help card above it.
-    const bd = document.querySelector(".pix-help-backdrop");
+    const bd = document.querySelector(".xh-help-backdrop");
     if (bd) bd.style.zIndex = "100000";
   }
 

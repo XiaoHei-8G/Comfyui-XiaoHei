@@ -537,7 +537,7 @@
 #    分发 / 压缩命名规范：Comfyui-XiaoHei_v{主}.{次}.{修}_{YYYYMMDD}.zip
 #    改完节点包后升级对应位，再重新压缩，文件名版本号才对得上。
 # ---------------------------------------------------------------------------
-VERSION = "1.0.7"  # 移除分镜/画板/去背景节点里指向第三方的下载链接，模型获取地址改由发布者自行告知
+VERSION = "1.0.8"  # 修复混装原版时浮字标签穿原版UI/帮助弹原作者、V3分类重复、帮助首页英文分类与第三方混入、工作流归属标记、全家族中文化补漏
 
 # ---------------------------------------------------------------------------
 #  子模块加载：逐个 try，缺谁只少谁（2026-10-05 改造，为「分发给别人」而做）
@@ -956,6 +956,22 @@ except Exception as _e:
     _fail("prompt_pack", "XiaoHei-提示词批量（复刻 Prompt Pack）", [], _e)
     _M_PP = _D_PP = {}
 
+# 2026-11-24：提示词填空 XiaoHei —— 模板 + 词库填空器。
+#   一段带 {{空位}} 的模板 + 每个空位的候选词库，seed 确定性抽词（sha256 前 8 位取模）。
+#   填充在后端做，保证工作流 JSON / 云端 RunningHub 同 seed 同结果；
+#   配置存隐藏输入 fill_config（随工作流走），前端全屏三栏编辑器只负责编辑与实时预览。
+#   内置 H3 视频官方三段式模板（来源 base-en.txt，40 候选逐条自核命中）。
+#   零第三方依赖（只用 json/re/hashlib）；class_type = XH_PromptFill，
+#   显示名「提示词填空 XiaoHei」。
+try:
+    from .nodes.prompt_fill import (
+        NODE_CLASS_MAPPINGS as _M_PF,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_PF,
+    )
+except Exception as _e:
+    _fail("prompt_fill", "提示词填空 XiaoHei（模板+词库填空）", [], _e)
+    _M_PF = _D_PF = {}
+
 # 2026-11-16：1:1 复刻 ComfyUI-Pixaroma 的 AudioReact Pixaroma（MIT）——
 #   单张图片跟随音频律动生成视频。纯 torch FFT 引擎（15 动态模式 / 8 叠加），
 #   零新增依赖；WebGL2 全屏编辑器。状态存 node.properties.audioStudioState，
@@ -1078,6 +1094,7 @@ _PARTS = tuple(
         ("tag_prompt", _M_TAG, _D_TAG),
         ("prompt_stack", _M_PS, _D_PS),
         ("prompt_pack", _M_PP, _D_PP),
+        ("prompt_fill", _M_PF, _D_PF),
         ("audio_studio", _M_AS, _D_AS),
         ("openh3", _M_OH3, _D_OH3),
         ("qwen21_edit", _M_QE, _D_QE),
@@ -1136,8 +1153,329 @@ def _normalize_display_name(name):
     return f"{name} XiaoHei"
 
 
+# ---------------------------------------------------------------------------
+#  分类细分单一真源（2026-11-23）
+#    背景：105 个节点原先挤在 XiaoHei/Image(44)·Video(34)·工具(27) 三坨里，
+#    帮助侧栏和右键「添加节点」菜单都不好找。按功能细分成 21 个二级分类。
+#    为什么放这里统一覆盖、而不是改 105 个 py 的 CATEGORY：
+#      ① ComfyUI 的 /object_info 直接读 obj_class.CATEGORY（server.py:870），
+#         在入口覆盖 = 右键菜单和帮助侧栏同时生效；
+#      ② 一批复刻件的 CATEGORY 走 category= 装饰器参数/常量拼接，逐个改必漏；
+#      ③ class_type 是工作流契约，全程不碰 —— 粉丝老工作流照常打开。
+#    覆盖是幂等的：只认下面表里的 class_type，其余节点分类原样保留。
+# ---------------------------------------------------------------------------
+# ==========================================================================
+#  分类单一真源（2026-11-25 重捋：9 大功能域，全中文）
+#    ① 帮助侧栏/首页 + 右键「添加节点」菜单都读 /object_info 的 category。
+#    ② 覆盖放这里统一覆盖，不逐个改 105 个 py 的 CATEGORY（复刻件走常量拼接，逐个改必漏）。
+#    ③ class_type 是工作流契约，全程不碰 —— 粉丝老工作流照常打开。
+#    ④ 幂等：只认下面表里的 class_type，151 个自家节点全覆盖。
+#    ⑤ 本轮修复：消灭 Control/Identity/Model/SetGet 四个英文分类；
+#       分镜 12 个（原「分镜」+「分镜/高级」）合到一类。
+# ==========================================================================
+_CATEGORY_GROUPS = {
+    # ── 分镜 · 12 个全放一起（原「分镜」7 + 「分镜/高级」5 合并） ──
+    "XiaoHei/分镜": (
+        "XH_SceneCutContactSheet",
+        "XH_SceneCutDetect",
+        "XH_SceneCutDetectAdvanced",
+        "XH_SceneCutDetectorLoader",
+        "XH_SceneCutLoadScenes",
+        "XH_SceneCutLoadVideo",
+        "XH_SceneCutRefine",
+        "XH_SceneCutSaveScenes",
+        "XH_SceneCutSelectedScenes",
+        "XH_SceneCutValidate",
+        "XH_SceneCutValidatorLoader",
+        "XH_SceneCutViewer",
+    ),
+    # ── 图像 · 加载与保存 ──
+    "XiaoHei/图像/图像输入输出": (
+        "XHLoadImage",
+        "XHLoadImageMini",
+        "XHLoadImageWithMask",
+        "XHSaveImage",
+    ),
+    # ── 图像 · 绘画手绘 ──
+    "XiaoHei/图像/绘画手绘": (
+        "XHPaint",
+        "XHSketch",
+        "XH_WN_Speedpaint",
+    ),
+    # ── 图像 · 尺寸缩放裁切 ──
+    "XiaoHei/图像/尺寸缩放裁切": (
+        "XHImageMaskScale",
+        "XHImageResizeV2",
+        "XHImageScaleByAspectRatio",
+        "XHResolutionSelect",
+        "XH_WN_DragResolution",
+        "XH_WN_ResizeMegapixels",
+        "XH_WN_ResolutionSuggest",
+        "XH_WN_ZoomCrop",
+    ),
+    # ── 图像 · 局部重绘与改图 ──
+    "XiaoHei/图像/局部重绘与改图": (
+        "XHInpaintCrop",
+        "XHInpaintStitch",
+        "XHQwen21Cut",
+        "XH_QwenEditAlignComposite",
+        "XH_QwenEditDiffMask",
+        "XH_QwenEditMeasureShift",
+        "XH_WN_QwenEditMask",
+    ),
+    # ── 图像 · 遮罩与抠图 ──
+    "XiaoHei/图像/遮罩与抠图": (
+        "XHBackgroundRemove",
+        "XHSmartFaceMask",
+        "XH_WN_PaintMask",
+        "XH_WepeNerdLoadLoraMasked",
+    ),
+    # ── 图像 · 调色修复上色 ──
+    "XiaoHei/图像/调色修复上色": (
+        "XHColorCalibrator",
+        "XHColorCorrect",
+        "XHImageContrast",
+        "XHMaskTint",
+        "XHTrackColorize",
+        "XH_WN_LiquifyImage",
+        "XH_WN_VAEDeGrid",
+    ),
+    # ── 图像 · 批量对比与信息 ──
+    "XiaoHei/图像/批量对比与信息": (
+        "XHImageBatchMulti",
+        "XHImageCompare",
+        "XHImageGetByIndex",
+        "XHImageList",
+        "XHImageListConcat",
+        "XHImageRangeFromBatch",
+        "XHImageSize",
+        "XHImageSliderCompare",
+    ),
+    # ── 图像 · 排版宫格 ──
+    "XiaoHei/图像/排版宫格": (
+        "XHRefSheetBuilder",
+        "XHStoryboardGrid",
+        "XHStoryboardPanelCrop",
+    ),
+    # ── 视频 · H3 核心与加速 ──
+    "XiaoHei/视频/H3核心与加速": (
+        "XHH3LatentContinuation",
+        "XHH3TemporalCorrection",
+        "XHOpenH3AutoInput",
+        "XHOpenH3LockAudio",
+        "XHOpenH3ModelPatch",
+        "XHOpenH3PromptEncodeRelease",
+        "XHOpenH3RefineRelease",
+        "XHOpenH3Sigmas",
+        "XHOpenH3TiledDiffusion",
+        "XHOpenH3VAEDecodeLowMemory",
+        # 2026-11-25 补：这两个类不走 XH_ 前缀，之前漏出英文 XiaoHei/Video。
+        "H3LTXAdapterLoader",
+        "H3LTXAdapterConvert",
+    ),
+    # ── 视频 · 加载与保存 ──
+    "XiaoHei/视频/视频加载与保存": (
+        "XHComposeVideo",
+        "XHLoadVideo",
+        "XH_WN_LoadVideo",
+        "XH_WN_SaveVideo",
+    ),
+    # ── 视频 · 帧与切片 ──
+    "XiaoHei/视频/帧与切片": (
+        "XHFrameAlign",
+        "XHVideoTimeline",
+        "XH_WN_FrameNumberSelector",
+        "XH_WN_FrameSlicer",
+    ),
+    # ── 视频 · 帧传播与改帧 ──
+    "XiaoHei/视频/帧传播与改帧": (
+        "XH_WN_H3AutoLongRipple",
+        "XH_WN_RippleApply",
+        "XH_WN_RippleClip",
+        "XH_WN_RippleFromFrames",
+        "XH_WN_RippleOutput",
+    ),
+    # ── 视频 · 合成拼接与对比 ──
+    "XiaoHei/视频/合成拼接与对比": (
+        "XHCompareVideos",
+        "XHConcatVideo",
+        "XHSeamCorrect",
+        "XHSeamFeather",
+        "XHSegmentConcat",
+        "XHVideoCombine",
+    ),
+    # ── 视频 · 图像缓存中转 ──
+    "XiaoHei/视频/图像缓存中转": (
+        "XHImageCacheRead",
+        "XHImageCacheWrite",
+        "XHImagePrecision",
+    ),
+    # ── 提示词 · 工具（填空/批量/堆栈/链提示词） ──
+    "XiaoHei/提示词/提示词工具": (
+        "XHMSRRelayEncode",
+        "XH_ChainPromptSelector",
+        "XH_DynamicPromptJoin",
+        "XH_PromptFill",
+        "XH_PromptPack",
+        "XH_PromptStack",
+        "XH_TagPrompt",
+    ),
+    # ── 提示词 · 文案标签与预览 ──
+    "XiaoHei/提示词/文案标签预览": (
+        "XHCameraAnglePrompt",
+        "XHInfo",
+        "XHLabel",
+        "XHLabelPix",
+        "XHShowText",
+    ),
+    # ── 逻辑与数值 · 数学 ──
+    "XiaoHei/逻辑与数值/数学": (
+        "XHCalculator",
+        "XHMathFloat",
+        "XHMathInt",
+        "XHNumberCounter",
+        "XHNumberPick",
+        "XHSimpleMath",
+    ),
+    # ── 逻辑与数值 · 数值与逻辑 ──
+    "XiaoHei/逻辑与数值/数值逻辑": (
+        "XHBooleanSwitch",
+        "XHBooleanToggle",
+        "XHMathExpression",
+        "XHNumberConvert",
+        "XHSeed",
+        "XHTimer",
+        "XH_WN_SigmaCurve",
+        "XH_WN_Slider",
+    ),
+    # ── 逻辑与数值 · 循环 ──
+    "XiaoHei/逻辑与数值/循环": (
+        "XHForLoopEnd",
+        "XHForLoopStart",
+        "XHLoopIteration",
+        "XHLoopProgress",
+        "XHLoopResult",
+    ),
+    # ── 逻辑与数值 · 存取（原 SetGet） ──
+    "XiaoHei/逻辑与数值/存取": (
+        "XHGet",
+        "XHMultiGet",
+        "XHMultiSet",
+        "XHSet",
+    ),
+    # ── 逻辑与数值 · 滑块（原 Control） ──
+    "XiaoHei/逻辑与数值/滑块": (
+        "XHSlider",
+    ),
+    # ── 音频 ──
+    "XiaoHei/音频": (
+        "XHAudioDuration",
+        "XHAudioFromVideo",
+        "XHAudioTrimFrames",
+        "XHH3AudioSync",
+        "XHLoadAudio",
+        "XHSoundPlayer",
+        "XHVoiceSeparatorLoader",
+        "XHVoiceSeparatorSampler",
+        "XH_AudioStudio",
+    ),
+    # ── 模型与身份 · 模型权重（原 Model） ──
+    "XiaoHei/模型与身份/模型权重": (
+        "XHPowerLoraStack",
+        "XHPureLoraStack",
+    ),
+    # ── 模型与身份 · 角色身份（原 Identity） ──
+    "XiaoHei/模型与身份/角色身份": (
+        "XHIdentityColorize",
+        "XHLTXIdentityOverlap",
+    ),
+    # ── 工具 · 遮罩与区域 ──
+    "XiaoHei/工具/遮罩与区域": (
+        "XHBBoxRegion",
+        "XHShapeMaskOverlay",
+        "XHSolidMask",
+    ),
+    # ── 工具 · 尺寸与采样 ──
+    "XiaoHei/工具/尺寸与采样": (
+        "XHSamplerSelect",
+        "XHVAEDecodeTiled",
+        "XH_ResolutionQuick",
+        "XH_Sizes",
+    ),
+    # ── 工具 · 镜头色彩与卡点 ──
+    "XiaoHei/工具/镜头色彩与卡点": (
+        "XHBeatCueTable",
+        "XHCameraParam",
+        "XHSegmentTable",
+        "XHToneCompensate",
+    ),
+    # ── 工具 · 系统与流程控制 ──
+    "XiaoHei/工具/系统与流程控制": (
+        "XHFloatVideo",
+        "XHGroupController",
+        "XH_FreeVram",
+    ),
+}
+_CATEGORY_BY_TYPE = {}
+for _cat, _types in _CATEGORY_GROUPS.items():
+    for _t in _types:
+        _CATEGORY_BY_TYPE[_t] = _cat
+
+
+def _override_node_category(_key, _cls, _new_cat):
+    """把节点分类覆盖到 _new_cat，同时兼容 V1 与 V3 两套体系。
+
+    2026-11-25 血泪坑：旧代码只写 `_cls.CATEGORY = _new_cat`，对 **V3(io.ComfyNode)** 完全无效——
+      · V3 的 `CATEGORY` 是 `@final @classproperty`，读的是私有缓存 `_CATEGORY`；
+      · `_CATEGORY` 由 `GET_SCHEMA()` 从 `define_schema() -> Schema.category` 填充；
+      · 而 `/object_info` 对 V3 走 `GET_NODE_INFO_V1()` → `schema.get_v1_info()` → `asdict()`，
+        分类取自 `_CATEGORY`，**根本不读别人后写的 CATEGORY 属性**。
+      结果：分镜 12 个、XHOpenH3*、XHImageMaskScale 等 V3 节点重启后仍是旧英文分类，
+      用户连重启几遍都没用。这里对 V3 先 GET_SCHEMA() 再改 `_CATEGORY` + `SCHEMA.category`。
+    V1 老节点仍走原来的 `CATEGORY` 类属性，保持不动。
+    """
+    # V3：必须包 define_schema() 本身。
+    #   只改 _CATEGORY / SCHEMA.category 无效——GET_NODE_INFO_V1() → GET_SCHEMA()
+    #   → FINALIZE_SCHEMA() → define_schema() 每次都重新造 schema，旧 category 又被写回。
+    #   包装后每次 define_schema() 返回的 schema.category 都是新值，源头一次改死。
+    if hasattr(_cls, "GET_SCHEMA") and hasattr(_cls, "define_schema"):
+        try:
+            _orig_define = _cls.__dict__.get("define_schema")
+            if _orig_define is None:
+                # 继承来的 classmethod（如 XH_SceneCut* 共用基类）：取其绑定版本
+                _orig_define = _cls.define_schema.__func__
+            else:
+                _orig_define = getattr(_orig_define, "__func__", _orig_define)
+
+            def _patched_define(cls, _orig=_orig_define, _cat=_new_cat):
+                _schema = _orig(cls)
+                _schema.category = _cat
+                return _schema
+
+            _cls.define_schema = classmethod(_patched_define)
+            # 清掉已缓存的 schema/分类，强制下次 GET_SCHEMA() 走包装后的 define_schema
+            for _attr in ("_CATEGORY", "SCHEMA", "_DESCRIPTION"):
+                try:
+                    setattr(_cls, _attr, None)
+                except Exception:
+                    pass
+            return True
+        except Exception as _e:
+            print(f"[XiaoHei]  V3 分类覆盖异常：{_key} -> {_new_cat}：{_e}")
+    # V1：普通类属性即可，object_info 直接读 obj_class.CATEGORY。
+    try:
+        setattr(_cls, "CATEGORY", _new_cat)
+        return True
+    except Exception as _e:
+        print(f"[XiaoHei]  分类覆盖失败：{_key} -> {_new_cat}：{_e}")
+        return False
+
+
 for _mod, _cm, _dm in _PARTS:
     for _key, _cls in _cm.items():
+        _new_cat = _CATEGORY_BY_TYPE.get(_key)
+        if _new_cat:
+            _override_node_category(_key, _cls, _new_cat)
         if _key in NODE_CLASS_MAPPINGS:
             # 不 raise：单个重名不该让整包加载失败。但一定要吼出来，
             # 因为静默覆盖正是合并这类操作最阴的坑。

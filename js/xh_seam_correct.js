@@ -14,7 +14,7 @@ const NODE_TYPE = "XHSeamCorrect";
 
 const XH_I18N = {
     zh: {
-        nodes: { XHSeamCorrect: "接缝修正" },
+        nodes: { XHSeamCorrect: "接缝修正 XiaoHei" },
         widgets: {
             images: "视频帧",
             fix_color_preset: "色彩/曝光修正",
@@ -29,7 +29,7 @@ const XH_I18N = {
         slots: { images: "视频帧" },
     },
     en: {
-        nodes: { XHSeamCorrect: "Seam Correct" },
+        nodes: { XHSeamCorrect: "Seam Correct XiaoHei" },
         widgets: {
             images: "images",
             fix_color_preset: "color / exposure fix",

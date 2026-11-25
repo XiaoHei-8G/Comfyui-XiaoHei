@@ -5,7 +5,7 @@ import { getAudioContext } from "./audio_analysis.mjs";
 import { pixAsset } from "../shared/api_url.mjs";
 
 function injectTransportCSS() {
-  if (document.getElementById("pix-as-transport-css")) return;
+  if (document.getElementById("xh-as-transport-css")) return;
   const css = `
     /* Play button — circular, Pixaroma orange. The icon is rendered via
        CSS mask so we can recolor a single SVG (white inside the circle)
@@ -147,7 +147,7 @@ function injectTransportCSS() {
     }
   `;
   const style = document.createElement("style");
-  style.id = "pix-as-transport-css";
+  style.id = "xh-as-transport-css";
   style.textContent = css;
   document.head.appendChild(style);
 }

@@ -12,10 +12,10 @@ ensureLangBridge();
 const XH_I18N = {
     zh: {
         nodes: {
-            XHSimpleMath: "简易数学",
-            XHVoiceSeparatorLoader: "人声分离(模型加载)",
-            XHVoiceSeparatorSampler: "人声分离(采样)",
-            XHAudioDuration: "音频取时长",
+            XHSimpleMath: "简易数学 XiaoHei",
+            XHVoiceSeparatorLoader: "人声分离(模型加载) XiaoHei",
+            XHVoiceSeparatorSampler: "人声分离(采样) XiaoHei",
+            XHAudioDuration: "音频取时长 XiaoHei",
         },
         widgets: {
             model_name: "模型文件",
@@ -40,10 +40,10 @@ const XH_I18N = {
     },
     en: {
         nodes: {
-            XHSimpleMath: "Simple Math",
-            XHVoiceSeparatorLoader: "Voice Separator (Load)",
-            XHVoiceSeparatorSampler: "Voice Separator (Sample)",
-            XHAudioDuration: "Audio Duration",
+            XHSimpleMath: "Simple Math XiaoHei",
+            XHVoiceSeparatorLoader: "Voice Separator (Load) XiaoHei",
+            XHVoiceSeparatorSampler: "Voice Separator (Sample) XiaoHei",
+            XHAudioDuration: "Audio Duration XiaoHei",
         },
         widgets: {
             model_name: "model file",

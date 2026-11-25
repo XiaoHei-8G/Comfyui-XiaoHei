@@ -4,7 +4,7 @@
 // ╚═══════════════════════════════════════════════════════════════╝
 
 import { createDummyWidget } from "./utils.mjs";
-import { pixApiUrl } from "./api_url.mjs";
+import { inputImageURL } from "./api_url.mjs";
 
 /**
  * Creates the DOM elements for a node preview area.
@@ -125,8 +125,9 @@ export function restoreNodePreview(parts, json, node) {
     // so this fallback never changes their behavior.
     const rel = meta.composite_path || meta.src_path;
     if (!rel) return;
-    const fn = rel.split(/[\\/]/).pop();
-    const url = pixApiUrl(`/view?filename=${encodeURIComponent(fn)}&type=input&subfolder=pixaroma&t=${Date.now()}`);
+    // 缩略图换图后一直显示旧图 = 这里写死 subfolder=pixaroma 导致 /view 404
+    // （家族 inpaint 图在 xh_inpaint/、画板在 xh_paint/）。按真实路径解析子目录。
+    const url = inputImageURL(rel);
     const dimText = `${meta.doc_w || "?"}\u00d7${meta.doc_h || "?"}`;
     showNodePreview(parts, url, dimText, node);
   } catch {

@@ -25,7 +25,7 @@ const SOUND_BASE = new URL("./", import.meta.url).href; // -> /extensions/<包�
 
 const XH_I18N = {
     zh: {
-        nodes: { XHSoundPlayer: "声音播放" },
+        nodes: { XHSoundPlayer: "声音播放 XiaoHei" },
         widgets: {
             file: "音效文件",
             volume: "音量",
@@ -36,7 +36,7 @@ const XH_I18N = {
         slots: { any: "任意信号", info: "信息" },
     },
     en: {
-        nodes: { XHSoundPlayer: "Sound Player" },
+        nodes: { XHSoundPlayer: "Sound Player XiaoHei" },
         widgets: {
             file: "sound file",
             volume: "volume",

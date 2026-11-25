@@ -8,6 +8,11 @@ import { wnDesc } from "./xh_wepenerd/xh_wn_i18n.mjs";
 //  2026-11-11：徽章栏共用唯一真源（设置面板「关于」也是它画出来的）。
 //    帮助窗口底部 + 「XiaoHei 指南 → 交流反馈」专题页都调用它 ⇒ 三处同一排、同一套文案。
 import { renderBadgeRow, QR_URL, primeAbout, COPY } from "./xh_about_badges.mjs";
+//  2026-11-25：家族白名单（归属判定的唯一真源）。帮助索引必须按它精确收录，
+//    否则第三方包只要把 CATEGORY 写成 `小黑/xxx`（如 Comfyui-XH_Krea2Catalog 的
+//    `小黑/Krea2`）就会混进我们的帮助首页，显示成纯英文分类「Krea2」。
+//    副作用导入即可——该文件把 Set 挂到 window.__XH_FAMILY_TYPES__。
+import "./xh_family_types.js";
 const NS = "XH.HelpBrowser";
 const HELP_DEFS = [
   {
@@ -84,7 +89,16 @@ const CATEGORY_ZH = {
   "工具": "工具", "循环": "循环", "数学": "数学", "链提示词": "链提示词",
   "音频": "音频", "音频分离": "音频分离", "音频工具": "音频工具", "导演台": "导演台"
 };
-function catZh(name) { return CATEGORY_ZH[name] || name; }
+//  2026-11-25 重捋后的 9 大功能域父级 —— 两级折叠靠它判定「父类/子类」。
+//  统一常量：catZh / sideParentOf / 节点导航树共用，避免三处各写一份漏改。
+const XH_PARENTS = "分镜|图像|视频|提示词|逻辑与数值|模型与身份|音频|工具";
+function catZh(name) {
+  const s = String(name || "");
+  //  侧栏/首页只显示末段子类名；父级（图像/视频/提示词…）仍用于归组和配色。
+  const m = s.match(new RegExp("^(" + XH_PARENTS + ")\\/([^/]+)$"));
+  if (m) return m[2];
+  return CATEGORY_ZH[s] || s;
+}
 //  ╔══════════════════════════════════════════════════════════════╗
 //  ║  分类规范化：剥掉前导 emoji / 符号                              ║
 //  ╚══════════════════════════════════════════════════════════════╝
@@ -115,12 +129,21 @@ const CATEGORY_ICONS = {
   "提示词": "type", "键提示词": "key-round",
   "音频": "audio-lines", "音频分离": "split", "音频工具": "mic", "导演台": "clapperboard",
   "Character": "user",
+  //  2026-11-25 重捋后的 9 大功能域（父类 + 子类）
+  "分镜": "clapperboard", "提示词": "type", "逻辑与数值": "calculator", "模型与身份": "box",
+  "滑块": "sliders-horizontal", "存取": "database", "数学": "calculator", "循环": "repeat",
+  "数值逻辑": "git-branch", "提示词工具": "type", "文案标签预览": "sticky-note",
+  "模型权重": "layers", "角色身份": "fingerprint",
   // 专题分组（XiaoHei 指南）
   "XiaoHei 指南": "book-open",
   //  2026-11-14：角色表节点归入「小黑家族」分类
   "小黑家族": "user",
 };
-function catIcon(name) { return CATEGORY_ICONS[name] || ""; }
+function catIcon(name) {
+  //  细分分类「图像/绘画手绘」在表里没有精确 key，回退到父级「图像」的图标。
+  const s = String(name || "");
+  return CATEGORY_ICONS[s] || CATEGORY_ICONS[s.split("/")[0]] || "";
+}
 //  节点图标：关键词优先（更贴切），其次按分类，最后兜底 box
 const NODE_KEYWORD_ICONS = [
   [/计时|秒表|timer/i, "timer"],
@@ -159,7 +182,7 @@ function iconNameForEntry(title, cat) {
 }
 //  统一出图标 HTML（家族黄，纯前端，不依赖手填）。title 传入时走关键词匹配。
 function catIconHTML(cat, title, opts) {
-  const name = title != null ? iconNameForEntry(title, cat) : (CATEGORY_ICONS[cat] || "box");
+  const name = title != null ? iconNameForEntry(title, cat) : (catIcon(cat) || "box");
   try { return xhIconHTML(name, Object.assign({ size: 22, color: "brand" }, opts || {})); }
   catch (e) { return ""; }
 }
@@ -225,6 +248,9 @@ function injectCSS() {
 .xhhelp-side .xhhelp-item{padding:4px 14px 4px 28px;cursor:pointer;color:var(--xh-text);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .xhhelp-side .xhhelp-item:hover{background:var(--xh-hover);opacity:1}
 .xhhelp-side .xhhelp-item.xhhelp-item-active{color:var(--xh-accent);opacity:1;background:var(--xh-hover)}
+/*  2026-11-23 两级折叠：顶层大类 → 子类 → 节点，子类缩进一层、字略小，视觉分层清楚 */
+.xhhelp-side .xhhelp-sub .xhhelp-grp-head{padding-left:26px;font-size:11px;opacity:.9}
+.xhhelp-side .xhhelp-sub .xhhelp-item{padding-left:44px}
 
 /* 主区 */
 .xhhelp-main{flex:1;overflow-y:auto;padding:16px 20px}
@@ -546,7 +572,14 @@ function nodeTitleColor(entry) {
         : { title: c.color || c.title || "#1A1613", body: c.bgcolor || c.body || "rgba(26,22,19,.16)" };
     }
   } catch (e) { /* 忽略 */ }
-  return XH_NODE_COLORS[entry.groupLabel] || { title: "#1A1613", body: "rgba(26,22,19,.14)" };
+  //  2026-11-23 分类细分：「XiaoHei/图像/绘画手绘」在色板里没有精确 key，
+  //  按父级前缀回落到旧色板（图像→绿 / 视频→蓝 / 工具→灰），保持整族配色不乱。
+  const gl = String(entry.groupLabel || "");
+  const parent = gl.startsWith("XiaoHei/图像/") ? "XiaoHei/Image"
+               : gl.startsWith("XiaoHei/视频/") ? "XiaoHei/Video"
+               : gl.startsWith("XiaoHei/工具/") ? "XiaoHei/工具" : null;
+  return XH_NODE_COLORS[gl] || (parent && XH_NODE_COLORS[parent])
+      || { title: "#1A1613", body: "rgba(26,22,19,.14)" };
 }
 
 /** 画出一张「节点样子」示意卡（HTML 字符串）。 */
@@ -661,13 +694,41 @@ async function buildIndex() {
       //  2026-11-14：1:1 复刻的角色表节点 CATEGORY 是「小黑家族」而不是 XiaoHei/*，
       //    原先这里会把它整个过滤掉 ⇒ 帮助里搜「小黑」只剩一条「交流反馈」。
       //    按分类精确放行（不放宽到任意中文分类，避免把别人的节点收进来）。
-      if (!catCore.startsWith("XiaoHei") && !catCore.startsWith("小黑") && !replica) continue;
-      if (catCore === "_internal") continue;         // 内部快照节点不进帮助侧栏
+      //  2026-11-25 收紧：先按家族白名单精确判定 class_type 是不是我们自己的。
+      //    旧逻辑只看分类前缀 `小黑` ⇒ 第三方 `Comfyui-XH_Krea2Catalog` 的
+      //    `XH_Krea2CatalogLibrary`（CATEGORY=`小黑/Krea2`）被误收，帮助首页
+      //    凭空多出一个纯英文分类「Krea2」，且重启 ComfyUI 永远修不掉。
+      //    白名单没加载成功时退回旧分类判据，避免整包白屏。
+      const family = window.__XH_FAMILY_TYPES__;
+      const isFamily = family ? family.has(type) : (catCore.startsWith("XiaoHei") || catCore.startsWith("小黑"));
+      if (!isFamily && !replica) continue;
+      //  白名单里还包含 XHDirectorStudio（续片 / 导演台，另一个包）的节点，归属守卫要认，
+      //    但它们是别家的帮助内容 ⇒ 本帮助面板只收本包分类（XiaoHei/* + 小黑家族），
+      //    否则首页会冒出 MiniMax H3/*、🔁XH/Video 这些纯英文分类。
+      const inThisPack = catCore.startsWith("XiaoHei") || catCore === "小黑家族" || replica;
+      if (!inThisPack) continue;
+      //  内部快照节点不进帮助侧栏。**无条件过滤**：旧版写在 inThisPack 之后，
+      //    XH_WN_MaskedLoraSnapshot 因 replica=true 绕过去，首页冒出英文分类「internal」。
+      if (catCore === "_internal" || catCore === "internal") continue;
       const helpDef = HELP_DEFS.find((h) => h.cls === type) || {};
       // 复刻节点 CATEGORY 已是 XiaoHei/Video·XiaoHei/Image·XiaoHei/工具 ⇒ 直接按真实分类归组（不再堆「复刻」分组）
       const catName = (() => {
         if (catCore === "小黑家族") return "小黑家族";
-        const n = catCore.replace(/^(XiaoHei|小黑)\/?/, "");
+        let n = catCore.replace(/^(XiaoHei|小黑)\/?/, "");
+        //  2026-11-25 兜底归一：运行中的旧 ComfyUI 进程分类还是老值，
+        //    会出现「Image 1 + 图像 43」「Video 10 + 视频 24」「分镜 7 + 分镜/高级 5」
+        //    「工具 3 + 工具/xxx 13」这种同义重复。前端先把老分类名折进新分类，
+        //    这样即使后端还没重启，帮助侧栏也不会出现两组同义分类。
+        //    后端新代码已把这些节点的 CATEGORY 真正改掉（V3 define_schema 覆盖），
+        //    重启后这些别名自然不再出现，本表退化为无害的兼容层。
+        if (n === "Image") n = "图像/图像输入输出";
+        else if (n === "Video") n = "视频/H3核心与加速";
+        else if (n === "Control") n = "逻辑与数值/滑块";
+        else if (n === "SetGet") n = "逻辑与数值/存取";
+        else if (n === "Identity") n = "模型与身份/角色身份";
+        else if (n === "Model") n = "模型与身份/模型权重";
+        else if (n === "分镜/高级") n = "分镜";
+        else if (n === "工具") n = "工具/系统与流程控制";
         return n || "其他";                          // 分类只写了个光秃秃的 XiaoHei 时归「其他」
       })();
       const groupLabel = catCore;
@@ -823,6 +884,34 @@ function updateNavButtons() { if (!S.win) return; const btns = S.win.querySelect
 // ═══════════════════════════════════════════════════════
 // 侧边栏 / 主区
 // ═══════════════════════════════════════════════════════
+//  2026-11-23 用户反馈：细分后侧栏 21 个分类头平铺成一长条，比细分前还难找。
+//  ⇒ 改成两级折叠：顶层只显示大类（指南/模型/图像/视频/工具…十几个，跟细分前一样短），
+//    点开大类才露子类，子类点开才是节点。
+//  关键：只改**视图层**，S.groups 扁平结构/首页/搜索/缓存全部不动。
+//    细分分类名形如「图像/绘画手绘」→ 父=图像、子=绘画手绘；
+//    其余分类（模型/控制/音频/指南…无斜杠）保持单级，跟原来完全一样。
+function sideParentOf(name) {
+  const m = String(name || "").match(new RegExp("^(" + XH_PARENTS + ")\\/([^/]+)$"));
+  return m ? { parent: m[1], sub: m[2] } : null;
+}
+/** 把扁平 S.groups 归并成大类树：[{parent:null|名, name, icon, subs:[{sub, group}]}]，侧栏/首页共用。 */
+function buildGroupTree() {
+  const tree = [];
+  const pIdx = {};
+  if (!S.parentOpen) S.parentOpen = {};   // 顶层大类展开状态跨重绘保持
+  for (const g of S.groups) {
+    const p = sideParentOf(g.name);
+    if (!p) { tree.push({ parent: null, name: g.name, icon: g.name, subs: [{ sub: null, group: g }] }); continue; }
+    let node = pIdx[p.parent];
+    if (!node) {
+      node = { parent: p.parent, name: p.parent, icon: p.parent, subs: [],
+               open: S.parentOpen[p.parent] === undefined ? false : S.parentOpen[p.parent] };
+      pIdx[p.parent] = node; tree.push(node);
+    }
+    node.subs.push({ sub: p.sub, group: g });
+  }
+  return tree;
+}
 function renderSidebar(activeEntry) {
   const side = S.win.querySelector(".xhhelp-side"); if (!side) return;
   side.innerHTML = "";
@@ -831,31 +920,55 @@ function renderSidebar(activeEntry) {
   home.addEventListener("click", () => navigate("home"));
   side.appendChild(home);
 
-  for (const g of S.groups) {
-    const grpWrap = el("div", "xhhelp-grp");
-    const headClass = "xhhelp-grp-head" + (g.open ? " xhhelp-grp-open" : "");
-    const head = el("div", headClass);
-    head.innerHTML = `<span class="xhhelp-grp-arrow">${xhIconHTML("chevron-right", { size: 12, color: "current" })}</span>
-      <span class="xhhelp-grp-ic">${catIconHTML(g.name, null, { size: 14 })}</span>
-      <span class="xhhelp-grp-label">${esc(catZh(g.name))}</span>
-      <span class="xhhelp-grp-count">${g.items.length}</span>`;
-    head.addEventListener("click", () => {
-      g.open = !g.open;
-      head.classList.toggle("xhhelp-grp-open", g.open);
-      itemsWrap.classList.toggle("xhhelp-grp-collapsed", !g.open);
-    });
-    grpWrap.appendChild(head);
-    const itemsWrap = el("div", "xhhelp-grp-items" + (g.open ? "" : " xhhelp-grp-collapsed"));
-    for (const it of g.items) {
-      const item = el("div", "xhhelp-item", esc(it.title));
-      if (activeEntry && activeEntry.key === it.key) item.classList.add("xhhelp-item-active");
-      item.title = it.cls;
-      item.addEventListener("click", () => navigate(it));
-      itemsWrap.appendChild(item);
+  const tree = buildGroupTree();
+  for (const node of tree) {
+    // 单级分类（无子类）：沿用原来的渲染，一个头 + 一串节点
+    if (!node.parent) {
+      const g = node.subs[0].group;
+      side.appendChild(buildSideGroup(g, g.name, catIconHTML(node.icon, null, { size: 14 }), activeEntry, false));
+      continue;
     }
-    grpWrap.appendChild(itemsWrap);
-    side.appendChild(grpWrap);
+    // 两级分类（图像/视频/工具）：顶层大类头 → 展开后是子类头 → 展开后才是节点
+    const total = node.subs.reduce((n, s) => n + s.group.items.length, 0);
+    const wrap = el("div", "xhhelp-grp");
+    const head = el("div", "xhhelp-grp-head" + (node.open ? " xhhelp-grp-open" : ""));
+    head.innerHTML = `<span class="xhhelp-grp-arrow">${xhIconHTML("chevron-right", { size: 12, color: "current" })}</span>
+      <span class="xhhelp-grp-ic">${catIconHTML(node.icon, null, { size: 14 })}</span>
+      <span class="xhhelp-grp-label">${esc(catZh(node.name))}</span>
+      <span class="xhhelp-grp-count">${total}</span>`;
+    const body = el("div", "xhhelp-grp-items" + (node.open ? "" : " xhhelp-grp-collapsed"));
+    head.addEventListener("click", () => {
+      node.open = !node.open;
+      S.parentOpen[node.name] = node.open;
+      head.classList.toggle("xhhelp-grp-open", node.open);
+      body.classList.toggle("xhhelp-grp-collapsed", !node.open);
+    });
+    for (const s of node.subs) body.appendChild(buildSideGroup(s.group, s.sub, "", activeEntry, true));
+    wrap.appendChild(head); wrap.appendChild(body); side.appendChild(wrap);
   }
+}
+/** 造一个可折叠组：单级时 head 带分类图标，两级子类时只显示子类名（图标位置留空缩进）。 */
+function buildSideGroup(g, label, iconHtml, activeEntry, isSub) {
+  const wrap = el("div", "xhhelp-grp" + (isSub ? " xhhelp-sub" : ""));
+  const head = el("div", "xhhelp-grp-head" + (g.open ? " xhhelp-grp-open" : ""));
+  head.innerHTML = `<span class="xhhelp-grp-arrow">${xhIconHTML("chevron-right", { size: 12, color: "current" })}</span>`
+    + (iconHtml ? `<span class="xhhelp-grp-ic">${iconHtml}</span>` : "")
+    + `<span class="xhhelp-grp-label">${esc(label)}</span>`
+    + `<span class="xhhelp-grp-count">${g.items.length}</span>`;
+  const body = el("div", "xhhelp-grp-items" + (g.open ? "" : " xhhelp-grp-collapsed"));
+  head.addEventListener("click", () => {
+    g.open = !g.open;
+    head.classList.toggle("xhhelp-grp-open", g.open);
+    body.classList.toggle("xhhelp-grp-collapsed", !g.open);
+  });
+  for (const it of g.items) {
+    const item = el("div", "xhhelp-item", esc(it.title));
+    if (activeEntry && activeEntry.key === it.key) item.classList.add("xhhelp-item-active");
+    item.title = it.cls;
+    item.addEventListener("click", () => navigate(it));
+    body.appendChild(item);
+  }
+  wrap.appendChild(head); wrap.appendChild(body); return wrap;
 }
 
 function renderHome() {
@@ -872,12 +985,15 @@ function renderHome() {
   }
   const h = el("p"); h.style.cssText = "font-weight:700;color:var(--xh-text);margin:0 0 12px;font-size:14px";
   h.textContent = ` 所有 XiaoHei 组件（共 ${S.index.length} 个）`; main.appendChild(h);
-  for (const g of S.groups) {
+  //  2026-11-23：首页也按大类归并（跟侧栏一致），一个大标题铺完该大类所有卡片，
+  //    不再把细分 21 个子类碎成 21 段小标题。
+  for (const node of buildGroupTree()) {
+    const total = node.subs.reduce((n, s) => n + s.group.items.length, 0);
     const gh = el("p");
     gh.style.cssText = "font-size:11px;color:var(--xh-sub);letter-spacing:.06em;margin:14px 0 6px;display:flex;align-items:center;gap:5px;";
-    gh.innerHTML = `<span class="xhhelp-grp-ic">${catIconHTML(g.name, null, { size: 14 })}</span><span>${esc(catZh(g.name))}</span><span style="opacity:.5">· ${g.items.length}</span>`;
+    gh.innerHTML = `<span class="xhhelp-grp-ic">${catIconHTML(node.icon, null, { size: 14 })}</span><span>${esc(catZh(node.name))}</span><span style="opacity:.5">· ${total}</span>`;
     main.appendChild(gh);
-    for (const it of g.items) main.appendChild(buildCard(it));
+    for (const s of node.subs) for (const it of s.group.items) main.appendChild(buildCard(it));
   }
 }
 function buildCard(entry) {
@@ -1193,7 +1309,10 @@ function toggle() { ensureWindow(); if (S.win.style.display === "flex") close();
 //  2026-11-12：追加节点「端口预览」数据（preview 字段）⇒ 升 v3 让旧缓存自然失效重建。
 //  2026-11-14：索引收录范围新增「小黑家族」分类 + 角色表节点中文说明
 //    ⇒ 升 v5 让浏览器里 v4 旧缓存自然失效重建（否则改了代码也还是搜不到）。
-const IDX_CACHE_KEY = "XH.Help.index.v5";
+//  2026-11-25：收录改按家族白名单精确判定（剔除第三方 Krea2 / XHDirectorStudio），
+//    无条件过滤 _internal，并归一旧分类别名（Image/Video/分镜/高级/工具 去重）
+//    ⇒ 升 v9，否则老缓存里的重复分类清不掉。
+const IDX_CACHE_KEY = "XH.Help.index.v9";
 
 function readIdxCache() {
   try {

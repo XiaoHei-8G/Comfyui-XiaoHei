@@ -126,7 +126,7 @@ export function buildIconCSS(icons) {
   }).join("\n");
 }
 
-// Create the <style id="pix-note-icon-css"> element once and populate
+// Create the <style id="xh-note-icon-css"> element once and populate
 // it with per-icon rules. Idempotent — subsequent calls no-op. Safe
 // to call on every editor open. `force=true` rewrites the rules from the
 // current cache (used after a forced re-fetch found new icons).
@@ -135,14 +135,14 @@ export function injectIconCSS(force = false) {
   const icons = _iconsCache || [];
   if (icons.length === 0) return; // nothing to inject; retry on next call
   // getElementById branch handles hot-module-reload scenarios where a
-  // previous page evaluation left a <style id="pix-note-icon-css"> in
+  // previous page evaluation left a <style id="xh-note-icon-css"> in
   // <head> but the module-level _cssInjected guard was reset. Reuse
   // the existing element and overwrite textContent rather than
   // appending a duplicate node.
-  let style = document.getElementById("pix-note-icon-css");
+  let style = document.getElementById("xh-note-icon-css");
   if (!style) {
     style = document.createElement("style");
-    style.id = "pix-note-icon-css";
+    style.id = "xh-note-icon-css";
     document.head.appendChild(style);
   }
   style.textContent = buildIconCSS(icons);

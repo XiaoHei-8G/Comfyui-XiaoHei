@@ -19,7 +19,7 @@
 // machine. A ResizeObserver re-runs it, because the width changes whenever the
 // node is resized, the renderer switches, or a scrollbar appears.
 
-const CSS_ID = "pix-ln-css";
+const CSS_ID = "xh-ln-css";
 
 function injectCSS() {
   if (document.getElementById(CSS_ID)) return;

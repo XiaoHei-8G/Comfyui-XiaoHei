@@ -583,7 +583,9 @@ app.registerExtension({
         node._pixInpaintSourceURL = null;
         if (node.properties) delete node.properties.pixInpaintSource;
         if (connected) refreshSourcePreview();
-        else restoreNodePreview(parts, "{}", node);
+        // 传真实 stateJson（不是 "{}"）：编辑器内"加载图片"会断开上游线，
+        // 断线瞬间必须能从新存的 src_path 重建缩略图，否则一直卡在旧图。
+        else restoreNodePreview(parts, stateJson, node);
       }
       return r;
     };

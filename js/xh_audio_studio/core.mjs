@@ -56,7 +56,7 @@ export function computeEngineWH(ar, customW, customH) {
  * tabbed-controls layout inside the right sidebar.
  */
 function injectAudioStudioCSS() {
-  if (document.getElementById("pix-audiostudio-css")) return;
+  if (document.getElementById("xh-audiostudio-css")) return;
   const css = `
     /* Source row (in topOptionsBar) — image/audio upload buttons + status */
     .pix-as-source-row {
@@ -227,7 +227,7 @@ function injectAudioStudioCSS() {
     #xh-audio-studio-editor .pxf-btn-sm { height: auto; min-height: 28px; }
   `;
   const style = document.createElement("style");
-  style.id = "pix-audiostudio-css";
+  style.id = "xh-audiostudio-css";
   style.textContent = css;
   document.head.appendChild(style);
 }

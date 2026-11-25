@@ -2,7 +2,7 @@
 // ║  Pixaroma Shared — Constants & Utility Functions             ║
 // ╚═══════════════════════════════════════════════════════════════╝
 
-import { pixApiUrl, pixAsset } from "./api_url.mjs";
+import { inputImageURL, pixAsset } from "./api_url.mjs";
 
 export const allow_debug = false;
 
@@ -145,8 +145,8 @@ export function restorePreview(node, widgetName, app) {
       node.imgs = [img];
       app.graph.setDirtyCanvas(true, true);
     };
-    const fn = meta.composite_path.split(/[\\/]/).pop();
-    img.src = pixApiUrl(`/view?filename=${encodeURIComponent(fn)}&type=input&subfolder=pixaroma&t=${Date.now()}`);
+    // 家族画板 composite 存在 xh_paint/，写死 pixaroma 会 404 → 缩略图卡旧图。
+    img.src = inputImageURL(meta.composite_path);
   } catch (e) {
     console.warn("[Pixaroma] restore failed:", e);
   }

@@ -24,7 +24,7 @@
 
 import { BRAND } from "./utils.mjs";
 
-const CSS_ID = "pixaroma-confirm-dialog-css";
+const CSS_ID = "xh-confirm-dialog-css";
 
 function injectCSS() {
   if (document.getElementById(CSS_ID)) return;

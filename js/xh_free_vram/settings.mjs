@@ -65,7 +65,7 @@ function outsideClose(e) {
   if (_panel.contains(e.target)) return;
   // 家族取色器和通用选项弹层都挂在 document.body，且这是捕获阶段——不放行它们，
   // 一选颜色就会把下面的面板关掉。
-  if (e.target.closest?.(".pix-cp-popup, .pix-cp-modal-backdrop, .pix-nset-pop")) return;
+  if (e.target.closest?.(".xh-cp-popup, .xh-cp-modal-backdrop, .pix-nset-pop")) return;
   // 节点脸上的齿轮走 click，比这个 pointerdown 晚——不放行它，面板会关了又立刻重开，永远关不掉。
   if (e.target.closest?.(".xh-fv-gear")) return;
   closeSettingsPanel();

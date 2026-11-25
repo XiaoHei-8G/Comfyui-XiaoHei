@@ -685,9 +685,9 @@ img[src*="/xh_icons/svg/"] { filter: brightness(0) invert(1); }
   document.head.appendChild(s);
 
   // ── Slider Fill System ──────────────────────────────────────
-  if (!window._pxfSliderFillInit) {
-    window._pxfSliderFillInit = true;
-    window._pxfUpdateFill = function (input) {
+  if (!window._xhSliderFillInit) {
+    window._xhSliderFillInit = true;
+    window._xhUpdateFill = function (input) {
       const mn = parseFloat(input.min) || 0,
         mx = parseFloat(input.max) || 100;
       const v = parseFloat(input.value) || 0;
@@ -698,7 +698,7 @@ img[src*="/xh_icons/svg/"] { filter: brightness(0) invert(1); }
     };
     document.addEventListener("input", (e) => {
       if (e.target.type === "range" && e.target.closest(".pxf-overlay"))
-        window._pxfUpdateFill(e.target);
+        window._xhUpdateFill(e.target);
     });
     const desc = Object.getOwnPropertyDescriptor(
       HTMLInputElement.prototype,
@@ -708,7 +708,7 @@ img[src*="/xh_icons/svg/"] { filter: brightness(0) invert(1); }
     desc.set = function (v) {
       origSet.call(this, v);
       if (this.type === "range" && this.closest(".pxf-overlay"))
-        window._pxfUpdateFill(this);
+        window._xhUpdateFill(this);
     };
     Object.defineProperty(HTMLInputElement.prototype, "value", desc);
   }

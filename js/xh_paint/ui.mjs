@@ -391,7 +391,7 @@ proto._syncBrushSizeUI = function () {
   const v = this.brush.size;
   if (this.el._sizeRange) {
     this.el._sizeRange.value = v;
-    if (window._pxfUpdateFill) window._pxfUpdateFill(this.el._sizeRange);
+    if (window._xhUpdateFill) window._xhUpdateFill(this.el._sizeRange);
   }
   if (this.el._sizeNum) this.el._sizeNum.value = v;
   // Immediately redraw cursor circle at last known position
@@ -409,7 +409,7 @@ proto._updateToolOptions = function () {
   // After rebuilding, refresh slider fills (deferred to next frame so DOM is ready)
   requestAnimationFrame(() => {
     bar.querySelectorAll("input[type=range]").forEach((s) => {
-      if (window._pxfUpdateFill) window._pxfUpdateFill(s);
+      if (window._xhUpdateFill) window._xhUpdateFill(s);
     });
   });
 
@@ -773,7 +773,7 @@ proto._updateToolOptions = function () {
       requestAnimationFrame(() => {
         [fillStrokeArea, polyArea, strokeArea].forEach((area) => {
           area.querySelectorAll("input[type=range]").forEach((s) => {
-            if (window._pxfUpdateFill) window._pxfUpdateFill(s);
+            if (window._xhUpdateFill) window._xhUpdateFill(s);
           });
         });
       });

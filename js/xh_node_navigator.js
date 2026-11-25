@@ -213,7 +213,9 @@ function renderTree() {
   const folders = names
     .map((g) => {
       const n = STATE.data.groups[g].length;
-      return '<div class="xh-nn-ti" data-g="' + esc(g) + '"> ' + esc(g) + " · " + n + "</div>";
+      // 2026-11-25 重捋：树里只显示末段子类名；data-g 仍用完整路径保证筛选命中。
+      const label = /^(分镜|图像|视频|提示词|逻辑与数值|模型与身份|音频|工具)\//.test(g) ? g.split("/").pop() : g;
+      return '<div class="xh-nn-ti" data-g="' + esc(g) + '"> ' + esc(label) + " · " + n + "</div>";
     })
     .join("");
   tree.innerHTML = all + '<div style="height:1px;background:' + C.BORDER + ';margin:6px 0;"></div>' + folders;

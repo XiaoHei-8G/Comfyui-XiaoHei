@@ -300,7 +300,7 @@ export function createEditorLayout(config) {
       window.addEventListener("keypress", layout._kbBlock, { capture: true });
       requestAnimationFrame(() => {
         overlay.querySelectorAll("input[type=range]").forEach((s) => {
-          if (window._pxfUpdateFill) window._pxfUpdateFill(s);
+          if (window._xhUpdateFill) window._xhUpdateFill(s);
         });
       });
     },

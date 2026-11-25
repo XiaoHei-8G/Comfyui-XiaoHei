@@ -521,9 +521,9 @@ export function writeState(node, state) {
 // instead (createLoadImagePreviewCanvas). Scoped to our node via :has(.pix-li-root)
 // so it's a no-op for every other node and in the legacy renderer.
 function injectLoadImageNodes2CSS() {
-  if (document.getElementById("pix-li-nodes2-css")) return;
+  if (document.getElementById("xh-li-nodes2-css")) return;
   const s = document.createElement("style");
-  s.id = "pix-li-nodes2-css";
+  s.id = "xh-li-nodes2-css";
   s.textContent =
     // Hide ComfyUI's native input image-preview for this node (we draw our own).
     ".lg-node:has(.pix-li-root) .image-preview{display:none !important;}" +

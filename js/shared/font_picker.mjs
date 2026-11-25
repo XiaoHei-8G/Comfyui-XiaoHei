@@ -243,10 +243,10 @@ export function attachPopupCloseListeners(popup, closeFn) {
 // it is idempotent, so whichever panel opens first pays for it.
 let _cssInjected = false;
 export function injectFontPickerCSS() {
-  if (_cssInjected || document.getElementById("pix-fontpicker-css")) { _cssInjected = true; return; }
+  if (_cssInjected || document.getElementById("xh-fontpicker-css")) { _cssInjected = true; return; }
   _cssInjected = true;
   const s = document.createElement("style");
-  s.id = "pix-fontpicker-css";
+  s.id = "xh-fontpicker-css";
   s.textContent = `
     /* Custom dropdown popup (positioned via body) */
     .pix-to-popup {

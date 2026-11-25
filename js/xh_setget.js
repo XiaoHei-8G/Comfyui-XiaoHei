@@ -30,10 +30,10 @@ ensureLangBridge();
 //  用户要求：**名字精简**。去掉 `XiaoHei-` 前缀与  图标，直接叫「设置 / 获取」；
 //   单路节点的标题 = `基础名_名字`（跟 KJ 的 `Set_66` 一模一样），**不带类型后缀**。
 const TITLES = {
-    XHSet: { zh: "设置", en: "Set" },
-    XHGet: { zh: "获取", en: "Get" },
-    XHMultiSet: { zh: "多路设置", en: "Multi Set" },
-    XHMultiGet: { zh: "多路获取", en: "Multi Get" },
+    XHSet: { zh: "设置 XiaoHei", en: "Set" },
+    XHGet: { zh: "获取 XiaoHei", en: "Get" },
+    XHMultiSet: { zh: "多路设置 XiaoHei", en: "Multi Set" },
+    XHMultiGet: { zh: "多路获取 XiaoHei", en: "Multi Get" },
 };
 
 // 老版本用过的标题（含 XiaoHei- 前缀、含类型后缀）—— 用于升级时自动刷新，

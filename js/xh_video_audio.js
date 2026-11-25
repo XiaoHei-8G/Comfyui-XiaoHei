@@ -13,7 +13,7 @@ ensureLangBridge();
 const NODE_TYPE = "XHAudioFromVideo";
 const XH_I18N = {
     zh: {
-        nodes: { XHAudioFromVideo: "视频取音" },
+        nodes: { XHAudioFromVideo: "视频取音 XiaoHei" },
         widgets: {
             output_frames: "同时输出画面帧",
         },
@@ -29,7 +29,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHAudioFromVideo: "Audio From Video" },
+        nodes: { XHAudioFromVideo: "Audio From Video XiaoHei" },
         widgets: {
             output_frames: "also output frames",
         },

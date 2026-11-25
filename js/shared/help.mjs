@@ -1,5 +1,5 @@
 // ╔═══════════════════════════════════════════════════════════════╗
-// ║  Pixaroma Shared - Node Help panel                            ║
+// ║  XiaoHei Shared - Node Help panel                             ║
 // ╚═══════════════════════════════════════════════════════════════╝
 //
 // A reusable "Help" affordance for Pixaroma nodes. ComfyUI's built-in Info tab
@@ -41,7 +41,7 @@
 import { app } from "../../../scripts/app.js";
 import { pixAsset } from "./api_url.mjs";
 
-const CSS_ID = "pix-help-css";
+const CSS_ID = "xh-help-css";
 const QUESTION_ICON = "icons/note/question.svg";
 const BRAND = "var(--xh-primary,#E8A33C)";
 
@@ -68,7 +68,7 @@ export function allNodeHelp() {
 
 const CSS = `
 /* ---- the ? button nodes drop into their body ---- */
-.pix-help-btn {
+.xh-help-btn {
   width: 16px; height: 16px; flex: none; padding: 0; border: none;
   background-color: rgba(255,255,255,0.5);
   -webkit-mask: url("${pixAsset(QUESTION_ICON)}") center / contain no-repeat;
@@ -76,80 +76,80 @@ const CSS = `
   cursor: pointer; align-self: center;
   transition: background-color 0.12s;
 }
-.pix-help-btn:hover { background-color: ${BRAND}; }
+.xh-help-btn:hover { background-color: ${BRAND}; }
 
 /* ---- popup ---- */
-.pix-help-backdrop {
+.xh-help-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
   display: flex; align-items: center; justify-content: center;
   z-index: 10000; font-family: inherit; -webkit-font-smoothing: antialiased;
 }
-.pix-help-card {
+.xh-help-card {
   background: #1d1d1d; border: 1px solid #333; border-radius: 8px;
   width: min(840px, 94vw); max-height: 82vh; display: flex; flex-direction: column;
   box-shadow: 0 14px 52px rgba(0,0,0,0.6); overflow: hidden; color: #cfcfcf;
-  animation: pix-help-in 0.14s ease;
+  animation: xh-help-in 0.14s ease;
 }
-@keyframes pix-help-in {
+@keyframes xh-help-in {
   from { opacity: 0; transform: translateY(10px) scale(0.985); }
   to   { opacity: 1; transform: none; }
 }
-.pix-help-header {
+.xh-help-header {
   display: flex; align-items: center; gap: 10px;
   padding: 13px 14px 13px 16px; border-bottom: 1px solid #2c2c2c; flex: none;
 }
-.pix-help-h-icon {
+.xh-help-h-icon {
   width: 18px; height: 18px; flex: none; background-color: ${BRAND};
   -webkit-mask: url("${pixAsset(QUESTION_ICON)}") center / contain no-repeat;
   mask: url("${pixAsset(QUESTION_ICON)}") center / contain no-repeat;
 }
-.pix-help-h-title { flex: 1; font-size: 15px; font-weight: 600; color: #fff; line-height: 1.2; }
-.pix-help-close {
+.xh-help-h-title { flex: 1; font-size: 15px; font-weight: 600; color: #fff; line-height: 1.2; }
+.xh-help-close {
   flex: none; width: 26px; height: 26px; border-radius: 4px; border: none;
   background: rgba(255,255,255,0.05); color: #aaa; cursor: pointer;
   font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center;
   transition: background 0.12s, color 0.12s;
 }
-.pix-help-close:hover { background: ${BRAND}; color: #fff; }
+.xh-help-close:hover { background: ${BRAND}; color: #fff; }
 
-.pix-help-body { padding: 14px 16px 16px 16px; overflow-y: auto; font-size: 12.5px; line-height: 1.55; }
-.pix-help-section { margin-bottom: 15px; }
-.pix-help-section:last-child { margin-bottom: 0; }
-.pix-help-h {
+.xh-help-body { padding: 14px 16px 16px 16px; overflow-y: auto; font-size: 12.5px; line-height: 1.55; }
+.xh-help-section { margin-bottom: 15px; }
+.xh-help-section:last-child { margin-bottom: 0; }
+.xh-help-h {
   margin: 0 0 6px 0; font-size: 11px; font-weight: 700; color: ${BRAND};
   text-transform: uppercase; letter-spacing: 0.5px;
 }
-.pix-help-p { margin: 0 0 6px 0; white-space: pre-wrap; color: #cfcfcf; }
-.pix-help-p:last-child { margin-bottom: 0; }
-.pix-help-ul { margin: 0; padding-left: 18px; }
-.pix-help-ul li { margin: 0 0 4px 0; }
-.pix-help-defs { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; align-items: baseline; }
-.pix-help-defs dt { color: #fff; font-weight: 600; white-space: nowrap; }
-.pix-help-defs dd { margin: 0; color: #bcbcbc; }
-.pix-help-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.pix-help-table th {
+.xh-help-p { margin: 0 0 6px 0; white-space: pre-wrap; color: #cfcfcf; }
+.xh-help-p:last-child { margin-bottom: 0; }
+.xh-help-ul { margin: 0; padding-left: 18px; }
+.xh-help-ul li { margin: 0 0 4px 0; }
+.xh-help-defs { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; align-items: baseline; }
+.xh-help-defs dt { color: #fff; font-weight: 600; white-space: nowrap; }
+.xh-help-defs dd { margin: 0; color: #bcbcbc; }
+.xh-help-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.xh-help-table th {
   text-align: left; padding: 5px 8px; color: #9a9a9a; font-weight: 600;
   border-bottom: 1px solid #3a3a3a; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px;
 }
-.pix-help-table td { padding: 5px 8px; border-bottom: 1px solid #262626; vertical-align: top; color: #cfcfcf; }
-.pix-help-table tr:last-child td { border-bottom: none; }
+.xh-help-table td { padding: 5px 8px; border-bottom: 1px solid #262626; vertical-align: top; color: #cfcfcf; }
+.xh-help-table tr:last-child td { border-bottom: none; }
 .pix-help code {
   background: rgba(255,255,255,0.08); border-radius: 3px; padding: 1px 5px;
   font-family: monospace; font-size: 11.5px; color: #ffd2c4;
 }
-.pix-help-tip {
+.xh-help-tip {
   margin-top: 4px; padding: 8px 11px; background: rgba(232,163,60,0.1);
   border-left: 2px solid ${BRAND}; border-radius: 3px; color: #ddd; font-size: 12px;
 }
-.pix-help-more {
+.xh-help-more {
   display: block; width: 100%; margin-top: 14px; padding: 9px 12px;
   border: 1px solid rgba(255,255,255,0.14); border-radius: 5px;
   background: rgba(255,255,255,0.04); color: #cfcfcf;
   font-size: 12.5px; font-family: inherit; cursor: pointer; text-align: center;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
-.pix-help-more:hover { background: ${BRAND}; border-color: ${BRAND}; color: #fff; }
-.pix-help-more:focus-visible { outline: 2px solid ${BRAND}; outline-offset: 2px; }
+.xh-help-more:hover { background: ${BRAND}; border-color: ${BRAND}; color: #fff; }
+.xh-help-more:focus-visible { outline: 2px solid ${BRAND}; outline-offset: 2px; }
 `;
 
 export function injectHelpCSS() {
@@ -171,11 +171,11 @@ function fmt(s) {
 
 function buildSection(section) {
   const sec = document.createElement("div");
-  sec.className = "pix-help-section";
+  sec.className = "xh-help-section";
 
   if (section.heading) {
     const h = document.createElement("div");
-    h.className = "pix-help-h";
+    h.className = "xh-help-h";
     h.textContent = section.heading;
     sec.appendChild(h);
   }
@@ -184,7 +184,7 @@ function buildSection(section) {
     // Blank line -> new paragraph; single \n stays (white-space: pre-wrap).
     for (const para of String(section.body).split(/\n\s*\n/)) {
       const p = document.createElement("p");
-      p.className = "pix-help-p";
+      p.className = "xh-help-p";
       p.innerHTML = fmt(para);
       sec.appendChild(p);
     }
@@ -192,7 +192,7 @@ function buildSection(section) {
 
   if (Array.isArray(section.bullets) && section.bullets.length) {
     const ul = document.createElement("ul");
-    ul.className = "pix-help-ul";
+    ul.className = "xh-help-ul";
     for (const item of section.bullets) {
       const li = document.createElement("li");
       li.innerHTML = fmt(item);
@@ -203,7 +203,7 @@ function buildSection(section) {
 
   if (Array.isArray(section.defs) && section.defs.length) {
     const dl = document.createElement("dl");
-    dl.className = "pix-help-defs";
+    dl.className = "xh-help-defs";
     for (const entry of section.defs) {
       // Tolerate a malformed entry (a bare string instead of [term, desc]).
       const [term, desc] = Array.isArray(entry) ? entry : [entry, ""];
@@ -219,7 +219,7 @@ function buildSection(section) {
 
   if (section.table && Array.isArray(section.table.rows)) {
     const table = document.createElement("table");
-    table.className = "pix-help-table";
+    table.className = "xh-help-table";
     if (Array.isArray(section.table.headers)) {
       const thead = document.createElement("thead");
       const tr = document.createElement("tr");
@@ -296,9 +296,9 @@ function ensureGraphCloseHook() {
 export function openHelpFor(target, helpDef, opts = {}) {
   const key = target || opts.comfyClass || opts.pageKey;
   try {
-    const browser = window.PixaromaHelpBrowser;
-    if (key && typeof browser?.open === "function") {
-      browser.open(key);
+    const browser = window.XHHelp;
+    if (key && typeof browser?.openNode === "function") {
+      browser.openNode(key);
       return true;
     }
   } catch { /* fall through to the popup */ }
@@ -313,22 +313,22 @@ export function openHelpPopup(helpDef, opts = {}) {
   closeHelpPopup(); // only one at a time
 
   const backdrop = document.createElement("div");
-  backdrop.className = "pix-help-backdrop";
+  backdrop.className = "xh-help-backdrop";
 
   const card = document.createElement("div");
-  card.className = "pix-help-card pix-help";
+  card.className = "xh-help-card pix-help";
   backdrop.appendChild(card);
 
   // header
   const header = document.createElement("div");
-  header.className = "pix-help-header";
+  header.className = "xh-help-header";
   const icon = document.createElement("span");
-  icon.className = "pix-help-h-icon";
+  icon.className = "xh-help-h-icon";
   const title = document.createElement("div");
-  title.className = "pix-help-h-title";
+  title.className = "xh-help-h-title";
   title.textContent = helpDef.title || "帮助";
   const close = document.createElement("button");
-  close.className = "pix-help-close";
+  close.className = "xh-help-close";
   close.type = "button";
   close.textContent = "✕";
   close.title = "关闭（Esc）";
@@ -339,10 +339,10 @@ export function openHelpPopup(helpDef, opts = {}) {
 
   // body
   const body = document.createElement("div");
-  body.className = "pix-help-body";
+  body.className = "xh-help-body";
   if (helpDef.tagline) {
     const tag = document.createElement("p");
-    tag.className = "pix-help-p";
+    tag.className = "xh-help-p";
     tag.style.color = "#e6e6e6";
     tag.innerHTML = fmt(helpDef.tagline);
     body.appendChild(tag);
@@ -355,12 +355,12 @@ export function openHelpPopup(helpDef, opts = {}) {
     try {
       body.appendChild(buildSection(section));
     } catch (e) {
-      console.warn("Pixaroma help: skipped a malformed section", e);
+      console.warn("[XiaoHei] 帮助：跳过格式错误的段落", e);
     }
   }
   if (helpDef.footer) {
     const tip = document.createElement("div");
-    tip.className = "pix-help-tip";
+    tip.className = "xh-help-tip";
     tip.innerHTML = fmt(helpDef.footer);
     body.appendChild(tip);
   }
@@ -369,17 +369,17 @@ export function openHelpPopup(helpDef, opts = {}) {
   // the window global rather than an import so this shared module never depends
   // on js/help_browser (which imports from here). Absent global -> no link, so
   // this popup still works on its own.
-  if (window.PixaromaHelpBrowser?.open) {
+  if (window.XHHelp?.openNode) {
     const more = document.createElement("button");
     more.type = "button";
-    more.className = "pix-help-more";
+    more.className = "xh-help-more";
     more.textContent = "打开完整帮助";
     more.title = "全部节点、画布工具和教程，开在一个可以一直留着的窗口里";
     more.addEventListener("click", (e) => {
       e.stopPropagation();
       const cls = opts.comfyClass || opts.pageKey;
       cleanup();
-      try { window.PixaromaHelpBrowser.open(cls); } catch (err) { console.warn("[Pixaroma] help browser", err); }
+      try { window.XHHelp.openNode(cls); } catch (err) { console.warn("[XiaoHei] 帮助浏览器", err); }
     });
     body.appendChild(more);
   }
@@ -425,7 +425,7 @@ export function openHelpPopup(helpDef, opts = {}) {
 export function createHelpButton(helpDef, opts = {}) {
   injectHelpCSS();
   const btn = document.createElement("button");
-  btn.className = "pix-help-btn";
+  btn.className = "xh-help-btn";
   btn.type = "button";
   btn.title = opts.title || `帮助：看看「${helpDef.title || "这个节点"}」怎么用`;
   btn.addEventListener("click", (e) => {

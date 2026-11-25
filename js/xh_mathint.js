@@ -12,12 +12,12 @@ ensureLangBridge();
 const NODE_TYPE = "XHMathInt";
 const XH_I18N = {
     zh: {
-        nodes: { XHMathInt: "整数运算" },
+        nodes: { XHMathInt: "整数运算 XiaoHei" },
         widgets: { a: "a", b: "b", operation: "操作" },
         slots: { INT: "整数" },
     },
     en: {
-        nodes: { XHMathInt: "Integer Math" },
+        nodes: { XHMathInt: "Integer Math XiaoHei" },
         widgets: { a: "a", b: "b", operation: "operation" },
         slots: { INT: "INT" },
     },

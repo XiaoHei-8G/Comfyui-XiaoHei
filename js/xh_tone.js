@@ -12,7 +12,7 @@ ensureLangBridge();
 const NODE_TYPE = "XHToneCompensate";
 const XH_I18N = {
     zh: {
-        nodes: { XHToneCompensate: "色调补偿" },
+        nodes: { XHToneCompensate: "色调补偿 XiaoHei" },
         widgets: {
             mode: "模式",
             overlap: "关键帧帧数",
@@ -29,7 +29,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHToneCompensate: "Tone Compensate" },
+        nodes: { XHToneCompensate: "Tone Compensate XiaoHei" },
         widgets: {
             mode: "mode",
             overlap: "keyframe frames",

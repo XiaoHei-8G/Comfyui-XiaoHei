@@ -13,9 +13,9 @@ const NODE_TYPES = ["XHComposeVideo", "XHConcatVideo", "XHVideoCombine"];
 const XH_I18N = {
     zh: {
         nodes: {
-            XHComposeVideo: "合成并保存视频",
-            XHConcatVideo: "视频拼接",
-            XHVideoCombine: "视频合成",
+            XHComposeVideo: "合成并保存视频 XiaoHei",
+            XHConcatVideo: "视频拼接 XiaoHei",
+            XHVideoCombine: "视频合成 XiaoHei",
         },
         widgets: {
             images: "图像", fps: "帧率", filename_prefix: "文件名前缀", audio: "音频",
@@ -50,9 +50,9 @@ const XH_I18N = {
     },
     en: {
         nodes: {
-            XHComposeVideo: "Compose Video",
-            XHConcatVideo: "Concat Video",
-            XHVideoCombine: "Video Combine",
+            XHComposeVideo: "Compose Video XiaoHei",
+            XHConcatVideo: "Concat Video XiaoHei",
+            XHVideoCombine: "Video Combine XiaoHei",
         },
         widgets: {
             images: "images", fps: "fps", filename_prefix: "filename prefix", audio: "audio",

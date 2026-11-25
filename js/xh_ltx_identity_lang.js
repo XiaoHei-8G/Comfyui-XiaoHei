@@ -13,7 +13,7 @@ ensureLangBridge();
 const XH_I18N = {
     zh: {
         nodes: {
-            XHLTXIdentityOverlap: "LTX锁脸",
+            XHLTXIdentityOverlap: "LTX锁脸 XiaoHei",
         },
         widgets: {
             model: "模型",
@@ -45,7 +45,7 @@ const XH_I18N = {
     },
     en: {
         nodes: {
-            XHLTXIdentityOverlap: "LTX Identity",
+            XHLTXIdentityOverlap: "LTX Identity XiaoHei",
         },
         widgets: {
             model: "model",

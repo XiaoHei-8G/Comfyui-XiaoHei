@@ -35,7 +35,7 @@ const INFO_H = 26;
 
 const XH_I18N = {
     zh: {
-        nodes: { XHH3AudioSync: "H3音频同步" },
+        nodes: { XHH3AudioSync: "H3音频同步 XiaoHei" },
         widgets: {
             clip_limit: "最长片段",
             when_short: "音轨短了",
@@ -53,7 +53,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHH3AudioSync: "H3 Audio Sync" },
+        nodes: { XHH3AudioSync: "H3 Audio Sync XiaoHei" },
         widgets: {
             clip_limit: "longest clip",
             when_short: "when short",

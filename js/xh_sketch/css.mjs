@@ -8,7 +8,7 @@
 import { pixAsset } from "../shared/api_url.mjs";
 import { ACC, ACC_HOVER } from "../shared/node_settings.mjs";
 
-const CSS_ID = "pix-sketch-css";
+const CSS_ID = "xh-sketch-css";
 
 export function injectCSS() {
   if (document.getElementById(CSS_ID)) return;
@@ -90,20 +90,15 @@ export function injectCSS() {
 .pix-sketch-tog.on{background:${ACC};}
 .pix-sketch-tog.on::after{left:14px;background:#fff;}
 
-/* ---- the floating overlays on the picture (方案 A, 2026-11-20) ----
-   The picture owns the whole body; tools run down its left edge, Expand and
-   Gear sit in the top right corner, colours and line width along the bottom.
-   Every panel has the same smoked glass look so it reads as one system and
-   never fights the picture under it. */
-.pix-sketch-vtools,.pix-sketch-hact,.pix-sketch-hcolor{position:absolute;z-index:3;display:flex;
-  background:var(--xh-title-bg,rgba(0,0,0,.45));border:1px solid var(--xh-border,#333333);border-radius:var(--ps-radius);
-  box-shadow:0 2px 10px var(--xh-shadow,rgba(0,0,0,.5));}
-.pix-sketch-vtools{left:6px;top:6px;flex-direction:column;align-items:center;gap:2px;padding:4px;}
-.pix-sketch-vtools .pix-sketch-btn{width:26px;height:22px;}
-.pix-sketch-vtools .pix-sketch-hsep{width:22px;height:1px;background:var(--xh-border,#333333);margin:2px 0;}
-.pix-sketch-hact{right:6px;top:6px;gap:4px;padding:4px;}
-.pix-sketch-hcolor{left:6px;right:6px;bottom:6px;align-items:center;gap:4px;padding:5px 6px;min-width:0;}
-.pix-sketch-hcolor .pix-sketch-grow{min-width:2px;}
+/* ---- 2026-11-25 不遮图：控件全部移到图片外的独立行 ----
+   以前工具/按钮/色板是压在 canvas 上的浮层（方案 A），挡住画面。现在工具在图片
+   上方一行、色板在下方一行，图片区是干净的一段，任何控件都不再盖住画面。 */
+.pix-sketch-tools-row,.pix-sketch-acts-row,.pix-sketch-colors-row{display:flex;align-items:center;
+  gap:4px;flex:0 0 auto;min-width:0;box-sizing:border-box;}
+.pix-sketch-tools-row .pix-sketch-btn{width:28px;height:24px;}
+.pix-sketch-tools-row .pix-sketch-btn svg{width:15px;height:15px;}
+.pix-sketch-colors-row{min-height:26px;padding:1px 0;}
+.pix-sketch-colors-row .pix-sketch-grow{min-width:2px;}
 .pix-sketch-caret{width:20px;height:16px;padding:0;border:none;background:none;color:var(--xh-sub,#8a8a8a);cursor:pointer;
   font-size:11px;line-height:1;flex:0 0 auto;}
 .pix-sketch-caret:hover{color:${ACC};}

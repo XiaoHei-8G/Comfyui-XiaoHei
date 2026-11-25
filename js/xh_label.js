@@ -31,6 +31,22 @@ const SVG_BG_COLOR = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none
 const SVG_COMPACT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#e8e8e8" stroke-width="2"/><line x1="8" y1="12" x2="16" y2="12" stroke="#e8e8e8" stroke-width="2" stroke-linecap="round"/></svg>`;
 const SVG_EXPAND = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#e8e8e8" stroke-width="2"/><line x1="12" y1="9" x2="12" y2="15" stroke="#e8e8e8" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="12" x2="15" y2="12" stroke="#e8e8e8" stroke-width="2" stroke-linecap="round"/></svg>`;
 
+//  2026-11-24 修复「几个按钮图案不显示」：
+//    恢复默认 / 字体 / 节点透明 这三颗原来的文案是空字符串（中英都是 ""），
+//    某次改版把内联 SVG 摘掉后忘了补回去 ⇒ 一直是空白方块，点了也不知道是什么。
+//    现在统一走家族图标库（js/xh_icons：mask + currentColor），图案颜色跟着按钮文字走；
+//    中/EN 切换时 _applyLangToOwnBtns 把 zh/en 两串图标写回，图案不会再被抹掉。
+const _LBL_ICON = (name, size = 15) => xhIconHTML(name, { size, color: "current" });
+//  工具栏激活态（当前对齐方式 / 是否加粗）：家族主色描边 + 淡底，不用自造颜色
+const _LBL_ON = "1px solid var(--xh-primary,#E8A33C)";
+const _LBL_OFF = "1px solid rgba(255,255,255,.10)";
+const _paintActive = (btn, on) => {
+    if (!btn) return;
+    btn.style.border = on ? _LBL_ON : _LBL_OFF;
+    btn.style.background = on ? "rgba(232,163,60,.16)" : "#252525";
+    btn.style.color = on ? "var(--xh-primary,#E8A33C)" : "#e8e8e8";
+};
+
 // ---- 选中文字右键：字号 / 颜色 / 加粗 / 清除格式（2026-10-19）----
 // 为什么做：正文是 contentEditable + innerHTML，本来就吃 <span style="font-size">；
 //   但让用户手写 HTML 不现实（别人拿到根本不会改）⇒ 给右键菜单：
@@ -392,41 +408,48 @@ app.registerExtension({
                     onPick: (c) => { if (c) { this._bgColor = c; this._save(); this._refresh(); } },
                 });
             }, "背景颜色", "BG Color");
-            addI18nBtn("reset", "", "", () => { this._resetDefault(); }, "恢复默认", "Reset Defaults");
+            addI18nBtn("reset", _LBL_ICON("rotate-ccw"), _LBL_ICON("rotate-ccw"),
+                () => { this._resetDefault(); }, "恢复默认", "Reset Defaults");
 
             // 字体选择
-            addI18nBtn("fontFamily", "", "", () => {
+            addI18nBtn("fontFamily", _LBL_ICON("type"), _LBL_ICON("type"), () => {
                 const fonts = ["Arial", "微软雅黑", "黑体", "宋体", "微软雅黑 Bold", "Consolas", "Courier New", "Georgia", "Times New Roman", "Impact"];
                 const idx = fonts.indexOf(this._fontFamily);
                 this._fontFamily = fonts[(idx + 1) % fonts.length];
+                //  hover 提示里的字体名要跟着换，否则切了字体标题还停在旧名字
+                const hoverZh = `字体: ${this._fontFamily}`, hoverEn = `Font: ${this._fontFamily}`;
+                const item = this._i18nBtns.fontFamily;
+                if (item) { item.hoverZh = hoverZh; item.hoverEn = hoverEn; item.btn.title = this._lang === "zh" ? hoverZh : hoverEn; }
                 this._save();
                 this._refresh();
                 app.canvas.setDirty(true);
             }, `字体: ${this._fontFamily}`, `Font: ${this._fontFamily}`);
 
             // 粗细
-            addI18nBtn("fontWeight", this._fontWeight === "bold" ? "B" : "b", this._fontWeight === "bold" ? "B" : "b", () => {
+            addI18nBtn("fontWeight", _LBL_ICON("bold"), _LBL_ICON("bold"), () => {
                 this._fontWeight = this._fontWeight === "bold" ? "normal" : "bold";
                 this._save();
                 this._refresh();
             }, "切换粗细", "Toggle Bold");
 
             // 居左 居中 居右
-            addI18nBtn("alignLeft", "居左", "Left", () => { this._align = "left"; this._save(); this._refresh(); }, "居左", "Align Left");
-            addI18nBtn("alignCenter", "居中", "Center", () => { this._align = "center"; this._save(); this._refresh(); }, "居中", "Align Center");
-            addI18nBtn("alignRight", "居右", "Right", () => { this._align = "right"; this._save(); this._refresh(); }, "居右", "Align Right");
+            addI18nBtn("alignLeft", _LBL_ICON("align-left"), _LBL_ICON("align-left"),
+                () => { this._align = "left"; this._save(); this._refresh(); }, "居左", "Align Left");
+            addI18nBtn("alignCenter", _LBL_ICON("align-center"), _LBL_ICON("align-center"),
+                () => { this._align = "center"; this._save(); this._refresh(); }, "居中", "Align Center");
+            addI18nBtn("alignRight", _LBL_ICON("align-right"), _LBL_ICON("align-right"),
+                () => { this._align = "right"; this._save(); this._refresh(); }, "居右", "Align Right");
 
             // 节点透明度
-            const hideBtn = mkBtn(this._hideTitle ? "" : "", () => {
+            const hideBtn = mkBtn(this._hideTitle ? _LBL_ICON("eye-off") : _LBL_ICON("eye"), () => {
                 this._hideTitle = !this._hideTitle;
                 this.color = this._hideTitle ? "transparent" : "#252525";
                 this.bgcolor = this._hideTitle ? "transparent" : "#1a1a2e88";
                 this.flags.showTitle = !this._hideTitle;
-                hideBtn.textContent = this._hideTitle ? "" : "";
-                hideBtn.title = this._hideTitle ? "节点已透明" : "节点显示标题";
+                this._syncToolbarState();
                 this._save();
                 app.graph.setDirtyCanvas(true, true);
-            }, this._hideTitle ? "节点已透明" : "节点显示标题");
+            }, this._hideTitle ? "节点已透明，点一下显示标题" : "节点显示标题，点一下变透明");
             topBar.insertBefore(hideBtn, spacer);
             this._hideBtn = hideBtn;
 
@@ -436,6 +459,7 @@ app.registerExtension({
             //     本文件顶部的 xh:lang-changed 监听再刷 _lang / 工具栏文案 / 文字区 —— 行为等价，
             //     且能跟着别的 XiaoHei 节点一起切（原来只切自己）。
             this._boldBtn = this._i18nBtns.fontWeight.btn;
+            this._syncToolbarState();   // 首次上色：加粗 / 对齐 / 透明三组按存档状态点亮
 
             // 文字区
             const textArea = document.createElement("div");
@@ -593,6 +617,22 @@ app.registerExtension({
         };
 
         // 刷新
+        //  工具栏各键的「当前状态」：加粗 / 对齐 / 透明 三组要能一眼看出现在选的是哪个，
+        //  否则四颗图标长得一样，点完不知道该看哪（2026-11-24）。
+        nodeType.prototype._syncToolbarState = function () {
+            const btns = this._i18nBtns || {};
+            _paintActive(btns.fontWeight?.btn, this._fontWeight === "bold");
+            _paintActive(btns.alignLeft?.btn, this._align === "left");
+            _paintActive(btns.alignCenter?.btn, this._align === "center");
+            _paintActive(btns.alignRight?.btn, this._align === "right");
+            if (this._hideBtn) {
+                this._hideBtn.innerHTML = this._hideTitle ? _LBL_ICON("eye-off") : _LBL_ICON("eye");
+                this._hideBtn.title = this._lang === "zh"
+                    ? (this._hideTitle ? "节点已透明，点一下显示标题" : "节点显示标题，点一下变透明")
+                    : (this._hideTitle ? "Node transparent — click to show its title" : "Node title shown — click to hide it");
+            }
+        };
+
         nodeType.prototype._refresh = function () {
             if (this._textArea) {
                 this._textArea.style.fontSize = this._fontSize + "px";
@@ -622,6 +662,7 @@ app.registerExtension({
                 this.bgcolor = "#1a1a2e88";
             }
             this.flags.showTitle = !(this._hideTitle || this._compact);
+            this._syncToolbarState?.();
             app.graph.setDirtyCanvas(true, true);
         };
 
@@ -632,6 +673,7 @@ app.registerExtension({
                 btn.innerHTML = zh ? rest.zh : rest.en;
                 btn.title = zh ? rest.hoverZh : rest.hoverEn;
             });
+            this._syncToolbarState?.();   // 图标重写后补回激活态描边
         };
 
         // 折叠 / 展开（隐藏工具栏 + 标题条，只留文字内容区；折叠态右上角留展开把手）
@@ -654,6 +696,7 @@ app.registerExtension({
             this._nodeColor = null;
             this._compact = false;
             this._save();
+            this._applyLangToOwnBtns();   // 语言一并回到中文，按钮提示 / 图案同步
             this._applyCompact();
         };
     },

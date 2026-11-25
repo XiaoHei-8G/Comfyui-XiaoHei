@@ -2,6 +2,8 @@ import { app } from "../../../scripts/app.js";
 import { api } from "../../../scripts/api.js";
 import { TileStroke } from "./speedpaint_stroke.mjs?v=eraser-1";
 import { loadConnectedImage } from "./speedpaint_input.mjs?v=eraser-1";
+// 家族 Nodes 2.0 适配：裸挂 DOM widget 在 Vue 节点体里可能整块不渲染（空节点）。
+import { applyAdaptiveCanvasOnly } from "../shared/nodes2.mjs";
 
 const NODE = "XH_WN_Speedpaint";
 const editors = new Set();
@@ -69,7 +71,7 @@ async function request(operation, body, signal) {
         const text = await response.text();
         let message = text;
         try { message = JSON.parse(text).error || text; } catch { /* Non-JSON server error. */ }
-        throw new Error(message || `Speedpaint request failed (${response.status}).`);
+        throw new Error(message || `速图画板请求失败（${response.status}）。`);
     }
     return response.json();
 }
@@ -102,8 +104,14 @@ function inputDimension(node, name, seen = new Set()) {
 
 export function setupSpeedpaint(node) {
     if (node._wnSpeedpaintEditor) return node._wnSpeedpaintEditor;
-    const data = node.widgets.find(w => w.name === "document");
-    Object.assign(data, { type: "wn_hidden", hidden: true, computeSize: () => [0, -4], draw() {}, mouse: () => false });
+    // document 是隐藏的数据槽。新版前端的 widget 是带访问器的类实例，
+    // 直接 Object.assign 去改 type / hidden 可能抛错，一抛整个画板就不会被创建。
+    const data = node.widgets?.find(w => w.name === "document") ?? { value: "" };
+    try {
+        Object.assign(data, { type: "wn_hidden", hidden: true, computeSize: () => [0, -4], draw() {}, mouse: () => false });
+    } catch (error) {
+        data.hidden = true;
+    }
     const dimensions = ["width", "height"].map(name => node.widgets.find(w => w.name === name));
     node.properties ||= {};
     const defaults = { colour: "#24232b", background: "#e8e6e1", size: 32, opacity: 100, shape: "round", erasing: false, pressure: true, local: [1024, 1024] };
@@ -157,7 +165,17 @@ export function setupSpeedpaint(node) {
     tools.append(round, square, eraser, colour, divider, size, sizeLabel, opacity, percent, pressure, undo, picker);
     const file = element("input"); file.type = "file"; file.accept = "image/png,image/jpeg,image/webp"; file.hidden = true;
     root.append(setup, stage, tools, file, shortcuts);
-    const dom = node.addDOMWidget("speedpaint_editor", "wn_speedpaint", root, { serialize: false, hideOnZoom: false, getMinHeight: () => 255 });
+    // type 必须是 "custom"：新版前端按 widget 类型找渲染宿主，随意自造的
+    // 类型名会被跳过，节点体里就只剩一片空白（用户看到的就是「没有画板」）。
+    const dom = node.addDOMWidget("speedpaint_editor", "custom", root, {
+        getValue: () => null,
+        setValue: () => {},
+        serialize: false,
+        hideOnZoom: false,
+        margin: 0,
+        getMinHeight: () => 255,
+    });
+    applyAdaptiveCanvasOnly(dom);
     dom.computeSize = () => [390, Math.max(255, node.size[1] - 95)];
     node.size = [Math.max(430, node.size[0]), Math.max(575, node.size[1])];
 
@@ -641,7 +659,9 @@ export function prepareOperation(original, graphArgument = false) {
 }
 
 app.registerExtension({
-    name: "wepenerd.speedpaint",
+    // 不能沿用上游的 "wepenerd.speedpaint"：原包同时装着时两个扩展重名，
+    // 前端扩展表按名字登记，重名会让其中一个整块失效（画板就不出来了）。
+    name: "xh.wepenerd.speedpaint",
     async setup() {
         if (!promptInstalled) {
             app.graphToPrompt = prepareOperation(app.graphToPrompt, true);

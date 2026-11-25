@@ -37,7 +37,7 @@ function injectCSS() {
   if (_css) return;
   _css = true;
   const s = document.createElement("style");
-  s.id = "pix-latent-batch-css";
+  s.id = "xh-latent-batch-css";
   s.textContent = `
 .pix-lb-band { position:absolute; height:${BAND_H}px; display:flex; align-items:center; gap:4px;
   pointer-events:none; z-index:2; font-size:11px; white-space:nowrap; }

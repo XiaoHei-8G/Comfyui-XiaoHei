@@ -15,7 +15,7 @@ const NODE_TYPE = "XHNumberCounter";
 // ---- 文案表 ----
 const XH_I18N = {
     zh: {
-        nodes: { XHNumberCounter: "数字计数器" },
+        nodes: { XHNumberCounter: "数字计数器 XiaoHei" },
         widgets: {
             number_type: "输出类型",
             mode: "计数模式",
@@ -31,7 +31,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHNumberCounter: "Number Counter" },
+        nodes: { XHNumberCounter: "Number Counter XiaoHei" },
         widgets: {
             number_type: "Number Type",
             mode: "mode",

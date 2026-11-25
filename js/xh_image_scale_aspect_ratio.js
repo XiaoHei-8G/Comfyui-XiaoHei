@@ -15,7 +15,7 @@ ensureLangBridge();
 const NODE_TYPE = "XHImageScaleByAspectRatio";
 const XH_I18N = {
     zh: {
-        nodes: { XHImageScaleByAspectRatio: "按比例缩放" },
+        nodes: { XHImageScaleByAspectRatio: "按比例缩放 XiaoHei" },
         widgets: {
             aspect_ratio: "目标比例",
             proportional_width: "自定义宽",
@@ -38,7 +38,7 @@ const XH_I18N = {
         },
     },
     en: {
-        nodes: { XHImageScaleByAspectRatio: "Scale By Aspect Ratio" },
+        nodes: { XHImageScaleByAspectRatio: "Scale By Aspect Ratio XiaoHei" },
         widgets: {
             aspect_ratio: "aspect ratio",
             proportional_width: "prop. width",

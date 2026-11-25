@@ -277,7 +277,7 @@ export function injectCSS() {
 
 /* Inline icons: empty span rendered via mask-image + currentColor.
    Per-icon mask-image URLs come from the dynamically-injected
-   <style id="pix-note-icon-css"> (see js/note/icons.mjs).
+   <style id="xh-note-icon-css"> (see js/note/icons.mjs).
    Default: solid 1.2em×1.2em colored rectangle when no matching
    per-icon rule is present — deliberately visible to signal a
    missing / unknown icon rather than rendering invisibly.
@@ -795,7 +795,7 @@ export function injectCSS() {
 /* Color popover styles previously lived here; the 5 toolbar pickers
    (text / highlight / Bg / Btn / Ln) now use the shared XiaoHei Color
    Picker module (js/shared/color_picker.mjs) which injects its own
-   .pix-cp-* styles on first use. */
+   .xh-cp-* styles on first use. */
 
 /* Generic picker-modal shell — used by the icon picker and the
    separator picker (and intended for future picker buttons that need
@@ -907,7 +907,7 @@ export function injectCSS() {
 }
 
 /* Icon-popup color section. Picker UI is rendered by the shared
-   XiaoHei Color Picker module (.pix-cp-* classes in
+   XiaoHei Color Picker module (.xh-cp-* classes in
    js/shared/color_picker.mjs). The wrapper just adds bottom margin
    so the picker doesn't crowd the size pills below it. */
 .pix-cp + .pix-note-iconpop-size-row { margin-top: 8px; }
@@ -952,7 +952,7 @@ export function injectCSS() {
 }
 
 /* Footer for picker modals — Insert (primary) + Cancel. Mirrors
-   .pix-cp-modal-actions but kept local to avoid coupling to the
+   .xh-cp-modal-actions but kept local to avoid coupling to the
    shared color picker module. Insert is disabled until the user
    makes a selection. Two parallel class names so legacy iconpop
    markup and generic modal markup share the same look. */

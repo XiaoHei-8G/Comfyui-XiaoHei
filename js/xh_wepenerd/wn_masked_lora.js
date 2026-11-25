@@ -2,6 +2,7 @@ import { app } from "../../../scripts/app.js";
 import { api } from "../../../scripts/api.js";
 import { executionId, imageAncestors, upstreamNodes } from "./mask_input.mjs";
 import { MaskStroke, fillEnclosed, maskSettings } from "./mask_stroke.mjs";
+import { applyAdaptiveCanvasOnly } from "../shared/nodes2.mjs";
 
 const NODE = "XH_WepeNerdLoadLoraMasked";
 // Nodes that share the standalone mask editor, with their accessible editor names.
@@ -196,7 +197,15 @@ export function setupMaskedLora(node, { maskOnly = false, label = "", outputSize
     if (!maskOnly) root.append(rangeNote);
     root.append(row, body, note);
     const file = element("input"); file.type = "file"; file.accept = "image/*"; file.hidden = true; root.append(file);
-    const dom = node.addDOMWidget("mask_editor", "wn_mask_editor", root, { serialize: false, hideOnZoom: false });
+    // 同速图画板：type 必须 "custom"，否则新版前端不认这个 widget，节点体一片空。
+    const dom = node.addDOMWidget("mask_editor", "custom", root, {
+        getValue: () => null,
+        setValue: () => {},
+        serialize: false,
+        hideOnZoom: false,
+        margin: 0,
+    });
+    applyAdaptiveCanvasOnly(dom);
     let height = 35;
     dom.computeSize = () => [300, height];
     dom.options.getMinHeight = () => height;
@@ -667,7 +676,8 @@ export function setupMaskedLora(node, { maskOnly = false, label = "", outputSize
 }
 
 app.registerExtension({
-    name: "wepenerd.masked_lora",
+    // 家族化改名：上游同名 "wepenerd.masked_lora" 在原包同时安装时会撞车。
+    name: "xh.wepenerd.masked_lora",
     async beforeRegisterNodeDef(nodeType, nodeData) {
         if (nodeData.name !== NODE && !(nodeData.name in MASK_ONLY)) return;
         const created = nodeType.prototype.onNodeCreated;

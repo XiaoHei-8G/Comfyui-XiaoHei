@@ -633,7 +633,7 @@ function injectCSS() {
   // The .pix-to-popup* rules moved to js/shared/font_picker.mjs with the popup
   // itself; pull them in here so this panel still styles its own font dropdown.
   injectFontPickerCSS();
-  const s = document.createElement("style"); s.id = "pix-to-css";
+  const s = document.createElement("style"); s.id = "xh-to-css";
   s.textContent = `
     .pix-to-root {
       box-sizing: border-box;

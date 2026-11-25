@@ -392,7 +392,7 @@ export class NoteEditor {
         // Cancel/outside to dismiss.
         if (key === "escape") {
           const hasModal = !!document.querySelector(
-            ".pix-note-blockdlg, .pix-note-confirm-backdrop, .pix-cp-popup, .pix-cp-modal-backdrop, .pix-note-iconpop, .pix-note-modal-backdrop, .pix-note-help-overlay"
+            ".pix-note-blockdlg, .pix-note-confirm-backdrop, .xh-cp-popup, .xh-cp-modal-backdrop, .pix-note-iconpop, .pix-note-modal-backdrop, .pix-note-help-overlay"
           );
           e.preventDefault();
           e.stopImmediatePropagation();
@@ -738,7 +738,7 @@ export class NoteEditor {
       // unsaved-changes prompt ON TOP of the still-open modal. Mirrors
       // the same hasModal check the Escape-key handler already uses above.
       const hasModal = !!document.querySelector(
-        ".pix-note-blockdlg, .pix-note-confirm-backdrop, .pix-cp-popup, .pix-cp-modal-backdrop, .pix-note-iconpop, .pix-note-modal-backdrop, .pix-note-help-overlay"
+        ".pix-note-blockdlg, .pix-note-confirm-backdrop, .xh-cp-popup, .xh-cp-modal-backdrop, .pix-note-iconpop, .pix-note-modal-backdrop, .pix-note-help-overlay"
       );
       if (hasModal) return;
       this.close();
