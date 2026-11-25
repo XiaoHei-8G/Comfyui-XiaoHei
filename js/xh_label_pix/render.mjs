@@ -255,7 +255,7 @@ export function injectCSS() {
 }
 .xh-lbl-title { display: flex; align-items: center; gap: 6px; color: #e0e0e0; font-size: 13px; font-weight: 600; letter-spacing: 0.2px; }
 .xh-lbl-title-logo { width: 18px; height: 18px; }
-.xh-lbl-title-brand { color: ${BRAND}; }
+.xh-lbl-title-brand { color: var(--xh-primary,#E8A33C); }
 .xh-lbl-close {
     background: none; border: none; color: #555; font-size: 18px;
     cursor: pointer; padding: 0 2px; line-height: 1;
@@ -273,7 +273,7 @@ export function injectCSS() {
     color: #d0d0d0; padding: 7px 9px; font-size: 13px;
     font-family: inherit; outline: none; resize: vertical; min-height: 46px;
 }
-.xh-lbl-field textarea:focus { border-color: ${BRAND}; }
+.xh-lbl-field textarea:focus { border-color: var(--xh-primary,#E8A33C); }
 .xh-lbl-preview {
     border-radius: 6px; border: 1px solid #222;
     padding: 12px; height: 200px; box-sizing: border-box; display: flex;
@@ -297,7 +297,7 @@ export function injectCSS() {
     display: flex; align-items: center; justify-content: center;
 }
 .xh-lbl-btn:hover { border-color: #555; color: #bbb; }
-.xh-lbl-btn.active { background: ${BRAND}22; border-color: ${BRAND}; color: ${BRAND}; }
+.xh-lbl-btn.active { background: color-mix(in srgb, var(--xh-primary,#E8A33C) 13%, transparent); border-color: var(--xh-primary,#E8A33C); color: var(--xh-primary,#E8A33C); }
 .xh-lbl-bold { font-weight: bold; min-width: 26px; text-align: center; }
 /* Divider inside button row — align-self:center so the short line sits in the
    middle of the row instead of dropping to the top (a fixed-height flex item in
@@ -317,7 +317,7 @@ export function injectCSS() {
 }
 .xh-lbl-btn-cancel { background: #252527; color: #aaa; border: 1px solid #333; }
 .xh-lbl-btn-cancel:hover { background: #2e2e30; }
-.xh-lbl-btn-save { background: ${BRAND}; color: #fff; border: 1px solid transparent; }
+.xh-lbl-btn-save { background: var(--xh-primary,#E8A33C); color: #fff; border: 1px solid transparent; }
 .xh-lbl-btn-save:hover { opacity: 0.88; }
 /* Align icon buttons */
 .xh-lbl-align-icon { display: flex; flex-direction: column; gap: 2px; width: 13px; align-items: flex-start; }
@@ -338,7 +338,7 @@ export function injectCSS() {
 /* Round help button (matches the Group Colors / toolbar look) */
 .xh-lbl-help-btn {
     width: 28px; height: 28px; border-radius: 50%;
-    border: none; background: ${BRAND}; color: #fff; font-size: 13px; font-weight: 700;
+    border: none; background: var(--xh-primary,#E8A33C); color: #fff; font-size: 13px; font-weight: 700;
     cursor: pointer; line-height: 1; padding: 0; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
 }
@@ -359,18 +359,18 @@ export function injectCSS() {
 .xh-lbl-slider {
     -webkit-appearance: none; appearance: none;
     flex: 1 1 auto; min-width: 0; height: 6px; cursor: pointer; margin: 0;
-    background: linear-gradient(to right, ${BRAND} 0%, ${BRAND} var(--fill, 50%), #3a3a40 var(--fill, 50%), #3a3a40 100%);
+    background: linear-gradient(to right, var(--xh-primary,#E8A33C) 0%, var(--xh-primary,#E8A33C) var(--fill, 50%), #3a3a40 var(--fill, 50%), #3a3a40 100%);
     border-radius: 3px; border: none; outline: none;
 }
 .xh-lbl-slider::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none;
     width: 13px; height: 13px; border-radius: 50%;
-    background: ${BRAND}; border: none; box-shadow: 0 0 3px rgba(0,0,0,0.5);
+    background: var(--xh-primary,#E8A33C); border: none; box-shadow: 0 0 3px rgba(0,0,0,0.5);
     cursor: pointer; margin-top: -3.5px;
 }
 .xh-lbl-slider::-moz-range-thumb {
     width: 13px; height: 13px; border-radius: 50%;
-    background: ${BRAND}; border: none; box-shadow: 0 0 3px rgba(0,0,0,0.5); cursor: pointer;
+    background: var(--xh-primary,#E8A33C); border: none; box-shadow: 0 0 3px rgba(0,0,0,0.5); cursor: pointer;
 }
 .xh-lbl-slider::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: transparent; border: none; }
 .xh-lbl-slider::-moz-range-track { height: 6px; border-radius: 3px; background: transparent; border: none; }
@@ -403,8 +403,8 @@ export function injectCSS() {
     background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);
     color: rgba(255,255,255,0.85); transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
-.xh-lbl-cbar:hover { background: ${BRAND}; border-color: ${BRAND}; color: #fff; }
-.xh-lbl-cbar.active { background: ${BRAND}; border-color: ${BRAND}; color: #fff; }
+.xh-lbl-cbar:hover { background: var(--xh-primary,#E8A33C); border-color: var(--xh-primary,#E8A33C); color: #fff; }
+.xh-lbl-cbar.active { background: var(--xh-primary,#E8A33C); border-color: var(--xh-primary,#E8A33C); color: #fff; }
 /* Hex bar under the picker (Group "Body #hex" style): dark interior, swatch
    chip, the selected target's label (gray) + its editable hex code (orange).
    It replaces the picker's own hex field (hidden below), and the label switches
@@ -429,7 +429,7 @@ export function injectCSS() {
 .xh-lbl-hexbar-k { font: 11px system-ui, sans-serif; color: #8a8a90; flex: 0 0 auto; }
 .xh-lbl-hexbar-v {
     flex: 1 1 auto; min-width: 0; background: transparent; border: none; outline: none;
-    color: ${BRAND}; font: 12.5px "Consolas", monospace; letter-spacing: 0.03em; padding: 0;
+    color: var(--xh-primary,#E8A33C); font: 12.5px "Consolas", monospace; letter-spacing: 0.03em; padding: 0;
 }
 .xh-lbl-hexbar-v::placeholder { color: #6a6a70; font-style: italic; letter-spacing: 0; }
 /* Colors: SV picker (left) | swatch grid (right), filling the full width.
@@ -454,8 +454,8 @@ export function injectCSS() {
     background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); color: #aaa;
     transition: all 0.12s;
 }
-.xh-lbl-transbtn:hover { border-color: ${BRAND}; color: #ddd; }
-.xh-lbl-transbtn.active { border-color: ${BRAND}; color: ${BRAND}; }
+.xh-lbl-transbtn:hover { border-color: var(--xh-primary,#E8A33C); color: #ddd; }
+.xh-lbl-transbtn.active { border-color: var(--xh-primary,#E8A33C); color: var(--xh-primary,#E8A33C); }
 .xh-lbl-transbtn-sw {
     width: 18px; height: 18px; border-radius: 4px; flex: 0 0 auto; box-sizing: border-box;
     border: 1px solid rgba(255,255,255,0.2);

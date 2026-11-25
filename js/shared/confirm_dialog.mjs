@@ -50,9 +50,9 @@ function injectCSS() {
       border:1px solid rgba(255,255,255,.13); color:rgba(255,255,255,.72);
       border-radius:4px; padding:6px 16px; font-size:11.5px; cursor:pointer;
       font-family:'Segoe UI', sans-serif; }
-    .pix-cfm-btn:hover { background:${BRAND}; border-color:${BRAND}; color:#fff; }
-    .pix-cfm-btn.primary { background:${BRAND}; border-color:${BRAND}; color:#fff; }
-    .pix-cfm-btn:focus-visible { outline:2px solid ${BRAND}; outline-offset:2px; }
+    .pix-cfm-btn:hover { background:var(--xh-primary,#E8A33C); border-color:var(--xh-primary,#E8A33C); color:#fff; }
+    .pix-cfm-btn.primary { background:var(--xh-primary,#E8A33C); border-color:var(--xh-primary,#E8A33C); color:#fff; }
+    .pix-cfm-btn:focus-visible { outline:2px solid var(--xh-primary,#E8A33C); outline-offset:2px; }
   `;
   document.head.appendChild(style);
 }

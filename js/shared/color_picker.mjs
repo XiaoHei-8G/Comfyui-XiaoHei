@@ -137,7 +137,7 @@ function ensureCSS() {
   box-sizing: border-box;
 }
 .xh-cp-tile.selected {
-  outline: 2px solid ${BRAND};
+  outline: 2px solid var(--xh-primary,#E8A33C);
   outline-offset: 1px;
 }
 .xh-cp-tile-clear {
@@ -191,7 +191,7 @@ function ensureCSS() {
 }
 .xh-cp-hex:focus {
   outline: none;
-  border-color: ${BRAND};
+  border-color: var(--xh-primary,#E8A33C);
 }
 .xh-cp-reset {
   flex: 0 0 auto;
@@ -206,8 +206,8 @@ function ensureCSS() {
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 .xh-cp-reset:hover {
-  color: ${BRAND};
-  border-color: ${BRAND};
+  color: var(--xh-primary,#E8A33C);
+  border-color: var(--xh-primary,#E8A33C);
 }
 
 .xh-cp-popup {
@@ -263,8 +263,8 @@ function ensureCSS() {
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 .xh-cp-more-btn:hover {
-  color: ${BRAND};
-  border-color: ${BRAND};
+  color: var(--xh-primary,#E8A33C);
+  border-color: var(--xh-primary,#E8A33C);
 }
 
 /* "More colors" modal — full SV / hue / hex picker with OK / Cancel.
@@ -320,12 +320,12 @@ function ensureCSS() {
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 .xh-cp-modal-btn:hover {
-  color: ${BRAND};
-  border-color: ${BRAND};
+  color: var(--xh-primary,#E8A33C);
+  border-color: var(--xh-primary,#E8A33C);
 }
 .xh-cp-modal-btn.primary {
-  background: ${BRAND};
-  border-color: ${BRAND};
+  background: var(--xh-primary,#E8A33C);
+  border-color: var(--xh-primary,#E8A33C);
   color: #fff;
 }
 .xh-cp-modal-btn.primary:hover {
