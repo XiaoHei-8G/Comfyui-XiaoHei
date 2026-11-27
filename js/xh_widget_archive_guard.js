@@ -28,7 +28,7 @@
 //
 // 【安全边界】
 //   · ⛔ 绝不加固「后端契约里的真参数」与「有实值的前端存储控件」
-//     （XHLabel.label / XHPaint.PaintWidget / Set-Get 通道名 / control_after_generate …），
+//     （XHLabelPix.label_json / XHPaint.PaintWidget / Set-Get 通道名 / control_after_generate …），
 //     这些值丢了会真的坏功能。归档实测：82 种恒空 UI 键全不在契约里，
 //     14 种有实值的存储键一个都没被判成 UI。
 //   · 加载路径只读不写：不调 graph.change() / tryMarkDirty()，只 setDirtyCanvas 重绘，

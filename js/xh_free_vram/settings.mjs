@@ -248,23 +248,7 @@ function buildRows(node, body) {
   section(body, T.secShow);
   body.appendChild(switchRow(node, "showBar", T.showBar, T.showBarSub));
 
-  // ── 强调色（家族主题）──
-  // 传本地化文案：家族共享 createAccentSection 默认英文且带原版品牌，这里注入中文/English。
-  // 不传的选项（其它家族节点）沿用默认英文，行为零变化。
-  body.appendChild(createAccentSection(node, {
-    title: T.helpTitle,
-    label: T.accentLabel,
-    hint: T.accentHint,
-    i18n: {
-      swTitle: T.accentSwTitle,
-      newNodes: T.accentNewNodes,
-      newNodesTip: T.accentNewNodesTip,
-      allNodes: T.accentAllNodes,
-      allNodesTip: T.accentAllNodesTip,
-      defaultFor: T.accentDefaultFor,
-      saved: T.accentSaved,
-    },
-    onChange: () => _onChange?.(),
-    onPickerOpen: (h) => { _cpHandle = h; },
-  }));
+  // 2026-11-25：原「强调色 / 按键颜色」块（createAccentSection）已删除 —— 家族右键
+  // 「节点配色 → 按键」是唯一配色入口，齿轮里不再重复一个改同一 accent 的色块。
+  // 需要改按键色请右键节点 → 节点配色 → 按键。
 }

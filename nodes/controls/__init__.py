@@ -1,13 +1,12 @@
-""" XiaoHei 控件三件套（纯前端 UI 节点）
+""" XiaoHei 控件（纯前端 UI 节点 + 若干真后端节点）
 
-来源：XH_GroupController` / XH_Label` / XH_Timer`
+来源：XH_GroupController` / XH_Timer`
 （2026-09-22 由 `XiaoHei_*` 改名，同日并入 `Comfyui-XiaoHei`）。
 
-三个都是**纯前端**节点：py 侧只注册一个空壳类，真正的界面（DOM widget）
-全部由顶层 `web/` 下对应的 js 画出来：
+group_controller / timer 是**纯前端**节点：py 侧只注册一个空壳类，真正的界面
+（DOM widget）由顶层 `js/` 下对应的 js 画出来：
 
     group_controller.py  ← XH_GroupController   XHGroupController   1 节点
-    label.py             ← XH_Label             XHLabel             1 节点
     timer.py             ← XH_Timer             XHTimer             1 节点
     number_counter.py    ← XHNumberCounter      XHNumberCounter     1 节点（真后端）
     for_loop.py          ← XHForLoopStart/End   XiaoHei-循环开始/结束   2 节点 + 3 个内部节点
@@ -97,10 +96,6 @@ from .group_controller import (
     NODE_CLASS_MAPPINGS as _M_GRP,
     NODE_DISPLAY_NAME_MAPPINGS as _D_GRP,
 )
-from .label import (
-    NODE_CLASS_MAPPINGS as _M_LBL,
-    NODE_DISPLAY_NAME_MAPPINGS as _D_LBL,
-)
 from .timer import (
     NODE_CLASS_MAPPINGS as _M_TMR,
     NODE_DISPLAY_NAME_MAPPINGS as _D_TMR,
@@ -129,10 +124,18 @@ from .tone_compensate import (
     NODE_CLASS_MAPPINGS as _M_TONE,
     NODE_DISPLAY_NAME_MAPPINGS as _D_TONE,
 )
-from .float_window import (
-    NODE_CLASS_MAPPINGS as _M_FLOAT,
-    NODE_DISPLAY_NAME_MAPPINGS as _D_FLOAT,
-)
+try:
+    from .float_window import (
+        NODE_CLASS_MAPPINGS as _M_FLOAT,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_FLOAT,
+    )
+except Exception as _float_err:                      # noqa: BLE001
+    # float_window.py 顶层直接调 ctypes.WinDLL("user32"/"kernel32")，
+    # Linux/macOS 的 ctypes 没有 WinDLL ⇒ AttributeError。
+    # 兜住它，避免整个 controls 桶（分组控制 / 计时器 / 循环 / 分段表等 24 个节点）
+    # 被这一个 Windows 专属节点连坐拖垮。浮窗功能在非 Windows 上本来也用不了。
+    print(f"[XiaoHei] 悬浮窗口节点跳过（仅支持 Windows）：{_float_err}")
+    _M_FLOAT, _D_FLOAT = {}, {}
 from .segment_table import (
     NODE_CLASS_MAPPINGS as _M_SEG,
     NODE_DISPLAY_NAME_MAPPINGS as _D_SEG,
@@ -197,7 +200,6 @@ NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
 
 NODE_CLASS_MAPPINGS.update(_M_GRP)
-NODE_CLASS_MAPPINGS.update(_M_LBL)
 NODE_CLASS_MAPPINGS.update(_M_TMR)
 NODE_CLASS_MAPPINGS.update(_M_CNT)
 NODE_CLASS_MAPPINGS.update(_M_LOOP)
@@ -221,7 +223,6 @@ NODE_CLASS_MAPPINGS.update(_M_H3LC)
 NODE_CLASS_MAPPINGS.update(_M_H3TST)
 NODE_CLASS_MAPPINGS.update(_M_FLOAT)
 NODE_DISPLAY_NAME_MAPPINGS.update(_D_GRP)
-NODE_DISPLAY_NAME_MAPPINGS.update(_D_LBL)
 NODE_DISPLAY_NAME_MAPPINGS.update(_D_TMR)
 NODE_DISPLAY_NAME_MAPPINGS.update(_D_CNT)
 NODE_DISPLAY_NAME_MAPPINGS.update(_D_LOOP)

@@ -11,6 +11,11 @@
 import { app } from "../../../scripts/app.js";
 import { pixAsset } from "../shared/api_url.mjs";
 import { themeAccentHex } from "../xh_note/core.mjs";
+// 本模块自己要用（DEFAULT_INFO / DEFAULT_CFG），同时要对外转发出去 ——
+// editor.mjs / starters.mjs / peek.mjs / index.js 都从 "./core.mjs" 取它。
+// ⛔ 只 import 不 re-export 会让这 4 个文件在链接期整份不执行（2026-11-27 体检发现，
+//    xh_info「说明」节点前端从 1.0.4 起就是死的）。
+export { themeAccentHex };
 import { xhIconUrl } from "../xh_icons/index.mjs";
 import { notifyGraphChanged } from "../shared/graph_changed.mjs";
 

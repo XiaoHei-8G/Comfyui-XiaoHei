@@ -8,7 +8,7 @@
 // 与 XiaoHei 自己的关系：
 //   · 面板对**任何节点**开放（官方节点也能配）—— 原版也是这样的
 //   · XiaoHei 家族另有「全家族自动配色」（xh_brand.js），手动色优先级更高
-//   · XHLabel 自带颜色管理 ⇒ 通过它暴露的 setNodeColor() 走（否则被 _refresh 覆盖）
+//   · 自带颜色管理的节点 ⇒ 通过它暴露的 setNodeColor() 走（否则被它自己的 _refresh 覆盖）
 //
 // 零 Python 改动、零第三方依赖。
 
@@ -19,6 +19,9 @@ import { refreshNode } from "./xh_brand.js";
 //  2026-11-11：按键配色从选中工具条孤儿命令融合进本面板「按键」页签，
 //   真逻辑（applyBtnColor 等）由 xh_node_toolbar.js export 复用。
 import { applyBtnColor, repaintBtnColor, normalizeHex, nodeHasButtons } from "./xh_node_toolbar.js";
+// 2026-11-25：「按键」页签的初值要取节点当前**实际**强调色（accentOf：手选 > 每类
+// 默认 > 主题预设），不能只看 xhBtnColor —— 没手选过时它是空，色号条会显示空白。
+import { accentOf } from "./shared/node_settings.mjs";
 
 const { app } = window.comfyAPI.app;
 const BRAND = "#ffffff";
@@ -529,7 +532,8 @@ function openNodeColorsPalette(targets, node) {
   let target = "title"; // which color the single picker edits: "title" | "body" | "btn"
   let linked = false;   // link: Body follows Title (Body = a darker tint of Title)
   // 按键配色（2026-11-11 从选中工具条孤儿命令 XH.ShowNodeStyle 融进本面板）
-  let btnHex = normalizeHex(node?.properties?.xhBtnColor) || null;
+  // 初值 = 节点当前实际强调色（手选 > 每类默认 > 主题预设），空工作流也有色可显示
+  let btnHex = normalizeHex(node?.properties?.xhBtnColor) || normalizeHex(accentOf(node)) || null;
   const applyBtnNow = () => { for (const n of targets) applyBtnColor(n, btnHex); };
   let linkBtn = null, linkIco = null;
   const syncLink = () => {
@@ -833,7 +837,7 @@ function captureColors(node) {
 function applyColors(nodes, titleHex, bodyHex) {
   for (const n of nodes) {
     if (!n) continue;
-    //  自带颜色管理的节点（如 XHLabel）会用自己的 _refresh 重写 color/bgcolor
+    //  自带颜色管理的节点会用自己的 _refresh 重写 color/bgcolor
     //   ⇒ 必须走它暴露的 setNodeColor 入口，否则会被下一次刷新覆盖掉。
     let handled = false;
     try {

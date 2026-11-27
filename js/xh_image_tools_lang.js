@@ -15,6 +15,10 @@ import { opeXHColorPickerPopup, XH_PICKER_PALETTE } from "./xh_color_picker.js";
 import { WN_NODES_ZH, WN_NODES_EN, WN_COMBO, isWNNode, wnText, wnUIFull } from "./xh_wepenerd/xh_wn_i18n.mjs";
 //  2026-11-09：XiaoHei-Qwen21 编辑四件套（复刻 BlueBox）接进家族中/EN 三表
 import { QE_NODES_ZH, QE_NODES_EN, isQENode, qeText, QE_COMBO } from "./xh_qwen21_edit/xh_qe_i18n.mjs";
+//  2026-11-26：GTA6 风格三件套（主题 / 人物 / 拼装）接进家族中/EN 三表。
+//    专属词条不并进全局 widgets/slots：全局表里 `mode` = 「切点来源」、
+//    `aspect` / `theme` 等键语义完全不同，并表必翻错。
+import { G6_NODES_ZH, G6_NODES_EN, isG6Node, g6Text, G6_COMBO } from "./xh_gta6_style/xh_g6_i18n.mjs";
 //  2026-11-14 晚：小黑·全能角色设定表 = 原作 1:1 复刻。
 //  设计器里的 DOM 文案由 reference13_zh.mjs 单独中文化；节点标题 / 控件标签 /
 //  输入·输出端口名仍归家族三表管（见下方 CS_* 隔离表），两条线同由 window.XH_LANG 驱动。
@@ -102,7 +106,6 @@ const XH_I18N = {
             XHImageRangeFromBatch: "取帧范围 XiaoHei",
             XHImageScaleByAspectRatio: "按比例缩放 XiaoHei",
             XHLTXIdentityOverlap: "LTX锁脸 XiaoHei",
-            XHLabel: "标签 XiaoHei",
             XHLabelPix: "浮字标签 XiaoHei",
             XHLoadAudio: "加载音频 XiaoHei",
             XHLoadVideo: "加载视频 XiaoHei",
@@ -469,7 +472,6 @@ const XH_I18N = {
                 XHImageRangeFromBatch: "Image Range From Batch XiaoHei",
                 XHImageScaleByAspectRatio: "Image Scale By Aspect Ratio XiaoHei",
                 XHLTXIdentityOverlap: "LTXIdentity Overlap XiaoHei",
-                XHLabel: "Label XiaoHei",
                 XHLabelPix: "Floating Label XiaoHei",
                 XHLoadAudio: "Load Audio XiaoHei",
                 XHLoadVideo: "Load Video XiaoHei",
@@ -1766,11 +1768,25 @@ function csText(kind, key, lang) {
 Object.assign(XH_I18N.zh.nodes, CS_NODES_ZH);
 Object.assign(XH_I18N.en.nodes, CS_NODES_EN);
 
+// 🔴🔴 2026-11-26 GTA6 三件套：**必须**并进本文件这份 XH_I18N，
+//   否则 applyLangToNode 第一行 isXHNode(node.type) 直接 false ⇒ 整个节点被跳过，
+//   控件标签 / 端口 / 下拉全部回落「全局 DOM 兜底层」，被 WN 词典按裸词乱翻
+//   （auto → 自动（够短就不分）、off → 不分块、mode → 模式）。
+//   ⚠️ js/xh_i18n_nodes.js 里也有一份同名 const XH_I18N，那是**另一个局部变量**，
+//      只负责标题；加在那儿对本函数毫无作用（这个坑已经踩过一次）。
+Object.assign(XH_I18N.zh.nodes, G6_NODES_ZH);
+Object.assign(XH_I18N.en.nodes, G6_NODES_EN);
+
 function applyLangToNode(node) {
     if (!node || !isXHNode(node.type)) return;
+    //  🔴 2026-11-26：G6 判定必须**排在 WN 之前**。
+    //      WN 的 isWNNode 是前缀匹配（XH_WN_ / XH_QwenEdit / XH_WepeNerd），
+    //      一旦哪天放宽成「XH 开头」，G6 就会被 WN 的词典接管，
+    //      通用裸词 auto/off 会被翻成 WN 的专有语义（「不分块」）。先认领自家节点最稳。
+    const _g6 = isG6Node(node.type);   //  2026-11-26 GTA6 风格三件套
+    const _wn = !_g6 && isWNNode(node.type);
     const _cs = normalizeType(node.type) === "XiaoHeiCharacterSheet";
-    const _wn = isWNNode(node.type);
-    const _qe = isQENode(node.type);   //  2026-11-09 Qwen21 四件套
+    const _qe = !_g6 && isQENode(node.type);   //  2026-11-09 Qwen21 四件套
     const lang = window.XH_LANG || "zh";
     const pack = XH_I18N[lang] || XH_I18N.zh;
     try {
@@ -1792,9 +1808,11 @@ function applyLangToNode(node) {
                     const _wnLb = _wn ? wnText("widgets", w.name, lang) : null;
                     const _qeLb = _qe ? qeText("widgets", w.name, lang, t) : null;
                     const _csLb = _cs ? csText("widgets", w.name, lang) : null;
+                    const _g6Lb = _g6 ? g6Text("widgets", w.name, lang, t) : null;
                     if (_wnLb) w.label = _wnLb;
                     else if (_qeLb) w.label = _qeLb;
                     else if (_csLb) w.label = _csLb;
+                    else if (_g6Lb) w.label = _g6Lb;
                     else if (pack.widgets[w.name]) w.label = pack.widgets[w.name];
                 }
                 const tg = w && w.name && TOGGLE_ONOFF[lang] && TOGGLE_ONOFF[lang][w.name];
@@ -1811,14 +1829,15 @@ function applyLangToNode(node) {
                 const _wnSlotLb = _wn ? wnText("slots", s && s.name, lang) : null;
                 const _qeSlotLb = _qe ? qeText("slots", s && s.name, lang, t) : null;
                 const _csSlotLb = _cs ? csText("slots", s && s.name, lang) : null;
-                const lb = _wnSlotLb || _qeSlotLb || _csSlotLb || slotLabel(s && s.name, lang);
+                const _g6SlotLb = _g6 ? g6Text("slots", s && s.name, lang, t) : null;
+                const lb = _wnSlotLb || _qeSlotLb || _csSlotLb || _g6SlotLb || slotLabel(s && s.name, lang);
                 if (lb) s.label = lb;
             }
         };
         applySlots(node.inputs);
         applySlots(node.outputs);
         // 下拉框显示中文（值不变）
-        applyComboLabels(node, lang, _wn ? WN_COMBO : (_qe ? QE_COMBO : COMBO_LABELS));
+        applyComboLabels(node, lang, _wn ? WN_COMBO : (_qe ? QE_COMBO : (_g6 ? G6_COMBO : COMBO_LABELS)));
 
         // Nodes 2.0 的端口标签走「快照」渲染，改完必须显式触发一次重建才看得见
         try {
@@ -2013,8 +2032,17 @@ function _xhBidi(text, lang) {
     const tbl = (lang === "en") ? _XH_TXT_ZH2EN : _XH_TXT_EN2ZH;
     if (tbl.has(t)) return text.replace(t, tbl.get(t));
     try {
-        const out = wnUIFull(t, lang);          // WN 全量双向（含动态数字串规则）
-        if (out && out !== t) return text.replace(t, out);
+        //  🔴 2026-11-26 血案：WN 全量词典（wnUIFull）里有 auto / off / on 这类**裸词**，
+        //     语义是 WN 自己的分块策略（auto=自动（够短就不分）、off=不分块、on=强制分块）。
+        //     这里是**全 document.body 的兜底扫描**，不认节点籍贯 ⇒ 任何节点只要画了个
+        //     「auto」「off」都被翻成 WN 的专有语义。GTA6 的 group_setup=auto 显示成
+        //     「自动（够短就不分）」、title_space=off 显示成「不分块」，就是这么来的。
+        //     规矩：裸短词（< 6 字符且无空格）一律交给各节点自己的 widgets / combo 表，
+        //     全局兜底只处理「短语 / 完整句」—— 那种长度才可能判定归属。
+        if (t.length >= 6 || /\s/.test(t)) {
+            const out = wnUIFull(t, lang);      // WN 全量双向（含动态数字串规则）
+            if (out && out !== t) return text.replace(t, out);
+        }
     } catch (err) {}
     return text;
 }
@@ -3954,7 +3982,10 @@ app.registerExtension({
                 //  角色设定表自带原作 DOM 设计器，再挂一条家族工具条 = 多一个
                 //  serialize:false 的 DOM 控件（widgets_values 有串位风险）；
                 //  中/EN 与帮助统一走官方选中工具条（xh_node_toolbar.js 认 XiaoHei 前缀）。
-                if (!isWNNode(nodeData.name) && normalizeType(nodeData.name) !== "XiaoHeiCharacterSheet") {
+                //  2026-11-26：GTA6 人物节点整块 UI 都是 DOM widget（零原生控件），
+                //   跟 WN / 角色设定表同一种情况 ⇒ 不挂内容区工具条，中/EN 走官方选中工具条。
+                if (!isWNNode(nodeData.name) && normalizeType(nodeData.name) !== "XiaoHeiCharacterSheet"
+                    && normalizeType(nodeData.name) !== "XH_GTA6People") {
                     makeXHToolbar(this, { appendNodes, prependNodes });
                 }
                 // XiaoHei-身份配色：节点 body 里挂「身份色板」（一排色块 + ＋加一个人）
@@ -3991,7 +4022,7 @@ app.registerExtension({
             } catch (e) {}
             try { fixWidgetValuesFromSaved(this, info); } catch (e) {}
             //  2026-11-08：读档会拿存档里的端口 label 盖掉显示层 ⇒ 重新按当前语言刷一遍
-            try { if (isWNNode(nodeData.name) || isQENode(nodeData.name) || normalizeType(nodeData.name) === "XiaoHeiCharacterSheet") applyLangToNode(this); } catch (e) {}
+            try { if (isWNNode(nodeData.name) || isQENode(nodeData.name) || isG6Node(nodeData.name) || normalizeType(nodeData.name) === "XiaoHeiCharacterSheet") applyLangToNode(this); } catch (e) {}
             try {
                 // 值回填完**之后**再重算「模式显隐 / 形状档位」—— 顺序不能反，否则档位是拿旧值算的
                 if (normalizeType(nodeData.name) === "XHSmartFaceMask") {

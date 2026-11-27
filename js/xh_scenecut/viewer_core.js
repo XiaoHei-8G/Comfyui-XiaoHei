@@ -1,4 +1,7 @@
-import { xhIconMask, xhIconUrl } from "/extensions/Comfyui-XiaoHei/xh_icons/index.mjs";
+// 相对路径，⛔ 不写 /extensions/Comfyui-XiaoHei/ 绝对 URL ——
+// 粉丝把解压出来的目录改个名（Comfyui-XiaoHei-main 之类）绝对路径就全断，
+// 这个文件及其依赖的 scenecut.js / selected_core.js 会整份不执行。
+import { xhIconMask, xhIconUrl } from "../xh_icons/index.mjs";
 import { T, onUiLang } from "./i18n_ui.js";
 
 // 家族图标助手：所有图案走 js/xh_icons，⛔ 不写死 SVG / 不用符号冒充图标。

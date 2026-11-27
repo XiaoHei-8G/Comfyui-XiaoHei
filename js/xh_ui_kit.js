@@ -1874,7 +1874,7 @@ export function forceCompactOnSpawn(node, opts = {}) {
  *                          要贴节点底部而不是置顶」的节点用（XiaoHei-Slider / XiaoHei-LoopStack /
  *                          XiaoHei-SetGet / XiaoHei-图片列表 / XiaoHei-标签 / XiaoHei-计时器 等）。
  *                          条本身的样式、按钮、拼装顺序、事件拦截仍是家族唯一实现。
- * @param opts.colorOnPick  【已废弃 2026-10-28】 按钮已删；改用 node.setNodeColor(hex)（见 xh_label.js）。
+ * @param opts.colorOnPick  【已废弃 2026-10-28】 按钮已删；改用 node.setNodeColor(hex)。
  */
 export function makeXHToolbar(node, opts = {}) {
     installTitleAutoColor(node);        // 家族节点一律：标题文字按标题栏底色自动黑/白

@@ -1462,16 +1462,9 @@ app.registerExtension({
     setupResolutionNode(node);
   },
 
-  // 家族规范化：右键「节点配色」入口。原版靠全局 help_toolbar 的齿轮命令打开
-  // registerNodeAccent 注册的设置面板，家族没有搬那个全局钩子 ⇒ 这里用家族现成的
-  // getNodeMenuItems 新 API 直接给本节点加入口，保证设置面板一定点得开。
-  getNodeMenuItems(node) {
-    if (node && (node.comfyClass === "XH_ResolutionQuick" || node.type === "XH_ResolutionQuick")) {
-      return [null, { content: " 节点配色", callback: () => openNodeSettings(node) }];
-    }
-    return [];
-  },
-
+  // 2026-11-25：这里原来额外加了一条「节点配色」→ openNodeSettings，但那条打开的是
+  // 齿轮设置面板（现在颜色块已删，等于弹空窗），而家族全局的「节点配色」（xh_node_style.js）
+  // 早就对任何节点生效 ⇒ 同一菜单里会出现两个同名项、其中一个还是空操作。删掉本条，只留全局那个。
   // 家族规范化：语言切换后重画所有本类型节点（含子图），让 CHIPS / label / title 换文字。
   setup() {
     onLangChanged(() => {
@@ -1565,6 +1558,6 @@ app.graphToPrompt = async function (...args) {
   return result;
 };
 
-// The colour option: gives this node a right-click "Resolution settings" entry, the
-// gear in the selection toolbar, and the shared colour panel behind both.
-registerNodeAccent("XH_ResolutionQuick", { title: "一键分辨率" });
+// 2026-11-25：原 registerNodeAccent("XH_ResolutionQuick", {title:"一键分辨率"}) 已移除。
+// 它只注册了 accent（没有 rows），节点齿轮里的「Button colour」删除后就没有任何可配项，
+// 再留着只会在 /object_info 之外多出一个空入口。配色统一走右键「节点配色」。

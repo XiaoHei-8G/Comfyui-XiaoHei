@@ -355,5 +355,6 @@ if (!app._xhPackQueuePatched) {
   };
 }
 
-// 右键菜单 / 齿轮里的节点配色项（家族通用设置面板）。
-registerNodeAccent(CLASS, { title: "提示词批量" });
+// 2026-11-25：原 registerNodeAccent(CLASS, { title: "提示词批量" }) 已移除 —— 它只注册
+// accent（没有参数行），节点齿轮里的「Button colour」删除后就没有任何可配项。
+// 配色统一走右键「节点配色」（xh_node_style.js 对任何节点生效）。

@@ -77,3 +77,25 @@ export function setPreviewPath(el, text, className) {
   });
   return true;
 }
+
+// ── %run_time% 预览（2026-11-27 补）────────────────────────────────────
+// 后端 `_save_helpers.py`：RUN_TIME_TOKEN = "%run_time%"，保存时换成
+// 「42s / 1m05s / 1h02m05s」（跑完才有时长，见 run_time_text / format_run_time）。
+// 前端画「将保存为」时它还没有值，必须画成占位，不能原样显示 `%run_time%`
+// —— 那看起来像文件名里真有一串百分号。
+export function markRunTime(text) {
+  // 换成 WIRED_UNKNOWN（纯字母，能穿过日期/清洗步骤），交给 setPreviewPath 画标记。
+  return String(text ?? "").replace(/%run_time%/gi, WIRED_UNKNOWN);
+}
+
+// setPreviewPath 画了占位时给元素的 tooltip：说清「为什么这里是空的」。
+// 一个提示覆盖两种来源（接进来的节点 / %run_time%），因为 markRunTime 之后
+// 两者都变成了同一个占位 token，前端已无法区分。
+export function previewTip(text) {
+  const s = String(text ?? "");
+  if (!s.includes(WIRED_UNKNOWN)) return "";
+  return (
+    "尖括号 ‹ › 里的部分是运行时才知道的：接进 name 的节点要等这一轮跑起来才写出文字，" +
+    "文件名里的 %run_time% 也要等跑完才有时长。真正保存时都会换成真实内容，不会存成这样。"
+  );
+}

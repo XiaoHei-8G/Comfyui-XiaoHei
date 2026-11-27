@@ -192,7 +192,7 @@
         官方的节点它也可以进行配色，其他的节点都可以进行配色」
     ①  **删掉节点工具条上的  配色键**（`makeXHToolbar` 只剩「中/EN」）。
        `makeColorBtn` 一并删除；返回值保留 `colorBtn: null` 字段（老调用方解构不崩）。
-        `showXHPicker` **保留**（XHLabel 的文字色/背景色、形状遮罩填充色还在用它）。
+        `showXHPicker` **保留**（浮字标签的文字色/背景色、形状遮罩填充色还在用它）。
     ②  新增 `web/xh_color_picker.js`：完整画板（移植 Pixaroma `js/shared/color_picker.mjs` 1075 行，
        砍掉紧凑弹窗/More-colors 模态/按钮安全色板/群组色）：
        **48 色板**（Pixaroma 36 色 + XiaoHei 家族 12 色，正好 4 行 × 12 列）+ **SV 平面** + **色相条**
@@ -203,8 +203,8 @@
     ④ 「恢复默认配色」：XiaoHei 节点回**分类默认色**（自动配色重新铺一遍），
        官方节点回主题默认色。 Nodes 2.0 的 color/bgcolor 是响应式 accessor，
        **必须赋 undefined**（`delete` 会把 accessor 本身删掉 ⇒ 颜色此后静默失效）。
-    ⑤ XHLabel 暴露 `setNodeColor(hex)`：它自带颜色管理（`_refresh` 会重写 color/bgcolor），
-       外部改色必须走这个入口，否则会被下一次刷新覆盖回 transparent。
+    ⑤ 自带颜色管理的节点（若有 `setNodeColor(hex)`）外部改色必须走该入口，
+       否则会被它自己的刷新覆盖回 transparent。
   · 2026-10-28（v1.18.0）：**学 Pixaroma 包，前端补 5 件套**（纯前端，零 Python 改动、零新依赖）——
     ①  `web/xh_brand.js` —— **全家族自动配色**：官方 `beforeRegisterNodeDef` 钩子按
        `CATEGORY` 前缀「XH」自动给节点上色（10 个分类各一个色系：工具石板灰 / 图像天蓝 /
@@ -537,7 +537,7 @@
 #    分发 / 压缩命名规范：Comfyui-XiaoHei_v{主}.{次}.{修}_{YYYYMMDD}.zip
 #    改完节点包后升级对应位，再重新压缩，文件名版本号才对得上。
 # ---------------------------------------------------------------------------
-VERSION = "1.0.8"  # 修复混装原版时浮字标签穿原版UI/帮助弹原作者、V3分类重复、帮助首页英文分类与第三方混入、工作流归属标记、全家族中文化补漏
+VERSION = "1.0.9"  # 新增 GTA6 风格三节点（主题/人物/提示词构建，Builder 可外接宽高）；修复 6 处 ESM 具名导入断链（10 个前端文件自 1.0.4 起未执行）、绝对 URL 改相对、配色卡 C 方案；浮字标签行内富文本；下线被浮字标签取代的老「标签」节点
 
 # ---------------------------------------------------------------------------
 #  子模块加载：逐个 try，缺谁只少谁（2026-10-05 改造，为「分发给别人」而做）
@@ -904,7 +904,7 @@ except Exception as _e:
 # 2026-11-08：1:1 复刻 ComfyUI-Pixaroma / Label Pixaroma（MIT）。
 #   前端三件套原样搬进 web/xh_label_pix/，逻辑与 CSS 数值一字未改，
 #   只换接线（XHLabelPix / xh-lbl- / XH.LabelPix）+ 界面文案全量中文。
-#   与自家 XiaoHei-标签（XHLabel）并存，老工作流存档零影响。
+#   2026-11-25：老「标签」（XHLabel）功能被它覆盖后已删除，只保留本节点。
 try:
     from .nodes.label_pix import (
         NODE_CLASS_MAPPINGS as _M_LP,
@@ -955,6 +955,22 @@ try:
 except Exception as _e:
     _fail("prompt_pack", "XiaoHei-提示词批量（复刻 Prompt Pack）", [], _e)
     _M_PP = _D_PP = {}
+
+# 2026-11-26：GTA6 风格三件套 —— 1:1 移植 ComfyUI-GTA6-Style（MIT, Loop Forge）。
+#   原包是 4 个 class_type（Theme / Woman / Man / Builder），一个 group 里「几个人就要
+#   几个节点串成链」，4 个人 = 6 个节点。这里压成 3 个：
+#   XH_GTA6Theme（主题）+ XH_GTA6People（人物列表，一人一张卡片，加人只是加一行）
+#   + XH_GTA6Builder（拼装 → 提示词 + 宽高 + 纯风格句）。
+#   英语提示词原文照抄 data/presets.json，一字不改；中文只做界面显示（js/xh_gta6_style/labels.mjs）。
+#   顺手修掉原包两个真 bug：单人留标题位动词写死复数、混合性别序数错乱。
+try:
+    from .nodes.gta6_style import (
+        NODE_CLASS_MAPPINGS as _M_G6,
+        NODE_DISPLAY_NAME_MAPPINGS as _D_G6,
+    )
+except Exception as _e:
+    _fail("gta6_style", "XiaoHei-GTA6 风格三件套（移植 GTA6 Style）", [], _e)
+    _M_G6 = _D_G6 = {}
 
 # 2026-11-24：提示词填空 XiaoHei —— 模板 + 词库填空器。
 #   一段带 {{空位}} 的模板 + 每个空位的候选词库，seed 确定性抽词（sha256 前 8 位取模）。
@@ -1094,6 +1110,7 @@ _PARTS = tuple(
         ("tag_prompt", _M_TAG, _D_TAG),
         ("prompt_stack", _M_PS, _D_PS),
         ("prompt_pack", _M_PP, _D_PP),
+        ("gta6_style", _M_G6, _D_G6),
         ("prompt_fill", _M_PF, _D_PF),
         ("audio_studio", _M_AS, _D_AS),
         ("openh3", _M_OH3, _D_OH3),
@@ -1324,9 +1341,14 @@ _CATEGORY_GROUPS = {
     "XiaoHei/提示词/文案标签预览": (
         "XHCameraAnglePrompt",
         "XHInfo",
-        "XHLabel",
         "XHLabelPix",
         "XHShowText",
+    ),
+    # ── 提示词 · GTA6 风格（主题 / 人物 / 拼装 三件套） ──
+    "XiaoHei/提示词/GTA6 风格": (
+        "XH_GTA6Builder",
+        "XH_GTA6People",
+        "XH_GTA6Theme",
     ),
     # ── 逻辑与数值 · 数学 ──
     "XiaoHei/逻辑与数值/数学": (

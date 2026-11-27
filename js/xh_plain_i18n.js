@@ -346,11 +346,6 @@ const PLAIN = {
         },
     },
 
-    XHLabel: {
-        zh: { title: "标签 XiaoHei", widgets: {}, slots: {} },
-        en: { title: "Label XiaoHei", widgets: {}, slots: {} },
-    },
-
     XHLoopIteration: {
         zh: {
             title: "循环迭代 XiaoHei",

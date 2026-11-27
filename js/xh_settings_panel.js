@@ -610,7 +610,7 @@ function renderPaletteBlock(C) {
     const p = T.PRESETS[id];
     if (!p) return;
     const on = id === active;
-    const main = p.dark.main, title = p.dark.title;
+    const main = p.dark.main, title = p.dark.title, light = p.dark.light || p.dark.main;
     cells +=
       //  data-xh-icon-done=1：豁免 xh_icon_fill.js 全页 sweep（它见中文+前导空白就清空
       //    textContent 重排图标，会把色卡里的色条 span 一起抹掉 ⇒ 色卡只剩文字）。
@@ -619,10 +619,14 @@ function renderPaletteBlock(C) {
       ' style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 3px;' +
       'cursor:pointer;border-radius:8px;border:' + (on ? '2px solid ' + C.PRIMARY : '1px solid ' + C.BORDER) + ';' +
       'background:' + (on ? 'color-mix(in srgb,' + C.PRIMARY + ' 12%,transparent)' : 'transparent') + ';">' +
-      //  色卡底色 = 该预设主色（一眼分出松绿/藏青/QQ蓝/石墨灰/勃艮第/鸢尾紫），
-      //    里面那一小条换成深色标题栏色 title 做点缀对比。原来底是 title（都很深）⇒ 整片黑灰分不清。
-      '  <span style="width:100%;height:22px;border-radius:5px;overflow:hidden;display:block;background:' + main + ';">' +
-      '    <span style="display:block;margin:14px auto 0;width:60%;height:6px;border-radius:3px;background:' + title + ';"></span>' +
+      //  色卡 = 上下分层（2026-11-26 用户从 4 个候选里选 C）：
+      //    上 10px 深色标题条（title）＋ 下 16px 主色块（main）＋ 主色块里一小段亮色（light）。
+      //    原方案是「一块主色 + 偏下一条深色横杠」，22px 太矮、横杠像瑕疵，已废弃。
+      '  <span style="width:100%;height:26px;border-radius:5px;overflow:hidden;display:block;">' +
+      '    <span style="display:block;height:10px;background:' + title + ';"></span>' +
+      '    <span style="display:flex;align-items:center;height:16px;padding:0 5px;box-sizing:border-box;background:' + main + ';">' +
+      '      <span style="display:block;width:26%;height:4px;border-radius:2px;background:' + light + ';"></span>' +
+      '    </span>' +
       '  </span>' +
       '  <span style="font-size:12px;color:' + C.TEXT + ';font-weight:' + (on ? '700' : '500') + ';">' + esc(p.name) + '</span>' +
       '</button>';
@@ -632,14 +636,21 @@ function renderPaletteBlock(C) {
     try { const j = JSON.parse(localStorage.getItem(T.LS_CUSTOM) || "null"); return (j && j.main) || "#6F00FF"; }
     catch (e) { return "#6F00FF"; }
   })();
+  // 自定义也有「标题条」：公式与 xh_theme_presets.js 的 buildScheme 一致（title = main × 0.30），
+  //   ⛔ 别在这里改系数，否则色卡预览和真实应用后的标题栏对不上。
+  const customTitle = _xhShadeHex(customMain, 0.30);
   cells +=
     '<button type="button" class="xh-sp-pal-cell" data-pal="custom" title="自定义色板" data-xh-icon-done="1" ' +
     ' style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 3px;' +
     'cursor:pointer;border-radius:8px;border:' + (customOn ? '2px solid ' + C.PRIMARY : '1px dashed ' + C.BORDER) + ';' +
     'background:' + (customOn ? 'color-mix(in srgb,' + C.PRIMARY + ' 12%,transparent)' : 'transparent') + ';">' +
-    //  2026-11-17：自定义格底色也用它的主色，滴管图标按 WCAG 取对比色（不再是灰底+彩图标）。
-    '  <span style="width:100%;height:22px;border-radius:5px;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:4px;background:' + customMain + ';">' +
-    '    <span style="display:inline-flex;color:' + (window.XH_THEME ? window.XH_THEME.pickOn(customMain) : '#fff') + ';">' + _xhPaletteIco("pipette", 15) + '</span>' +
+    //  2026-11-26 起与预设格统一成「上深下彩」：上 10px 用 main×0.30 的深色，下 16px 主色 + 滴管。
+    //    滴管按 WCAG 取对比色（不再是灰底+彩图标）。
+    '  <span style="width:100%;height:26px;border-radius:5px;overflow:hidden;display:block;">' +
+    '    <span style="display:block;height:10px;background:' + customTitle + ';"></span>' +
+    '    <span style="display:flex;align-items:center;justify-content:center;height:16px;background:' + customMain + ';">' +
+    '      <span style="display:inline-flex;color:' + (window.XH_THEME ? window.XH_THEME.pickOn(customMain) : '#fff') + ';">' + _xhPaletteIco("pipette", 12) + '</span>' +
+    '    </span>' +
     '  </span>' +
     '  <span style="font-size:12px;color:' + C.TEXT + ';font-weight:' + (customOn ? '700' : '500') + ';">自定义</span>' +
     '</button>';
@@ -660,6 +671,15 @@ function renderPaletteBlock(C) {
     '</div>';
 }
 function mainColorSafe(hex) { return /^#[0-9a-f]{6}$/i.test(String(hex)) ? hex : "#E8A33C"; }
+// 与 xh_theme_presets.js 的 darken() 同一公式（逐通道 × f），只给自定义色卡算标题条色。
+//  ⛔ 别换成 color-mix：系数一偏，色卡预览就和应用后的真实标题栏对不上。
+function _xhShadeHex(hex, f) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ""));
+  if (!m) return "#171718";
+  const n = parseInt(m[1], 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.max(0, Math.min(255, Math.round(v * f))));
+  return "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
+}
 
 function bindPaletteBlock() {
   const body = document.querySelector("#xh-sp-body");

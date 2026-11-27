@@ -6,7 +6,7 @@ import { isVueNodes, applyAdaptiveCanvasOnly } from "../shared/nodes2.mjs";
 import { isGraphLoading } from "../shared/graph_loading.mjs";
 import { onRendererChange } from "../shared/renderer_switch.mjs";
 import { isLiveNode } from "../shared/live_node.mjs";
-import { DEFAULTS, fontStr, measureLabel, applyLabelToDom, injectVueLabelCSS } from "./render.mjs";
+import { DEFAULTS, fontStr, measureLabel, applyLabelToDom, injectVueLabelCSS, onEmbeddedFontsReady } from "./render.mjs";
 import { parseCfg, LabelEditor, LABEL_HELP } from "./core.mjs";
 import { registerNodeHelp } from "../shared/help.mjs";
 import { registerNodeSettings } from "../shared/node_settings.mjs";
@@ -83,6 +83,15 @@ function setupLabel(node, withResize = false) {
     // so a saved label with none doesn't get a needless write on load).
     if (node.inputs && node.inputs.length) node.inputs.length = 0;
     if (withResize) resizeLabelToContent(node);
+    // 内置字体（得意黑）异步加载：画布 / DOM 都不会自己重绘，加载完补一次，
+    // 否则选了内置字体的标签在别人机器上先渲染成 fallback 就再也不变回来（§13.80）。
+    onEmbeddedFontsReady(() => {
+      try {
+        node._xhLblRender?.();
+        node._xhLblFit?.();
+        node.setDirtyCanvas?.(true, true);
+      } catch (_e) {}
+    });
   } catch (err) {
     console.error("XiaoHei 浮字标签] setupLabel 出错：", err);
   }

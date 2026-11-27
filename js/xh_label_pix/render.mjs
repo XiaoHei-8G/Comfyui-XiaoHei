@@ -15,36 +15,289 @@ export const DEFAULTS = {
   lineHeight: 1,
 };
 
+// ⚠️ 前四个字符串是**存档契约**（老工作流的 label_json 里就是它们），一律不改，
+//    新字体只能往后追加（2026-11-26）。
 export const FONT_CHOICES = [
   "Arial",
   "Times New Roman",
   "Courier New",
   "Impact",
+  // ↓ 2026-11-26 追加：等线 / 仿宋（Windows·macOS 都自带）+ 得意黑（随包内置）
+  "DengXian",
+  "FangSong",
+  "Smiley Sans Oblique",
 ];
-export const FONT_SHORT = ["Arial", "Times", "Courier", "Impact"];
+
+// 中文优先字体栈：前四款本来是西文字体，中文必然 fallback 到系统默认中文字体，
+// 结果四个按钮的「小黑」长得一模一样，用户根本分不出区别。改成差异明显的
+// 中文字体，落在按钮 / 预览 / 画布上都能一眼看出是不同字体。
+// ⚠️ 只换「显示用字体」，「等宽」对汉字本来就没有视觉差异，第 3 格改用楷体；
+//    FONT_CHOICES 的存档值一律不动，老工作流不受影响。
+// 🔴 最后一条「Smiley Sans Oblique（得意黑）」是**内置字体**：文件在 ./fonts/ 里随包
+//    分发，粉丝不用装系统字体，字形跟你机器上完全一致（为什么必须内置、授权怎么算，
+//    见 §13.80 与本目录 fonts/README.txt）。
+export const FONT_STACKS = [
+  "'Microsoft YaHei','PingFang SC','Hiragino Sans GB',Arial,'Segoe UI Emoji','Noto Color Emoji',sans-serif",
+  "'SimSun','Songti SC','Noto Serif CJK SC','Times New Roman','Segoe UI Emoji','Noto Color Emoji',serif",
+  "'KaiTi','STKaiti','Kaiti SC','Courier New','Segoe UI Emoji','Noto Color Emoji',monospace",
+  "'SimHei','Heiti SC','Microsoft YaHei',Impact,'Segoe UI Emoji','Noto Color Emoji',sans-serif",
+  "'DengXian','等线','Microsoft YaHei','PingFang SC','Segoe UI Emoji','Noto Color Emoji',sans-serif",
+  "'FangSong','仿宋','STFangsong','Songti SC','SimSun','Segoe UI Emoji','Noto Color Emoji',serif",
+  "'Smiley Sans Oblique','SmileySans-Oblique','Microsoft YaHei','PingFang SC',sans-serif",
+];
+
+// 按钮上显示的文字（用户点名：把样例英文换成汉字「小黑」）。
+export const FONT_SAMPLE_TEXT = "小黑";
+// 中文名，用于 title 提示与无障碍标签。
+export const FONT_LABELS = ["黑体", "宋体", "楷体", "粗黑", "等线", "仿宋", "得意黑"];
+export const FONT_HINTS = [
+  "黑体·无衬线（微软雅黑）",
+  "宋体·衬线",
+  "楷体·手写体",
+  "粗黑·黑体",
+  "等线·细现代无衬线（Windows 自带）",
+  "仿宋·公文感（Windows 自带）",
+  "得意黑·标题冲击体（随包内置，谁装都一样）",
+];
+// 兼容旧引用
+export const FONT_SHORT = FONT_LABELS;
+
+// ─── 内置字体加载（2026-11-26）─────────────────────────────────
+// 为什么不用 <style>@font-face：canvas 绘制不需要样式表，但需要字体真的注册进
+// `document.fonts`。用 FontFace API 直接注册，任何入口（编辑器 / 画布 / 节点 DOM）
+// 都能拿到，也省掉一次 CSS 注入。
+// 🔴 首屏坑：字体没加载完时 canvas 用 fallback 画，之后**不会自动重绘**。所以所有
+//    绘制方都要挂 onEmbeddedFontsReady()，加载完成后补一次重绘（§13.80）。
+const EMBEDDED_FONT_FAMILY = "Smiley Sans Oblique";
+const EMBEDDED_FONT_URL = new URL("./fonts/SmileySans-Oblique.woff2", import.meta.url).href;
+
+let _fontState = "idle"; // idle | loading | ready
+let _fontFace = null;
+const _fontWaiters = [];
+
+function flushFontWaiters() {
+  _fontState = "ready";
+  const ws = _fontWaiters.splice(0);
+  for (const fn of ws) { try { fn(); } catch (_e) {} }
+}
+
+/** 字体加载完就跑一次 cb（已在就同步跑）。多次调用只下载一次。 */
+export function onEmbeddedFontsReady(cb) {
+  if (typeof cb !== "function") return;
+  if (_fontState === "ready") { try { cb(); } catch (_e) {} return; }
+  _fontWaiters.push(cb);
+  if (_fontState === "loading") return;
+  _fontState = "loading";
+  if (typeof document === "undefined" || !document.fonts || typeof FontFace === "undefined") {
+    flushFontWaiters();
+    return;
+  }
+  try {
+    // 字体本身是斜体设计，但**声明成 normal**：家族节点里没有 italic 请求，
+    // 声明成 oblique 会导致 font-style:normal 匹配不上 ⇒ 直接 fallback。
+    _fontFace = new FontFace(EMBEDDED_FONT_FAMILY, `url("${EMBEDDED_FONT_URL}") format("woff2")`);
+    document.fonts.add(_fontFace);
+    _fontFace.load().then(flushFontWaiters, flushFontWaiters);
+  } catch (_e) {
+    flushFontWaiters();
+  }
+}
+
+// 把存档里的字体名翻译成实际可用的 CSS 字体栈。
+export function stackOf(family) {
+  const i = FONT_CHOICES.indexOf(family);
+  if (i >= 0) return FONT_STACKS[i];
+  // 老工作流/手改过 json 的未知字体名：原样保留，别吞掉用户设置
+  return `'${family}','Segoe UI Emoji','Noto Color Emoji',system-ui,sans-serif`;
+}
 
 // (Legacy curated swatch arrays removed — the editor now uses the shared
 //  PIXAROMA_PALETTE from js/shared/color_picker.mjs.)
 
+// ─── 对比预设（背景 + 文字一次定）──────────────────────────────
+// 2026-11-25 用户要求：逐个调「背景」「文字」两个色太麻烦，要几组全世界通用的
+// 高对比配对，一键套用。这里全部按 WCAG 2.1 对比度筛选，覆盖浅底深字 / 深底浅字 /
+// 警示黄 / 新闻蓝 / 强调红，外加最常用的「透明底白字」（压在视频画面上用）。
+// ⚠️ 只影响新建/点击时的配色，不改 DEFAULTS，老工作流存档值一个字不动。
+export const COLOR_PRESETS = [
+  { id: "dark-on-light", bg: "#ffffff", fg: "#000000", name: "白底黑字" },
+  { id: "light-on-dark", bg: "#000000", fg: "#ffffff", name: "黑底白字" },
+  { id: "dark-on-yellow", bg: "#ffe100", fg: "#000000", name: "黄底黑字" },
+  { id: "yellow-on-dark", bg: "#000000", fg: "#ffe100", name: "黑底黄字" },
+  { id: "light-on-blue", bg: "#0b3d91", fg: "#ffffff", name: "蓝底白字" },
+  { id: "light-on-red", bg: "#c8102e", fg: "#ffffff", name: "红底白字" },
+  { id: "light-on-clear", bg: "transparent", fg: "#ffffff", name: "透明底白字" },
+];
+
+// WCAG 2.1 相对亮度 → 对比度。预设卡片的提示里标真实比值，不靠手感写死数字。
+// 返回 null 表示算不了（透明底、非 #RRGGBB），调用方自己回退文案。
+export function contrastRatio(bg, fg) {
+  const lum = (hex) => {
+    const h = String(hex || "").replace("#", "").trim();
+    if (h.length !== 6) return null;
+    const ch = [0, 2, 4].map((i) => {
+      const v = parseInt(h.slice(i, i + 2), 16) / 255;
+      if (Number.isNaN(v)) return null;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    if (ch.some((v) => v === null)) return null;
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  };
+  const a = lum(bg);
+  const b = lum(fg);
+  if (a === null || b === null) return null;
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
 // ─── Helpers ─────────────────────────────────────────────────
 export function fontStr(cfg) {
-  return `${cfg.fontWeight === "bold" ? "bold " : ""}${cfg.fontSize}px '${cfg.fontFamily}', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif`;
+  return `${cfg.fontWeight === "bold" ? "bold " : ""}${cfg.fontSize}px ${stackOf(cfg.fontFamily)}`;
 }
 
 export function measureLabel(cfg) {
   const cvs = document.createElement("canvas");
   const ctx = cvs.getContext("2d");
-  ctx.font = fontStr(cfg);
-  const lines = (cfg.text || "").split("\n");
-  const lh = cfg.fontSize * cfg.lineHeight;
+  // 按行内分段测量：每段用自己那套字体量，行宽 = 各段之和。
+  // 纯文本时每行只有一段，结果与改造前完全一致。
+  const rich = richLines(cfg);
   let maxW = 0;
-  for (const line of lines) maxW = Math.max(maxW, ctx.measureText(line).width);
+  const rowLh = [];
+  for (const runs of rich) {
+    let sum = 0;
+    let maxSize = cfg.fontSize;
+    for (const r of runs) {
+      ctx.font = runFont(cfg, r);
+      sum += ctx.measureText(r.text).width;
+      maxSize = Math.max(maxSize, r.size || cfg.fontSize);
+    }
+    maxW = Math.max(maxW, sum);
+    // 行高按**该行最大字号**算：某一段被放大到 34px 时整行要跟着变高，
+    // 否则大字号会被固定的行高挤扁 / 溢出到下一行。
+    rowLh.push(maxSize * cfg.lineHeight);
+  }
+  if (!rowLh.length) rowLh.push(cfg.fontSize * cfg.lineHeight);
+  const totalH = rowLh.reduce((a, b) => a + b, 0);
   return {
     w: Math.ceil(maxW) + cfg.padding * 2,
-    h: Math.ceil(lines.length * lh) + cfg.padding * 2,
-    lines,
-    lh,
+    h: Math.ceil(totalH) + cfg.padding * 2,
+    // lines 仍是「每行纯文本」，老调用方（缩略、命中测试）不用改
+    lines: rich.map((runs) => runs.map((r) => r.text).join("")),
+    rich,
+    rowLh,
+    lh: rowLh[0],
   };
+}
+
+// ─── 富文本（行内分段样式）────────────────────────────────────
+// 2026-11-25 从老「标签」节点（XHLabel）移植过来：选中一段文字单独改字号 /
+// 颜色 / 加粗，整块其它文字不受影响。
+//
+// 数据模型（关键，别改坏）：
+//   cfg.text  ← 纯文本，**存档契约**，老工作流只有它，一个字节都不能变
+//   cfg.rich  ← 受限 HTML（只有 <span style> / <br> / <div>），有它优先渲染
+// 两者同时写：text 给测量兜底与搜索，rich 给渲染。rich 为空 ⇒ 退回纯文本渲染，
+// 所以老工作流、手改过 json 的、被别的工具清过 rich 的，全都照常显示。
+const RICH_TAGS = new Set(["SPAN", "BR", "DIV", "P", "B", "STRONG", "I", "EM", "U"]);
+const BLOCK_TAGS = new Set(["DIV", "P", "LI", "H1", "H2", "H3", "H4", "H5", "H6", "BLOCKQUOTE", "PRE"]);
+const RICH_STYLE_KEYS = ["font-size", "color", "font-weight", "font-style", "text-decoration"];
+
+export function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// contentEditable 吐出来的 HTML 不可信（粘一段网页进来就带一堆样式/脚本）。
+// 白名单清洗：只留 RICH_TAGS，属性只留 style 里的五项，其余全剥。
+export function sanitizeRich(html) {
+  const src = String(html == null ? "" : html);
+  if (!src) return "";
+  if (typeof document === "undefined") return "";
+  const box = document.createElement("div");
+  box.innerHTML = src;
+  const clean = (node) => {
+    for (const child of Array.from(node.childNodes)) {
+      if (child.nodeType === 3) continue;
+      if (child.nodeType !== 1) { child.remove(); continue; }
+      if (!RICH_TAGS.has(child.tagName)) {
+        // 不在白名单的标签：保留文字，去掉标签本身
+        const frag = document.createDocumentFragment();
+        while (child.firstChild) frag.appendChild(child.firstChild);
+        child.replaceWith(frag);
+        clean(node);
+        return;
+      }
+      for (const attr of Array.from(child.attributes)) {
+        if (attr.name !== "style") child.removeAttribute(attr.name);
+      }
+      for (const prop of Array.from(child.style)) {
+        if (!RICH_STYLE_KEYS.includes(prop)) child.style.removeProperty(prop);
+      }
+      clean(child);
+    }
+  };
+  clean(box);
+  return box.innerHTML;
+}
+
+/** 存档 → 用于渲染的 HTML（rich 优先，没有就把纯文本转义成 HTML）。 */
+export function richHtmlOf(cfg) {
+  const rich = cfg.rich ? sanitizeRich(cfg.rich) : "";
+  if (rich) return rich;
+  // 纯文本：换行转 <br>，其余 HTML 转义（防止标注里写 "<div>" 被当标签）
+  return escapeHtml(cfg.text || "").replace(/\n/g, "<br>");
+}
+
+/** 把 rich HTML 拆成「一行 = 若干 run」的结构，供 canvas 测量与绘制。 */
+export function richLines(cfg) {
+  const html = richHtmlOf(cfg);
+  const lines = [];
+  let cur = [];
+  const pushLine = () => { lines.push(cur); cur = []; };
+  const pushText = (text, st) => {
+    if (!text) return;
+    const parts = String(text).split("\n");
+    parts.forEach((p, i) => {
+      if (i > 0) pushLine();
+      if (p) cur.push({ text: p, size: st.size || cfg.fontSize, bold: !!st.bold, italic: !!st.italic, color: st.color || cfg.fontColor });
+    });
+  };
+  if (typeof document === "undefined") { pushText(cfg.text || "", {}); pushLine(); }
+  else {
+    const box = document.createElement("div");
+    box.innerHTML = html;
+    const walk = (node, st) => {
+      if (node.nodeType === 3) { pushText(node.nodeValue, st); return; }
+      if (node.nodeType !== 1) return;
+      if (node.tagName === "BR") { pushLine(); return; }
+      const nst = { ...st };
+      const s = node.style || {};
+      const fs = parseFloat(s.fontSize);
+      if (fs > 0) nst.size = fs;
+      if (s.color) nst.color = s.color;
+      if (node.tagName === "B" || node.tagName === "STRONG") nst.bold = true;
+      if (node.tagName === "I" || node.tagName === "EM") nst.italic = true;
+      if (s.fontWeight && (String(s.fontWeight) === "bold" || parseInt(s.fontWeight, 10) >= 600)) nst.bold = true;
+      if (s.fontStyle === "italic") nst.italic = true;
+      const isBlock = BLOCK_TAGS.has(node.tagName);
+      if (isBlock && cur.length) pushLine();
+      for (const ch of node.childNodes) walk(ch, nst);
+      if (isBlock && cur.length) pushLine();
+    };
+    for (const ch of box.childNodes) walk(ch, {});
+    if (cur.length) pushLine();
+  }
+  if (!lines.length) lines.push([]);
+  // 去掉末尾因 <br> 多出来的空行（保留用户真敲的空行，只削掉最后一个）
+  while (lines.length > 1 && lines[lines.length - 1].length === 0) lines.pop();
+  return lines;
+}
+
+function runFont(cfg, run) {
+  const size = run.size || cfg.fontSize;
+  const bold = run.bold || cfg.fontWeight === "bold";
+  return `${bold ? "bold " : ""}${run.italic ? "italic " : ""}${size}px ${stackOf(cfg.fontFamily)}`;
 }
 
 // ─── Canvas rendering (shared by preview and node draw) ──────
@@ -58,15 +311,36 @@ export function renderLabelToCanvas(ctx, cfg, m, w, h) {
     else ctx.rect(0, 0, m.w, m.h);
     ctx.fill();
   }
-  ctx.font = fontStr(cfg);
-  ctx.fillStyle = cfg.fontColor;
-  ctx.textBaseline = "top";
-  ctx.textAlign = cfg.textAlign;
-  let tx = cfg.padding;
-  if (cfg.textAlign === "center") tx = m.w / 2;
-  else if (cfg.textAlign === "right") tx = m.w - cfg.padding;
-  for (let i = 0; i < m.lines.length; i++) {
-    ctx.fillText(m.lines[i], tx, cfg.padding + i * m.lh);
+  ctx.globalAlpha = cfg.opacity;
+  ctx.textBaseline = "alphabetic";
+  const rows = m.rich || [];
+  let y = cfg.padding;
+  for (let i = 0; i < rows.length; i++) {
+    const runs = rows[i];
+    const rowH = m.rowLh?.[i] ?? m.lh ?? cfg.fontSize * cfg.lineHeight;
+    if (runs.length) {
+      // 混排字号时按该行最大字号的基线对齐，小字才不会往上飘
+      let maxSize = cfg.fontSize;
+      for (const r of runs) maxSize = Math.max(maxSize, r.size || cfg.fontSize);
+      const baseline = y + maxSize * 0.82;
+      // 先量整行宽度，再按对齐决定起点（canvas 的 textAlign 对分段绘制不适用）
+      let total = 0;
+      for (const r of runs) {
+        ctx.font = runFont(cfg, r);
+        r._w = ctx.measureText(r.text).width;
+        total += r._w;
+      }
+      let x = cfg.padding;
+      if (cfg.textAlign === "center") x = (m.w - total) / 2;
+      else if (cfg.textAlign === "right") x = m.w - cfg.padding - total;
+      for (const r of runs) {
+        ctx.font = runFont(cfg, r);
+        ctx.fillStyle = r.color || cfg.fontColor;
+        ctx.fillText(r.text, x, baseline);
+        x += r._w;
+      }
+    }
+    y += rowH;
   }
   ctx.globalAlpha = 1;
 }
@@ -77,8 +351,12 @@ export function renderLabelToCanvas(ctx, cfg, m, w, h) {
 // at any zoom / large font). white-space:pre preserves the \n line breaks +
 // spaces; the background pill is the element background + border-radius.
 export function applyLabelToDom(el, cfg) {
-  el.textContent = cfg.text || "";
-  el.style.fontFamily = `'${cfg.fontFamily}', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif`;
+  // 富文本优先：cfg.rich 有内容就按受限 HTML 渲染（行内 span 的字号/颜色/加粗
+  // 直接生效）；没有 rich 的老存档退回纯文本，显示与改造前完全一致。
+  const rich = cfg.rich ? sanitizeRich(cfg.rich) : "";
+  if (rich) el.innerHTML = rich;
+  else el.textContent = cfg.text || "";
+  el.style.fontFamily = stackOf(cfg.fontFamily);
   el.style.fontSize = `${cfg.fontSize}px`;
   el.style.fontWeight = cfg.fontWeight === "bold" ? "bold" : "normal";
   el.style.lineHeight = String(cfg.lineHeight);
@@ -274,6 +552,20 @@ export function injectCSS() {
     font-family: inherit; outline: none; resize: vertical; min-height: 46px;
 }
 .xh-lbl-field textarea:focus { border-color: var(--xh-primary,#E8A33C); }
+/* 正文（contenteditable）：外观跟原 textarea 一致，多出来的能力是「选中一段
+   后右键单独改字号/颜色/加粗」。white-space:pre-wrap 让换行与空格照原样。 */
+.xh-lbl-field .xh-lbl-text {
+    width: 100%; box-sizing: border-box; min-height: 46px; max-height: 132px; overflow-y: auto;
+    background: #1e1e1f; border: 1px solid #2e2e2e; border-radius: 5px;
+    color: #d0d0d0; padding: 7px 9px; font-size: 13px; font-family: inherit;
+    outline: none; white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.45;
+    user-select: text; cursor: text;
+}
+.xh-lbl-field .xh-lbl-text:focus { border-color: var(--xh-primary,#E8A33C); }
+.xh-lbl-field .xh-lbl-text::-webkit-scrollbar { width: 5px; }
+.xh-lbl-field .xh-lbl-text::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+/* 文字框下面那行常驻提示（富文本怎么用） */
+.xh-lbl-field .xh-lbl-hint { margin-top: 5px; color: #6f6f75; font-size: 10.5px; line-height: 1.4; }
 .xh-lbl-preview {
     border-radius: 6px; border: 1px solid #222;
     padding: 12px; height: 200px; box-sizing: border-box; display: flex;
@@ -298,6 +590,12 @@ export function injectCSS() {
 }
 .xh-lbl-btn:hover { border-color: #555; color: #bbb; }
 .xh-lbl-btn.active { background: color-mix(in srgb, var(--xh-primary,#E8A33C) 13%, transparent); border-color: var(--xh-primary,#E8A33C); color: var(--xh-primary,#E8A33C); }
+/* 字体按钮：每个都写「小黑」，靠字形区分 —— 单独占区、格够宽、字号够大才看得清。
+   7 款排一行会压成小方块（20px 的「小黑」挤不下），改成 4 列网格 = 4+3 两行。 */
+.xh-lbl-fontrow { gap: 6px; display: grid; grid-template-columns: repeat(4, 1fr); }
+.xh-lbl-fontrow .xh-lbl-fontbtn { padding: 8px 4px; min-height: 40px; }
+.xh-lbl-fontbtn { font-size: 20px; letter-spacing: 0.02em; font-weight: 400; }
+.xh-lbl-stylerow { margin-top: 6px; }
 .xh-lbl-bold { font-weight: bold; min-width: 26px; text-align: center; }
 /* Divider inside button row — align-self:center so the short line sits in the
    middle of the row instead of dropping to the top (a fixed-height flex item in
@@ -405,6 +703,34 @@ export function injectCSS() {
 }
 .xh-lbl-cbar:hover { background: var(--xh-primary,#E8A33C); border-color: var(--xh-primary,#E8A33C); color: #fff; }
 .xh-lbl-cbar.active { background: var(--xh-primary,#E8A33C); border-color: var(--xh-primary,#E8A33C); color: #fff; }
+/* 对比预设：一键同时定「背景 + 文字」。卡片本身就是效果预览——卡底 = 背景色，
+   中间的「字」= 文字色，不用点开就能看出这组配得清不清楚。 */
+.xh-lbl-prelabel { font: 11px system-ui, sans-serif; color: #8a8a90; margin-bottom: 6px; }
+.xh-lbl-presets {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+    gap: 6px; margin-bottom: 10px;
+}
+.xh-lbl-preset {
+    height: 34px; padding: 0; border-radius: 6px; cursor: pointer; box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.18);
+    transition: border-color 0.12s, box-shadow 0.12s;
+}
+.xh-lbl-preset:hover { border-color: #999; }
+.xh-lbl-preset.active {
+    border-color: var(--xh-primary,#E8A33C);
+    box-shadow: 0 0 0 1px var(--xh-primary,#E8A33C);
+}
+.xh-lbl-preset-tx { font: 700 15px/1 system-ui, sans-serif; pointer-events: none; }
+/* 透明底：斜纹棋盘表示「没有背景」，压在画面上用 */
+.xh-lbl-preset.is-transp {
+    background-color: #3a3a3a;
+    background-image:
+      linear-gradient(45deg, #555 25%, transparent 25%, transparent 75%, #555 75%),
+      linear-gradient(45deg, #555 25%, transparent 25%, transparent 75%, #555 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 5px 5px;
+}
 /* Hex bar under the picker (Group "Body #hex" style): dark interior, swatch
    chip, the selected target's label (gray) + its editable hex code (orange).
    It replaces the picker's own hex field (hidden below), and the label switches

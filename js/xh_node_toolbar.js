@@ -33,6 +33,9 @@ const { app } = window.comfyAPI.app;
 
 import { currentLang, toggleLang, ensureLangBridge, onLangChanged } from "./xh_ui_kit.js";
 import { opeXHColorPickerPopup, BUTTON_PALETTE } from "./xh_color_picker.js";
+// 2026-11-25：「按键」页签必须落到家族真正在用的 accent 变量上（--pix-acc）。
+// 只写 --xh-acc 等于写了个没人读的变量，按钮纹丝不动 —— 这就是「按键配色无效」的根因。
+import { setNodeAccent, repaintAccent } from "./shared/node_settings.mjs";
 
 ensureLangBridge();
 
@@ -233,7 +236,9 @@ const _btnColorObs = new WeakMap();   // root 元素 → MutationObserver
 // 节点容器/标题栏/下拉等不吃该变量 ⇒ 永不误染。颜色真源仍是 node.properties.xhBtnColor。
 export function repaintBtnColor(node) {
     const root = nodeRoot(node);
-    const hex = normalizeHex(node?.properties?.xhBtnColor);
+    // 真源：pixAccent（accentOf 读它）优先，兼容老工作流的 xhBtnColor
+    const hex = normalizeHex(node?.properties?.xhBtnColor)
+        || normalizeHex(node?.properties?.pixAccent);
     const targets = [];
     if (root) targets.push(root);
     for (const w of (node?.widgets || [])) {
@@ -288,14 +293,21 @@ export function applyBtnColor(node, hex) {
     if (!node.properties) node.properties = {};
     if (!hex) {                        // 清除
         delete node.properties.xhBtnColor;
-        repaintBtnColor(node);
+        setNodeAccent(node, null);     // 清 pixAccent ⇒ 回到主题默认色（不冻成今天的色）
+        repaintAccent(node);           // --pix-acc / --xh-acc 一起回默认
+        repaintBtnColor(node);         // 摘掉 xh-has-accent + 原生控件重定向
         unwatchBtnColor(node);
         tryMarkDirty();
         return;
     }
     const c = normalizeHex(hex);
     if (!c) return;
-    node.properties.xhBtnColor = c;    // 存进工作流（重载后由 nodeCreated / afterConfigureGraph 重涂）
+    // ① 真源写 pixAccent：accentOf 优先级最高，切主题预设不会把它冲掉
+    setNodeAccent(node, c);
+    // ② 家族 CSS（.pix-sketch-btn:hover / 色板选中框 / LoRA 加号 …）全吃 --pix-acc
+    repaintAccent(node);
+    // ③ 老键保留，旧版本节点与已存工作流仍读得到；--xh-acc / 原生开关滑块由它负责
+    node.properties.xhBtnColor = c;
     repaintBtnColor(node);
     watchBtnColor(node);
     tryMarkDirty();

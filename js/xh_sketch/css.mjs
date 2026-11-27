@@ -34,6 +34,11 @@ export function injectCSS() {
   display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;box-sizing:border-box;}
 .pix-sketch-btn:hover{border-color:${ACC};color:var(--xh-text,#e8e8e8);}
 .pix-sketch-btn.on{background:${ACC};border-color:${ACC};color:#fff;}
+/* 2026-11-25 按键配色可见化：只有手选过按键色的节点（root 带 .xh-has-accent）才给工具
+   按钮描边染色，平时保持原样。不补这条的话，选了色只有「当前选中的那个工具」变（.on），
+   没选中工具时用户看到的就是「点了没反应」。 */
+[data-node-id].xh-has-accent .pix-sketch-btn{border-color:color-mix(in srgb,var(--pix-acc,#E8A33C) 42%,var(--xh-border,#333333));}
+[data-node-id].xh-has-accent .pix-sketch-btn:hover{border-color:var(--pix-acc,#E8A33C);}
 .pix-sketch-btn:disabled,.pix-sketch-btn:disabled:hover{opacity:.35;cursor:default;border-color:var(--xh-border,#333333);color:var(--xh-sub,#8a8a8a);}
 .pix-sketch-btn svg{width:16px;height:16px;display:block;}
 .pix-sketch-gear::before{content:"";display:block;width:15px;height:15px;background:currentColor;

@@ -1312,7 +1312,10 @@ function toggle() { ensureWindow(); if (S.win.style.display === "flex") close();
 //  2026-11-25：收录改按家族白名单精确判定（剔除第三方 Krea2 / XHDirectorStudio），
 //    无条件过滤 _internal，并归一旧分类别名（Image/Video/分镜/高级/工具 去重）
 //    ⇒ 升 v9，否则老缓存里的重复分类清不掉。
-const IDX_CACHE_KEY = "XH.Help.index.v9";
+//  2026-11-25（同日）：老「标签」节点（XHLabel）已被浮字标签覆盖删除
+//    ⇒ 升 v10。虽然 types 签名比对会发现少一个节点而重建，但重建前会先用旧缓存
+//    填一次界面，会闪出一个点不开的「标签」条目；换 key 直接不读旧缓存。
+const IDX_CACHE_KEY = "XH.Help.index.v10";
 
 function readIdxCache() {
   try {

@@ -232,10 +232,8 @@ export function openSettingsPanel(node, onChange) {
   // ── accent colour (convention #19) ──
   // Pass NO title: `title` is what the helper puts in the "New <X> nodes"
   // button, and it already reads "Number Pick" from the registry.
-  body.appendChild(createAccentSection(node, {
-    onChange: () => _onChange?.(),
-    onPickerOpen: (h) => { _cpHandle = h; },
-  }));
+  // 2026-11-25：原「按键颜色」块（createAccentSection）已删除 —— 家族右键
+  // 「节点配色 → 按键」是唯一配色入口，齿轮里不再重复。
 
   panel.appendChild(body);
   document.body.appendChild(panel);

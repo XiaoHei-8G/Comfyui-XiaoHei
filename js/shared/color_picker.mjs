@@ -1073,3 +1073,10 @@ function openMoreColorsModal(opts) {
   }
   window.addEventListener("keydown", onKey, true);
 }
+
+// ── 家族别名（2026-11-27）──────────────────────────────────────────────
+// `openXiaoHeiColorPickerPopup` 是 xs 家族调用点一直在用的名字，
+// 但这个文件里从未定义过它 ⇒ 具名导入断链 ⇒ xh_load_image_mini 整个前端不执行
+// （1.0.4 起就坏，2026-11-27 体检发现）。这里补一个别名，行为与
+// openPixaromaColorPickerPopup 完全一致（同名同参），⛔ 不要再各写一份。
+export const openXiaoHeiColorPickerPopup = openPixaromaColorPickerPopup;

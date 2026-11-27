@@ -70,6 +70,17 @@ export const BRAND = "#E8A33C";
 export const ACCENT_VAR = "--pix-acc";
 export const ACC = `var(${ACCENT_VAR},${BRAND})`;
 
+/** 按背景亮度选深字/浅字（浅底必须配深字，否则白底白字看不见）。
+ *  与 xh_node_toolbar.js 的 btnTextColor 同一判据，供 --xh-acc-tx 使用。 */
+export function accentTextColor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+  if (!m) return "var(--xh-text,#e8e8e8)";
+  const h = m[1];
+  const f = (c) => { const n = parseInt(c, 16) / 255; return n <= 0.03928 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4); };
+  const L = 0.2126 * f(h.slice(0, 2)) + 0.7152 * f(h.slice(2, 4)) + 0.0722 * f(h.slice(4, 6));
+  return L > 0.5 ? "#1c1c1c" : "var(--xh-text,#e8e8e8)";
+}
+
 // Master default: every Pixaroma node follows this unless it (or its node type)
 // has been given its own colour. Registered as a visible row by the toolbar
 // extension so it also shows up in ComfyUI's Settings panel.
@@ -165,7 +176,7 @@ export function registerNodeSettings(comfyClass, def) {
  *     title:        "Show Text",           // defaults to a de-camelled class name
  *     prop:         "pixAccent",           // node.properties key
  *     setting:      "Pixaroma.X.AccentColor",
- *     swatchLabel:  "Button colour",       // the row label in the panel
+ *     swatchLabel:  "按键颜色",             // the row label in the panel
  *     swatchHint:   "This node only. ...", // the small grey line under it
  *     onChange(node),                      // repaint the node face after a pick
  *     ownMenuItem?: true,
@@ -186,11 +197,13 @@ export function registerNodeAccent(comfyClass, opts = {}) {
     sections: typeof opts.sections === "function" ? opts.sections : null,
     // A node with NO orange on its face (3D Builder, Inpaint Crop, Set/Get) can
     // host rows without offering a colour that would change nothing.
-    accent: opts.accent !== false,
+    // 2026-11-25：默认关闭 —— 节点齿轮不再渲染「Button colour」，配色只保留
+    // 右键「节点配色」这一个入口（见 openAccentPanel）。
+    accent: opts.accent === true,
     title: opts.title || defaultTitle(comfyClass),
     prop: opts.prop || DEFAULT_ACCENT_PROP,
     setting: opts.setting || classAccentSetting(comfyClass),
-    swatchLabel: opts.swatchLabel || "Button colour",
+    swatchLabel: opts.swatchLabel || "按键颜色",
     swatchHint: opts.swatchHint || "This node only. Save it as a default below.",
     onChange: typeof opts.onChange === "function" ? opts.onChange : null,
     ownMenuItem: !!opts.ownMenuItem,
@@ -254,7 +267,11 @@ export function themeAccent() {
 export function accentOf(node) {
   if (!node) return themeAccent() || BRAND;
   const def = getNodeSettings(node.comfyClass);
-  const own = node.properties?.[def?.prop || DEFAULT_ACCENT_PROP];
+  // 2026-11-25：右键「节点配色 → 按键」页签历史上写的是 properties.xhBtnColor
+  // （走 --xh-acc，家族 CSS 根本不认）。现在统一以 pixAccent 为真源，这里把老键
+  // 一起读进来，老工作流里存过的按键色不会丢，也不会被主题预设冲掉。
+  const own = node.properties?.[def?.prop || DEFAULT_ACCENT_PROP]
+    || node.properties?.xhBtnColor;
   if (typeof own === "string" && own.trim()) return own.trim();
   const perClass = readSetting(def?.setting || classAccentSetting(node.comfyClass));
   if (perClass) return perClass;
@@ -433,6 +450,14 @@ export function repaintAccent(node) {
   if (!node) return;
   const a = accentOf(node);
   for (const e of accentTargets(node)) e.style.setProperty(ACCENT_VAR, a);
+  // 2026-11-25：家族里还有一批自定义控件（.xh-bar-btn / LoRA 堆栈 / 标注工具条）
+  // 消费的是 --xh-acc，而「右键 → 节点配色 → 按键」写的就是它。两个变量必须同步，
+  // 否则会出现「按键页签选了色，按钮纹丝不动」—— 消费者读的和你写的不是同一个。
+  const tx = accentTextColor(a);
+  for (const e of accentTargets(node)) {
+    e.style.setProperty("--xh-acc", a);
+    e.style.setProperty("--xh-acc-tx", tx);
+  }
   try { node.setDirtyCanvas?.(true, true); } catch {}
   // MUST also run the node's own refresh. The CSS var + a canvas redraw is not
   // enough for two whole families:
@@ -912,7 +937,7 @@ export function createAccentSection(node, opts = {}) {
 
   const row = el("div", "pix-nset-acc");
   const txt = el("div");
-  txt.appendChild(el("div", "lab", opts.label || "Button colour"));
+  txt.appendChild(el("div", "lab", opts.label || "按键颜色"));
   txt.appendChild(el("div", "sub", opts.hint || "This node only. Save it as a default below."));
   row.append(sw, txt);
 
@@ -962,6 +987,11 @@ export function createAccentSection(node, opts = {}) {
 export function openAccentPanel(node) {
   const def = getNodeSettings(node?.comfyClass);
   if (!node) return;
+  // 颜色块删除后，只剩「颜色」的节点（未注册任何 rows/sections）不再弹空壳面板。
+  // 它们的配色统一走右键「节点配色」，这里点到齿轮就什么都不弹，避免又出现一个
+  // 只有 Done 按钮的空窗。
+  if (!def) return;
+  if (!def.rows?.length && typeof def.sections !== "function") return;
   closeNodeSettingsPanel();
   injectCSS();
   wrapLoadGraphData();
@@ -1003,20 +1033,11 @@ export function openAccentPanel(node) {
     }
   }
 
-  // A node with no orange on its face opts out of the colour block entirely
-  // rather than offering a colour that would change nothing.
-  if (def?.accent !== false) {
-    if (def?.rows?.length || hasSection) body.appendChild(el("div", "pix-nset-rule"));
-    body.appendChild(createAccentSection(node, {
-      title,
-      label: def?.swatchLabel,
-      hint: def?.swatchHint,
-      // Only the panel's own chrome here: repaintAccent already runs the node's
-      // onChange, and calling it again would double every rebuild per pick.
-      onChange: () => { panel.style.setProperty(ACCENT_VAR, accentOf(node)); },
-      onPickerOpen: (h) => { _cpHandle = h; },                // so close() reaches it
-    }));
-  }
+  // 2026-11-25：节点齿轮里的「Button colour」整块已删除。
+  // 原因：家族右键菜单已有「节点配色 → 按键」页签（同一套 accent，还额外管原生
+  // 开关/滑块），两个入口改同一个东西 ⇒ 用户会以为其中一个是坏的；且这块文案是
+  // 英文（Button colour / This node only…），也是中文化漏网。accent 现在只由
+  // 右键面板写入，设置面板只保留节点自己的参数行（rows / sections）。
 
   const foot = el("div", "pix-nset-f");
   const done = el("button", "pix-nset-btn pix-nset-push", "Done");

@@ -7,11 +7,20 @@ import { installGraphUndoGuard } from "../shared/graph_undo_guard.mjs";
 import {
   DEFAULTS,
   FONT_CHOICES,
-  FONT_SHORT,
+  FONT_STACKS,
+  FONT_SAMPLE_TEXT,
+  FONT_LABELS,
+  FONT_HINTS,
+  COLOR_PRESETS,
+  contrastRatio,
+  richHtmlOf,
+  sanitizeRich,
   measureLabel,
   renderLabelToCanvas,
   injectCSS,
+  onEmbeddedFontsReady,
 } from "./render.mjs";
+import { attachRichEditing, richToText } from "./rich.mjs";
 
 // Shared-style help (same themed popup as the Group help). Registered for the
 // selection-toolbar ? button (index.js) AND opened by the in-editor ? button.
@@ -22,14 +31,18 @@ export const LABEL_HELP = {
     // 原版这里曾有两个互相覆盖的帮助条目，后加载的会静默盖掉前一个，
     // 导致一半说明根本显示不出来。现合并成这一份，就放在它描述的编辑器旁边。
     { heading: "它能干什么", body: "直接把一段带样式的文字画在画布上，用来给工作流的某一部分做标注。它没有输入、没有输出，也永远不会执行，不占用任何算力——它只是给你看的。标签会自动缩放到刚好包住文字。" },
-    { heading: "文字", body: "可以输入任意内容，支持多行和表情符号。" },
+    { heading: "文字", body: "可以输入任意内容，支持多行和表情符号。想给其中某几个字单独换颜色、放大或加粗：**先按住左键选中那一段 → 右键 → 在弹出的菜单里点颜色 / 字号 / 加粗**，只有选中的字会变，其它字不动。点「清除格式」恢复跟随整块设置。从网页复制的内容只取纯文字，不会带一堆乱七八糟的样式。" },
     { heading: "排版", defs: [
-      ["字体", "在 Arial（无衬线）、Times（衬线）、Courier（等宽）、Impact（粗黑）之间切换。按钮上显示的字形就是该字体的预览。"],
+      ["字体", "每个按钮上写的都是「小黑」，字形不同就代表不同字体，鼠标停上去会提示字体名：黑体（无衬线）、宋体（衬线）、楷体（手写）、粗黑、等线（细现代）、仿宋（公文感）、得意黑（标题冲击体，斜着的那款）。前六款读你电脑自带的字体，最后一款「得意黑」是**随包自带**的开源字体——别人的电脑就算没装这款字，装了我们这个包也能看到一模一样的字形。选哪个，预览和画布上的字就跟着变。"],
       ["B", "开启或关闭加粗。"],
       ["对齐", "多行文字可选左对齐、居中或右对齐。"],
       ["字号", "拖动滑块、直接输入数值，或点上下箭头微调（范围 8 到 256 像素）。"],
     ] },
-    { heading: "颜色", body: "先点 `背景` 或 `文字` 按钮，选中要改的那一块，按钮上会显示当前的色值。接着在右侧色板里挑颜色、在左边的取色方块里拖动，或直接在下方色值条里输入十六进制色号。点 `透明` 可让背景变透明（仅背景可用）。" },
+    { heading: "颜色", defs: [
+      ["对比预设", "一排小方块，每个卡片的底色就是背景色、中间的「字」就是文字色，不用点开就能看出清不清楚。点一下，背景和文字会一起换成这一组，常用于字幕、标注的高对比搭配（白底黑字、黑底白字、黄底黑字、黑底黄字、蓝底白字、红底白字、透明底白字）。鼠标停上去会显示这组的真实对比度。想微调就接着用下面的色板。"],
+      ["背景 / 文字", "先点 `背景` 或 `文字` 按钮，选中要改的那一块，按钮上会显示当前的色值。接着在右侧色板里挑颜色、在左边的取色方块里拖动，或直接在下方色值条里输入十六进制色号。"],
+      ["透明", "让背景变透明，只留文字压在画面上（仅背景可用）。"],
+    ] },
     { heading: "间距与样式", defs: [
       ["内边距", "文字与标签边缘之间的留白。"],
       ["圆角", "背景色块的圆角大小。"],
@@ -99,6 +112,10 @@ export class LabelEditor {
     this._build();
     document.body.appendChild(this._el);
     this._updatePreview();
+    // 内置字体（得意黑）是异步下载的：没加载完时预览会用 fallback 画，
+    // 而且 canvas 不会自己重绘 ⇒ 加载完成后补一次，否则用户切到「得意黑」
+    // 看不出变化（跟 §13.75 一模一样的坑）。
+    onEmbeddedFontsReady(() => { if (this._el) this._updatePreview(); });
     // After layout settles, match the color picker's height to the swatch grid
     // so their bottoms (and the hex bar / Transparent button below them) line up.
     requestAnimationFrame(() => requestAnimationFrame(() => this._alignColorColumns()));
@@ -138,6 +155,8 @@ export class LabelEditor {
   close() {
     this._undoGuardOff?.();
     this._undoGuardOff = null;
+    this._richOff?.();
+    this._richOff = null;
     window.removeEventListener("keydown", this._keyBlock, true);
     window.removeEventListener("keyup", this._keyBlock, true);
     window.removeEventListener("keypress", this._keyBlock, true);
@@ -217,16 +236,40 @@ export class LabelEditor {
     panel.appendChild(body);
 
     // ── Text
+    // 2026-11-25：textarea 改成 contenteditable，为了支持「选中一段文字单独
+    // 改字号 / 颜色 / 加粗」（从老「标签」节点移植的富文本能力）。存档同时写两份：
+    //   cfg.text ← 纯文本（老契约，缺了就自动退化，渲染不受影响）
+    //   cfg.rich ← 受限 HTML（只有 span/br，白名单清洗过）
     const textField = el("div", "xh-lbl-field");
     textField.appendChild(lbl("文字"));
-    const ta = document.createElement("textarea");
-    ta.value = c.text;
-    ta.rows = 2;
-    ta.addEventListener("input", () => {
-      c.text = ta.value;
+    const ta = document.createElement("div");
+    ta.className = "xh-lbl-text";
+    ta.contentEditable = "true";
+    ta.spellcheck = false;
+    ta.setAttribute("role", "textbox");
+    ta.setAttribute("aria-multiline", "true");
+    ta.setAttribute("aria-label", "标签文字（选中一段后右键可单独改字号、颜色、加粗）");
+    ta.innerHTML = richHtmlOf(c);
+    const readText = () => {
+      c.rich = sanitizeRich(ta.innerHTML);
+      c.text = richToText(ta.innerHTML);
       this._updatePreview();
+    };
+    ta.addEventListener("input", readText);
+    // 只接纯文本：从网页粘一段带样式的进来会污染存档，也会把整块排版打乱
+    ta.addEventListener("paste", (e) => {
+      const txt = (e.clipboardData || window.clipboardData)?.getData("text/plain");
+      if (txt == null) return;
+      e.preventDefault();
+      document.execCommand("insertText", false, txt);
     });
+    this._richOff = attachRichEditing(ta);
     textField.appendChild(ta);
+    // 一行常驻提示。富文本是「隐式」能力，不写出来没人会发现；同时也是
+    // 「前端是不是新版」的自检标记 —— 看不到这行就是旧 JS，得 Ctrl+F5。
+    const richHint = el("div", "xh-lbl-hint");
+    richHint.textContent = "左键选中一段文字 → 右键 → 改字号 / 颜色 / 加粗（只改选中的字）";
+    textField.appendChild(richHint);
     body.appendChild(textField);
 
     // ── Preview (fit-to-area, DPR-sharp, never clipped — see _renderPreview)
@@ -238,17 +281,20 @@ export class LabelEditor {
     prevSection.appendChild(prevWrap);
     body.appendChild(prevSection);
 
-    // ── Typography: font buttons + Bold + align in one row, size below
+    // ── Typography: 字体 4 格单独占一行（格子够宽才看得出字形差异），
+    //    加粗 + 对齐放下一行 —— 8 个按钮挤一行会把「小黑」压成小方块。
     const typoSection = el("div");
     typoSection.appendChild(lbl("排版"));
-    const fontBtns = el("div", "xh-lbl-btns");
+    const fontBtns = el("div", "xh-lbl-btns xh-lbl-fontrow");
 
     const fontBtnEls = [];
     for (let i = 0; i < FONT_CHOICES.length; i++) {
-      const btn = el("button", "xh-lbl-btn");
-      btn.textContent = FONT_SHORT[i];
-      btn.style.fontFamily = FONT_CHOICES[i];
-      btn.title = ["Arial：无衬线", "Times：衬线", "Courier：等宽", "Impact：粗黑"][i];
+      const btn = el("button", "xh-lbl-btn xh-lbl-fontbtn");
+      // 样例文字用汉字「小黑」，字体靠各自的中文优先字体栈区分
+      btn.textContent = FONT_SAMPLE_TEXT;
+      btn.style.fontFamily = FONT_STACKS[i];
+      btn.title = `小黑 · ${FONT_HINTS[i]}`;
+      btn.setAttribute("aria-label", `字体：${FONT_LABELS[i]}`);
       if (c.fontFamily === FONT_CHOICES[i]) btn.classList.add("active");
       btn.onclick = () => {
         c.fontFamily = FONT_CHOICES[i];
@@ -259,7 +305,9 @@ export class LabelEditor {
       fontBtnEls.push(btn);
       fontBtns.appendChild(btn);
     }
-    fontBtns.appendChild(vsep());
+    typoSection.appendChild(fontBtns);
+
+    const styleBtns = el("div", "xh-lbl-btns xh-lbl-stylerow");
 
     // Bold
     const boldBtn = el("button", "xh-lbl-btn xh-lbl-bold");
@@ -270,8 +318,8 @@ export class LabelEditor {
       boldBtn.classList.toggle("active");
       this._updatePreview();
     };
-    fontBtns.appendChild(boldBtn);
-    fontBtns.appendChild(vsep());
+    styleBtns.appendChild(boldBtn);
+    styleBtns.appendChild(vsep());
 
     // Align
     const aligns = ["left", "center", "right"];
@@ -290,10 +338,10 @@ export class LabelEditor {
         this._updatePreview();
       };
       alignBtnEls.push(btn);
-      fontBtns.appendChild(btn);
+      styleBtns.appendChild(btn);
     }
 
-    typoSection.appendChild(fontBtns);
+    typoSection.appendChild(styleBtns);
 
     // Font size — full-width slider + number + spinner
     const fsField = this._sliderRow("字号", 8, 256, 1,
@@ -333,6 +381,48 @@ export class LabelEditor {
     const txBar = mkBar("text", "文字");
     const allBars = [bgBar, txBar];
     colorSection.appendChild(bars);
+
+    // ── 对比预设（2026-11-25 用户要求）────────────────────────
+    // 一键同时定「背景 + 文字」，省掉逐个调两个色的麻烦。卡片自己就是预览：
+    // 卡底画背景色、中间的「字」画文字色，一眼就能判断清不清楚。
+    // 只用 WCAG 高对比组合；鼠标停上去显示真实对比度比值。
+    const preLabel = el("div", "xh-lbl-prelabel");
+    preLabel.textContent = "对比预设";
+    colorSection.appendChild(preLabel);
+
+    const presetRow = el("div", "xh-lbl-presets");
+    const presetEls = [];
+    for (const p of COLOR_PRESETS) {
+      const btn = el("button", "xh-lbl-preset");
+      btn.type = "button";
+      const isTrans = p.bg === "transparent";
+      if (isTrans) btn.classList.add("is-transp");
+      else btn.style.background = p.bg;
+      const cap = el("span", "xh-lbl-preset-tx");
+      cap.textContent = "字";
+      cap.style.color = p.fg;
+      btn.appendChild(cap);
+      const ratio = isTrans ? null : contrastRatio(p.bg, p.fg);
+      btn.title = ratio
+        ? `${p.name} · 对比度 ${ratio.toFixed(1)}:1`
+        : `${p.name} · 背景透明，字压在画面上`;
+      btn.setAttribute("aria-label", btn.title);
+      presetEls.push({ el: btn, p });
+      presetRow.appendChild(btn);
+    }
+    colorSection.appendChild(presetRow);
+
+    // 当前「背景 + 文字」正好等于某组预设时，那组高亮（手动微调后自动取消）。
+    const syncPresets = () => {
+      const bg = String(c.backgroundColor || "").toLowerCase();
+      const fg = String(c.fontColor || "").toLowerCase();
+      for (const { el: b, p } of presetEls) {
+        b.classList.toggle(
+          "active",
+          bg === String(p.bg).toLowerCase() && fg === String(p.fg).toLowerCase()
+        );
+      }
+    };
 
     // Swatch grid (right column): the 36 shared palette colours in a perfect
     // 9x4 grid (no transparent tile — it lives below as a labelled button so the
@@ -378,7 +468,7 @@ export class LabelEditor {
         if (!color) return;
         if (target === "bg") c.backgroundColor = color;
         else c.fontColor = color;
-        syncBars(); syncSwSel(); syncHexBar(); this._updatePreview();
+        syncBars(); syncSwSel(); syncHexBar(); syncPresets(); this._updatePreview();
       },
     });
     this._picker = picker;
@@ -416,7 +506,7 @@ export class LabelEditor {
         if (target === "bg") c.backgroundColor = v;
         else c.fontColor = v;
         picker.setColor(v);
-        syncBars(); syncSwSel(); syncHexBar(); this._updatePreview();
+        syncBars(); syncSwSel(); syncHexBar(); syncPresets(); this._updatePreview();
       }
     });
     hexV.addEventListener("keydown", (e) => {
@@ -441,7 +531,7 @@ export class LabelEditor {
       target = k;
       const cur = curColorFor(k);
       picker.setColor(k === "bg" && cur === "transparent" ? "#333333" : cur);
-      syncBars(); syncSwSel(); syncTransVis(); syncHexBar();
+      syncBars(); syncSwSel(); syncTransVis(); syncHexBar(); syncPresets();
     };
 
     // Bar interactions: click a button to choose which target the picker +
@@ -455,16 +545,28 @@ export class LabelEditor {
         if (target === "bg") c.backgroundColor = hex;
         else c.fontColor = hex;
         picker.setColor(hex);          // move the SV marker to the picked swatch
-        syncBars(); syncSwSel(); syncHexBar(); this._updatePreview();
+        syncBars(); syncSwSel(); syncHexBar(); syncPresets(); this._updatePreview();
       };
     }
     transBtn.onclick = () => {
       if (target !== "bg") return;     // transparent is Background-only
       c.backgroundColor = "transparent";
-      syncBars(); syncSwSel(); syncHexBar(); this._updatePreview();
+      syncBars(); syncSwSel(); syncHexBar(); syncPresets(); this._updatePreview();
     };
 
-    syncBars(); syncSwSel(); syncTransVis(); syncHexBar();
+    // 点预设 = 背景和文字一起换，然后把左边的取色器 / 色值条 / 色板选中态
+    // 同步到「当前目标」那个新色上，避免界面显示的还是上一组的颜色。
+    for (const { el: b, p } of presetEls) {
+      b.onclick = () => {
+        c.backgroundColor = p.bg;
+        c.fontColor = p.fg;
+        const cur = curColorFor(target);
+        picker.setColor(target === "bg" && cur === "transparent" ? "#333333" : cur);
+        syncBars(); syncSwSel(); syncHexBar(); syncPresets(); this._updatePreview();
+      };
+    }
+
+    syncBars(); syncSwSel(); syncTransVis(); syncHexBar(); syncPresets();
     body.appendChild(colorSection);
 
     // ── Spacing & Style — 2x2 grid of slider + number + spinner
